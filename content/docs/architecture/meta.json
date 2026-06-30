@@ -1,0 +1,12 @@
+{
+  "title": "Architecture",
+  "pages": [
+    "system-overview",
+    "runtime-boundaries",
+    "data-flow",
+    "security-model",
+    "multi-runtime-direction"
+  ],
+  "defaultOpen": true,
+  "collapsible": false
+}

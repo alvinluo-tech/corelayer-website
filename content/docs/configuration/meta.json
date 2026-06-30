@@ -1,0 +1,12 @@
+{
+  "title": "Configuration",
+  "pages": [
+    "model-providers",
+    "mcp-servers",
+    "storage",
+    "voice",
+    "permissions"
+  ],
+  "defaultOpen": true,
+  "collapsible": false
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Guides",
+  "pages": [
+    "connect-mcp-app",
+    "add-custom-tool",
+    "configure-local-models",
+    "enable-voice",
+    "review-audit-logs",
+    "build-from-source"
+  ],
+  "defaultOpen": true,
+  "collapsible": false
+}

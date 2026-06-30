@@ -1,0 +1,11 @@
+{
+  "title": "Reference",
+  "pages": [
+    "config-file",
+    "cli-commands",
+    "api-endpoints",
+    "troubleshooting"
+  ],
+  "defaultOpen": true,
+  "collapsible": false
+}

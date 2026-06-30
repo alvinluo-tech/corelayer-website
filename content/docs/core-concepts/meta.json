@@ -1,0 +1,14 @@
+{
+  "title": "Core Concepts",
+  "pages": [
+    "jarvis",
+    "control-center",
+    "model-gateway",
+    "tool-registry",
+    "permission-guard",
+    "daemon",
+    "skills"
+  ],
+  "defaultOpen": true,
+  "collapsible": false
+}
