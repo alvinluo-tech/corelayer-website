@@ -1,0 +1,74 @@
+---
+title: Permission Guard
+description: Risk-based execution control with approval workflows and audit logs.
+icon: ShieldCheck
+---
+
+The Permission Guard is CoreLayer's safety system. It classifies tool calls by risk level, pauses risky operations for user approval, and maintains a complete audit trail.
+
+## Why It Exists
+
+AI agents that can call tools need boundaries. Without a permission system, an agent could:
+
+- Delete files without asking
+- Make external API calls with your credentials
+- Modify data you didn't intend to change
+
+The Permission Guard makes tool execution **visible, controllable, and auditable**.
+
+## Risk Classification
+
+Every tool call is classified:
+
+| Risk Level | Examples | Default Policy |
+|------------|----------|----------------|
+| **Read** | List files, read data, search | Auto-allow |
+| **Write** | Create/modify files, update records | Confirm |
+| **External** | API calls, web requests | Confirm |
+| **Destructive** | Delete files, drop tables | Confirm + warning |
+| **Credential-sensitive** | Access tokens, passwords | Block unless explicit |
+
+## Approval Flow
+
+```text
+Tool call requested
+  → Risk classification
+  → Policy check (allow / confirm / deny)
+  → If confirm: pause, show approval panel
+  → User approves or denies
+  → Execute or skip
+  → Log decision to audit trail
+```
+
+## Approval Panel
+
+When approval is needed, the Control Center shows:
+
+- **Tool name** and source
+- **Parameters** being passed
+- **Risk level** indicator
+- **Explanation** of what will happen
+- **Approve** / **Deny** / **Approve Always** buttons
+
+## Audit Logs
+
+Every tool execution is logged with:
+
+- Timestamp
+- Tool name and source
+- Parameters (sanitized)
+- Risk level
+- User decision (approved/denied/auto-allowed)
+- Execution result
+
+View logs in **Control Center → Permissions → Audit Log**.
+
+## Configuration
+
+See [Permissions configuration](/docs/configuration/permissions) for policy rules.
+
+## Next Steps
+
+- [Permissions](/docs/configuration/permissions) — configure policies
+- [Review Audit Logs](/docs/guides/review-audit-logs) — working with the audit trail
+- [Security Model](/docs/architecture/security-model) — architecture details

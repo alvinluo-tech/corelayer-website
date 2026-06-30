@@ -1,0 +1,76 @@
+---
+title: Quickstart
+description: Connect your first model and MCP server in 5 minutes.
+icon: Zap
+---
+
+This guide walks you through the minimum setup to get CoreLayer working with an AI model and an MCP server.
+
+## Step 1: Launch CoreLayer
+
+Open the CoreLayer desktop app. The Control Center will appear with the initial setup wizard.
+
+## Step 2: Configure a Model Provider
+
+Navigate to **Settings → Models** and add a provider:
+
+```text
+Provider: Groq (recommended for fast local-like experience)
+API Key: your-groq-api-key
+Model: llama-3.3-70b-versatile
+```
+
+You can also use:
+- **MiMo** — Xiaomi's model via OpenRouter
+- **OpenRouter** — access to multiple providers
+- **Ollama** — fully local models
+- **OpenAI-compatible** — any provider with an OpenAI-compatible API
+
+## Step 3: Connect an MCP Server
+
+Navigate to **Settings → MCP** and add a server:
+
+```json
+{
+  "name": "filesystem",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/your/workspace"]
+}
+```
+
+This gives Jarvis access to read and write files in your workspace through the MCP protocol.
+
+## Step 4: Test It
+
+Open the command palette with **Alt+Space** and type:
+
+```text
+List the files in my workspace
+```
+
+Jarvis will:
+1. Interpret your intent
+2. Route the request through the Model Gateway
+3. Resolve the filesystem tool from the Tool Registry
+4. Execute the MCP tool call
+5. Return the results
+
+If the tool requires write access, the Permission Guard will pause and ask for approval.
+
+## What Just Happened?
+
+```text
+Your request
+  → Jarvis interprets intent
+  → Model Gateway selects Groq/llama-3.3
+  → Tool Registry resolves filesystem MCP tool
+  → Permission Guard checks risk level
+  → MCP Client executes tool call
+  → Result returned to you
+```
+
+## Next Steps
+
+- [First MCP Server](/docs/getting-started/first-mcp-server) — deeper guide to MCP integration
+- [Model Providers](/docs/configuration/model-providers) — configure multiple providers
+- [Permission Guard](/docs/core-concepts/permission-guard) — understand the safety model

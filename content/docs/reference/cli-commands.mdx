@@ -1,0 +1,57 @@
+---
+title: CLI Commands
+description: Command-line interface for CoreLayer.
+icon: Terminal
+---
+
+CoreLayer provides CLI commands for common operations.
+
+## Development Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start daemon + Tauri frontend in development mode |
+| `pnpm dev:web` | Start frontend in web-only mode (no Tauri) |
+| `pnpm dev:daemon` | Start daemon only |
+| `pnpm dev:frontend` | Start Tauri frontend only |
+
+## Build Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm build` | Full production build (sidecar + Tauri) |
+| `pnpm build:daemon` | Build daemon only |
+| `pnpm build:daemon:sidecar` | Build daemon as sidecar binary |
+
+## Quality Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm lint` | Run ESLint on source files |
+| `pnpm lint:fix` | Auto-fix ESLint issues |
+| `pnpm format` | Format code with Prettier |
+| `pnpm format:check` | Check formatting without writing |
+| `pnpm test` | Run all tests |
+| `pnpm typecheck` | Run TypeScript type checking |
+
+## Cleanup Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm clean` | Clean all build outputs |
+| `pnpm clean:app` | Kill running CoreLayer app |
+| `pnpm clean:daemon` | Kill daemon process on port 3001 |
+| `pnpm clean:all` | Clean app + daemon |
+
+## Release Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm release` | Create a new release (patch) |
+| `pnpm release:minor` | Create a minor release |
+| `pnpm release:major` | Create a major release |
+
+## Next Steps
+
+- [Build From Source](/docs/guides/build-from-source) — full build guide
+- [API Endpoints](/docs/reference/api-endpoints) — daemon HTTP API

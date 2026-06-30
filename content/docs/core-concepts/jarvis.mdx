@@ -1,0 +1,48 @@
+---
+title: Jarvis
+description: The AI assistant persona that coordinates work across CoreLayer.
+icon: Bot
+---
+
+Jarvis is the built-in AI assistant that operates within CoreLayer. It is not a standalone chatbot — it is a coordinator that routes requests through the Model Gateway, discovers tools via the Tool Registry, and enforces safety through the Permission Guard.
+
+## How Jarvis Works
+
+```text
+User Input (voice, text, shortcut)
+  → Intent interpretation
+  → Context assembly (conversation history, memory, tools)
+  → Model selection via Model Gateway
+  → Response generation with tool calling
+  → Permission check before tool execution
+  → Result delivery
+```
+
+## Capabilities
+
+- **Natural language task management** — create, query, and update tasks
+- **Reading list management** — track articles with AI-powered recommendations
+- **Daily/weekly reviews** — summarize activity with pattern recognition
+- **Tool calling** — execute tools from native modules, MCP servers, skills, or REST adapters
+- **Voice interaction** — full voice pipeline with wake word, ASR, TTS, and interruption
+
+## Memory
+
+Jarvis maintains long-term memory across conversations. Memory is stored locally in the configured database (SQLite by default) and persists across sessions.
+
+- **Conversation context** — current session history, kept in memory during active conversations and written to the database on session end
+- **User preferences** — learned patterns (e.g., preferred models, frequent tools, response style) accumulated over time
+- **Task context** — active tasks, deadlines, and status — Jarvis references this when you ask about your work
+- **Tool context** — recently used tools and their results, so Jarvis can follow up on previous actions without re-querying
+
+Memory is scoped per user and never shared across CoreLayer instances unless you enable Supabase cloud sync.
+
+## Multi-Model Routing
+
+Jarvis doesn't depend on a single model. The Model Gateway selects the best model for each request based on complexity, latency requirements, and availability.
+
+## Next Steps
+
+- [Control Center](/docs/core-concepts/control-center) — the UI that hosts Jarvis
+- [Model Gateway](/docs/core-concepts/model-gateway) — how models are selected
+- [Voice Pipeline](/docs/configuration/voice) — voice interaction setup

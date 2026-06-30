@@ -1,0 +1,51 @@
+---
+title: Control Center
+description: The central UI for managing models, tools, permissions, and system health.
+icon: LayoutDashboard
+---
+
+The Control Center is the main interface of CoreLayer. It provides a unified surface for managing all aspects of the system.
+
+## Panels
+
+| Panel | Purpose |
+|-------|---------|
+| **Chat** | Main conversation with Jarvis |
+| **Models** | Configure and monitor model providers |
+| **MCP** | Manage MCP server connections |
+| **Tools** | View registered tools and their status |
+| **Permissions** | Approval queue and audit logs |
+| **Voice** | Voice pipeline status and configuration |
+| **Settings** | System-wide configuration |
+
+## Command Palette
+
+Press **Alt+Space** to open the command palette for quick actions:
+
+- Search conversations
+- Execute tools directly
+- Switch between panels
+- Quick-configure settings
+
+## Status Bar
+
+The bottom of the Control Center shows:
+
+- Daemon health status
+- Connected MCP servers count
+- Active model provider
+- Voice pipeline state
+- Pending approvals count
+
+## Layout
+
+The Control Center uses a sidebar layout:
+
+- **Left sidebar** — navigation between panels
+- **Main area** — active panel content
+- **Right panel** — context-sensitive details (tool info, approval details)
+
+## Next Steps
+
+- [Daemon](/docs/core-concepts/daemon) — the backend that powers the Control Center
+- [Permission Guard](/docs/core-concepts/permission-guard) — the approval system

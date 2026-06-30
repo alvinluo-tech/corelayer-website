@@ -1,0 +1,51 @@
+---
+title: Tool Registry
+description: Unified tool registration, discovery, and routing.
+icon: Wrench
+---
+
+The Tool Registry is a central catalog of all tools available to Jarvis. It aggregates tools from multiple sources and presents them through a unified interface.
+
+## Tool Sources
+
+| Source | Description |
+|--------|-------------|
+| **Native modules** | Built-in CoreLayer tools (task management, reading list, reviews) |
+| **MCP servers** | Tools from connected MCP servers |
+| **Skills** | Custom scripted workflows |
+| **REST adapters** | Tools from REST API endpoints |
+
+## How It Works
+
+```text
+Tool sources register their tools
+  → Tool Registry catalogs all tools
+  → Jarvis queries available tools for a request
+  → Tool Registry returns matching tools
+  → Jarvis selects and calls the appropriate tool
+  → Permission Guard checks before execution
+```
+
+## Tool Metadata
+
+Each tool in the registry includes:
+
+- **Name** — unique identifier
+- **Description** — what the tool does
+- **Parameters** — input schema (JSON Schema)
+- **Source** — which provider owns this tool
+- **Risk level** — read, write, external, destructive
+
+## Querying Tools
+
+Jarvis can query the registry to find tools by:
+
+- **Capability** — "find tools that can read files"
+- **Source** — "show me all MCP tools"
+- **Name** — "use the filesystem:read tool"
+
+## Next Steps
+
+- [MCP Servers](/docs/configuration/mcp-servers) — connect external tools
+- [Add a Custom Tool](/docs/guides/add-custom-tool) — register your own tools
+- [Permission Guard](/docs/core-concepts/permission-guard) — safety checks

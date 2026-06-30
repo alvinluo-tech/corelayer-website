@@ -1,0 +1,67 @@
+---
+title: Daemon
+description: The Node.js backend that powers CoreLayer's AI orchestration.
+icon: Server
+---
+
+The Daemon is a Node.js process that runs in the background, handling all AI orchestration, tool execution, and data management.
+
+## Architecture
+
+```text
+Tauri Desktop App (Rust)
+  └─ Daemon Supervisor (Rust)
+     └─ Node.js Daemon (Hono HTTP server)
+        ├─ Model Gateway
+        ├─ Tool Registry
+        ├─ Permission Guard
+        ├─ MCP Client Manager
+        └─ Database (SQLite / Supabase / PostgreSQL)
+```
+
+## Daemon Supervisor
+
+The Tauri app includes a Rust-based Daemon Supervisor that:
+
+- **Starts** the daemon process when the app launches
+- **Monitors** daemon health
+- **Restarts** the daemon if it crashes
+- **Stops** the daemon when the app closes
+
+## HTTP API
+
+The daemon exposes an HTTP API on `localhost:3001` (configurable via the `daemon.port` field in `config.json`). The Tauri frontend communicates with the daemon through this API via Tauri's IPC bridge.
+
+## Development Mode
+
+In development, the daemon runs with hot reload:
+
+```bash
+pnpm dev:daemon
+```
+
+This uses `tsx watch` to restart on file changes.
+
+## Production Mode
+
+In production builds, the daemon is packaged as a sidecar binary:
+
+```bash
+pnpm build:daemon:sidecar
+```
+
+The sidecar is bundled with the Tauri app and runs as a separate process.
+
+## Health Monitoring
+
+The Control Center shows daemon status:
+
+- **Healthy** — daemon is running and responsive
+- **Starting** — daemon is initializing
+- **Unhealthy** — daemon is not responding
+- **Stopped** — daemon was intentionally stopped
+
+## Next Steps
+
+- [System Overview](/docs/architecture/system-overview) — full architecture
+- [Build From Source](/docs/guides/build-from-source) — build the daemon

@@ -1,0 +1,91 @@
+---
+title: Storage
+description: "Configure data storage modes: local SQLite, Supabase, or PostgreSQL."
+icon: Database
+---
+
+CoreLayer supports three storage backends that can be hot-swapped at runtime.
+
+## Storage Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| **SQLite** | Local file database (default) | Personal use, offline-first |
+| **Supabase** | Cloud PostgreSQL with real-time sync | Multi-device sync |
+| **PostgreSQL** | Self-hosted PostgreSQL | Team/enterprise use |
+
+## SQLite (Default)
+
+SQLite is the default storage mode. Data is stored locally in a `.db` file:
+
+```json
+{
+  "storage": {
+    "mode": "sqlite",
+    "path": "~/.corelayer/data.db"
+  }
+}
+```
+
+No external dependencies required. Works fully offline.
+
+## Supabase
+
+Connect to Supabase for cloud sync:
+
+```json
+{
+  "storage": {
+    "mode": "supabase",
+    "url": "https://your-project.supabase.co",
+    "anonKey": "eyJ..."
+  }
+}
+```
+
+Set up Supabase:
+1. Create a project at [supabase.com](https://supabase.com)
+2. Run the CoreLayer migration scripts
+3. Add your project URL and anon key
+
+## PostgreSQL
+
+Connect to a self-hosted PostgreSQL instance:
+
+```json
+{
+  "storage": {
+    "mode": "postgres",
+    "connectionString": "postgresql://user:pass@localhost:5432/corelayer"
+  }
+}
+```
+
+## Hot-Switching
+
+You can switch storage modes at runtime from the Control Center:
+
+1. Open **Settings → Storage**
+2. Select the new mode
+3. Enter connection details
+4. Click **Switch**
+
+CoreLayer will migrate data between modes automatically.
+
+## Data Schema
+
+CoreLayer stores these main entities:
+
+- **tasks** — task management items
+- **articles** — reading list entries
+- **reviews** — daily/weekly review summaries
+- **conversations** — chat history
+- **messages** — individual messages
+- **tool_call_logs** — audit trail for tool execution
+- **model_profiles** — model provider configurations
+- **memories** — Jarvis long-term memory
+
+## Next Steps
+
+- [Permission Guard](/docs/core-concepts/permission-guard) — how data access is controlled
+- [Security Model](/docs/architecture/security-model) — storage security details

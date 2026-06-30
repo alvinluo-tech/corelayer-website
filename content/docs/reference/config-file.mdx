@@ -1,0 +1,92 @@
+---
+title: Config File
+description: CoreLayer configuration file reference.
+icon: Settings
+---
+
+CoreLayer uses a JSON configuration file for system-wide settings.
+
+## Location
+
+| Platform | Path |
+|----------|------|
+| Windows | `%APPDATA%/corelayer/config.json` |
+| macOS | `~/Library/Application Support/corelayer/config.json` |
+| Linux | `~/.config/corelayer/config.json` |
+
+## Full Reference
+
+```json
+{
+  "models": {
+    "providers": [
+      {
+        "name": "groq",
+        "type": "groq",
+        "apiKey": "${GROQ_API_KEY}",
+        "defaultModel": "llama-3.3-70b-versatile"
+      }
+    ]
+  },
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+        "env": {}
+      }
+    ]
+  },
+  "storage": {
+    "mode": "sqlite",
+    "path": "~/.corelayer/data.db"
+  },
+  "voice": {
+    "enabled": true,
+    "wakeWord": {
+      "enabled": true,
+      "keyword": "jarvis"
+    },
+    "asr": {
+      "provider": "web-speech",
+      "language": "en-US"
+    },
+    "tts": {
+      "provider": "mimo",
+      "streaming": true,
+      "sentenceLevel": true
+    }
+  },
+  "permissions": {
+    "defaultPolicy": "confirm",
+    "rules": [
+      {
+        "tool": "filesystem:read",
+        "policy": "allow"
+      }
+    ]
+  },
+  "daemon": {
+    "port": 3001
+  },
+  "runtime": {
+    "skills": {
+      "enabled": true
+    }
+  }
+}
+```
+
+## Environment Variables
+
+Use `${ENV_VAR_NAME}` syntax to reference environment variables in the config file.
+
+## Validation
+
+CoreLayer validates the config file on startup. Invalid configurations will show an error in the Control Center.
+
+## Next Steps
+
+- [CLI Commands](/docs/reference/cli-commands) — command-line interface
+- [API Endpoints](/docs/reference/api-endpoints) — daemon HTTP API

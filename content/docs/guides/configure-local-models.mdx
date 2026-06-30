@@ -1,0 +1,72 @@
+---
+title: Configure Local Models
+description: Set up Ollama for fully local AI model inference.
+icon: Laptop
+---
+
+Run AI models entirely on your machine using Ollama.
+
+## Install Ollama
+
+Download and install from [ollama.com](https://ollama.com).
+
+## Pull a Model
+
+```bash
+ollama pull llama3.2
+```
+
+Popular models for CoreLayer:
+
+| Model | Size | Use Case |
+|-------|------|----------|
+| `llama3.2` | 2-3GB | General purpose, fast |
+| `llama3.3:70b` | 40GB | Complex reasoning |
+| `qwen2.5:14b` | 9GB | Good balance of speed and capability |
+| `codellama:13b` | 7GB | Code generation |
+
+## Configure CoreLayer
+
+Add Ollama as a provider:
+
+```json
+{
+  "models": {
+    "providers": [
+      {
+        "name": "ollama",
+        "type": "ollama",
+        "endpoint": "http://localhost:11434",
+        "defaultModel": "llama3.2"
+      }
+    ]
+  }
+}
+```
+
+Or via the Control Center:
+
+1. Open **Settings → Models**
+2. Click **Add Provider**
+3. Select **Ollama**
+4. Set endpoint to `http://localhost:11434`
+5. Select your model
+
+## Verify
+
+Ask Jarvis a question and check that it responds using the local model:
+
+```text
+What model are you running on?
+```
+
+## Performance Tips
+
+- **GPU acceleration**: Ollama automatically uses GPU if available
+- **Model size**: Smaller models respond faster but are less capable
+- **Quantization**: Use quantized models (Q4, Q5) for better performance on limited hardware
+
+## Next Steps
+
+- [Model Providers](/docs/configuration/model-providers) — configure multiple providers
+- [Model Gateway](/docs/core-concepts/model-gateway) — understand routing

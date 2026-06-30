@@ -1,0 +1,123 @@
+---
+title: Build From Source
+description: Build CoreLayer from the source repository.
+icon: Hammer
+---
+
+This guide covers building CoreLayer from source for development or when pre-built binaries aren't available.
+
+## Prerequisites
+
+| Requirement | Version |
+|-------------|---------|
+| Node.js | >= 22 |
+| pnpm | >= 9 |
+| Rust | Latest stable |
+| Platform tools | See [Tauri prerequisites](https://tauri.app/start/prerequisites/) |
+
+### Platform-Specific Requirements
+
+**Windows:**
+- Microsoft Visual Studio C++ Build Tools
+- Windows SDK
+
+**macOS:**
+- Xcode Command Line Tools
+
+**Linux:**
+- Various system libraries (see Tauri docs)
+
+## Clone and Install
+
+```bash
+git clone https://github.com/alvinluo-tech/CoreLayer.git
+cd CoreLayer
+pnpm install
+```
+
+## Development Mode
+
+Run the full app in development mode with hot reload:
+
+```bash
+pnpm dev
+```
+
+This starts:
+- The daemon on port 3001
+- The Vite dev server for the frontend
+- The Tauri app with hot reload
+
+## Build for Production
+
+```bash
+pnpm build
+```
+
+This will:
+1. Build the daemon sidecar
+2. Build the Tauri app with production optimizations
+3. Output platform-specific installers
+
+## Build Individual Components
+
+### Daemon only
+
+```bash
+pnpm build:daemon
+```
+
+### Daemon sidecar (for packaging)
+
+```bash
+pnpm build:daemon:sidecar
+```
+
+### Frontend only (web mode)
+
+```bash
+pnpm dev:web
+```
+
+## Project Structure
+
+```text
+CoreLayer/
+├── frontend/              # Tauri + React frontend
+│   ├── src/               # React source
+│   └── src-tauri/         # Rust native code
+├── daemon/                # Node.js backend
+├── packages/              # Shared packages
+│   ├── types/             # TypeScript types
+│   ├── model-gateway/     # AI model routing
+│   ├── mcp-client/        # MCP connections
+│   ├── tool-registry/     # Tool management
+│   ├── permission-guard/  # Safety system
+│   ├── runtime-core/      # Runtime management
+│   ├── runtime-protocol/  # Protocol definitions
+│   └── execution-environment/ # Execution abstraction
+├── skills/                # Built-in skill definitions
+├── scripts/               # Build scripts
+└── supabase/              # Database migrations
+```
+
+## Troubleshooting
+
+**pnpm install fails:**
+- Ensure Node.js 22+ and pnpm 9+ are installed
+- Try `pnpm install --frozen-lockfile`
+
+**Tauri build fails:**
+- Verify Rust toolchain is installed: `rustc --version`
+- Check platform-specific prerequisites
+- See [Tauri troubleshooting](https://tauri.app/start/troubleshooting/)
+
+**Daemon won't start:**
+- Check port 3001 is not in use
+- Verify database permissions
+- Check daemon logs for errors
+
+## Next Steps
+
+- [System Overview](/docs/architecture/system-overview) — understand the architecture
+- [Daemon](/docs/core-concepts/daemon) — daemon details

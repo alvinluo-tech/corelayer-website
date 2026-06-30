@@ -1,0 +1,85 @@
+---
+title: Skills
+description: Custom scripted workflows that extend Jarvis capabilities.
+icon: Sparkles
+---
+
+Skills are reusable workflows that extend what Jarvis can do. They combine multiple steps — tool calls, conditional logic, and structured output — into named operations that Jarvis can invoke automatically or on request.
+
+## What Are Skills?
+
+A skill is a `SKILL.md` file that defines a multi-step workflow. Unlike individual tool calls, skills can:
+
+- Chain multiple tools together
+- Include conditional logic
+- Maintain state across steps
+- Present results in a structured format
+
+## Using Skills
+
+Jarvis automatically discovers available skills and can invoke them when appropriate. You can also explicitly request a skill:
+
+```text
+Run the code-review skill on the current changes
+```
+
+## Skill Definition Format
+
+Each skill is a Markdown file (`SKILL.md`) with structured sections. Here's a minimal example:
+
+```markdown
+# My Skill
+
+Short description of what this skill does.
+
+## What This Skill Does
+
+Longer explanation for the AI agent executing this skill.
+
+## Steps
+
+### Step 1: Gather context
+Read the current project state and identify relevant files.
+
+### Step 2: Execute action
+Call the appropriate tools with the gathered context.
+
+### Step 3: Report results
+Summarize what was done and any follow-up actions.
+```
+
+Skills live in the `skills/` directory. Each skill gets its own folder:
+
+```text
+skills/
+└── corelayer-mcp-adapter/
+    └── SKILL.md
+```
+
+## Skill Sources
+
+Skills can come from:
+
+- **Built-in** — shipped with CoreLayer (e.g., `corelayer-mcp-adapter`)
+- **Community** — shared by other users
+- **Custom** — written by you
+
+### Built-in Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `corelayer-mcp-adapter` | Guides adaptation of any project into a CoreLayer-compatible MCP server |
+
+## Writing a Custom Skill
+
+1. Create a folder under `skills/`: `skills/my-skill/`
+2. Add a `SKILL.md` file with your workflow definition
+3. Restart CoreLayer — Jarvis will discover the new skill automatically
+
+The `corelayer-mcp-adapter` skill is a good reference for how to structure multi-step workflows with clear instructions, checklists, and examples.
+
+## Next Steps
+
+- [Tool Registry](/docs/core-concepts/tool-registry) — how skills are registered
+- [Add a Custom Tool](/docs/guides/add-custom-tool) — create your own extensions
+- [Connect an MCP App](/docs/guides/connect-mcp-app) — the MCP adapter skill in action

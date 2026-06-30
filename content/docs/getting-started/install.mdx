@@ -1,0 +1,64 @@
+---
+title: Install
+description: Download and install CoreLayer on Windows, macOS, or Linux.
+icon: Download
+---
+
+## Download
+
+Visit the [Download page](/download) to get the latest release for your platform.
+
+| Platform | Status |
+|----------|--------|
+| Windows | Available |
+| macOS | Available |
+| Linux | Planned |
+
+## Install from Source
+
+If you prefer to build from source or no binary is available for your platform:
+
+### Prerequisites
+
+- **Node.js** >= 22
+- **pnpm** >= 9
+- **Rust** (for Tauri build)
+- Platform-specific Tauri requirements ([Tauri prerequisites](https://tauri.app/start/prerequisites/))
+
+### Build Steps
+
+```bash
+git clone https://github.com/alvinluo-tech/CoreLayer.git
+cd CoreLayer
+pnpm install
+pnpm build
+```
+
+The build output will be in `frontend/src-tauri/target/release/`.
+
+### Development Mode
+
+To run in development mode with hot reload:
+
+```bash
+pnpm dev
+```
+
+This starts both the daemon and the Tauri frontend concurrently.
+
+## After Installing
+
+1. **Open Control Center** — launch the CoreLayer desktop app
+2. **Configure a model provider** — add your API key for MiMo, Groq, OpenRouter, or a local model
+3. **Add an MCP server** — connect your first external tool
+4. **Review permissions** — understand the permission guard before enabling tool execution
+5. **Try your first command** — use the command palette (Alt+Space) or voice
+
+## Troubleshooting
+
+If the app fails to start:
+
+- Check that Node.js 22+ and pnpm 9+ are installed
+- Verify platform-specific Tauri prerequisites are met
+- Check the daemon logs in the Control Center
+- See [Troubleshooting](/docs/reference/troubleshooting) for common issues

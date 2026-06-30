@@ -1,0 +1,93 @@
+---
+title: MCP Servers
+description: Configure Model Context Protocol server connections.
+icon: Plug
+---
+
+CoreLayer connects to external tools and data sources through MCP servers. Each server exposes tools that Jarvis can call during conversations, subject to the Permission Guard.
+
+## Server Configuration
+
+Each MCP server is defined by a name, command, and optional arguments:
+
+```json
+{
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+        "env": {}
+      },
+      {
+        "name": "github",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": {
+          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        }
+      }
+    ]
+  }
+}
+```
+
+## Server Types
+
+### Stdio Servers
+
+Most MCP servers use stdio (standard input/output) for communication:
+
+```json
+{
+  "name": "my-server",
+  "command": "node",
+  "args": ["./my-mcp-server.js"]
+}
+```
+
+### SSE Servers
+
+For remote servers using Server-Sent Events:
+
+```json
+{
+  "name": "remote-server",
+  "url": "https://my-server.example.com/mcp"
+}
+```
+
+## Managing Servers
+
+### Via Control Center
+
+- **Add** — Settings → MCP → Add Server
+- **Remove** — click the delete button on a server card
+- **Restart** — click the restart button to reconnect
+- **View tools** — see all tools exposed by a connected server
+
+### Connection Status
+
+| Status | Meaning |
+|--------|---------|
+| Connected | Server is running and tools are available |
+| Connecting | Server is starting up |
+| Disconnected | Server was stopped or crashed |
+| Error | Server failed to start — check logs |
+
+## Tool Discovery
+
+When an MCP server connects, CoreLayer automatically:
+
+1. Discovers all tools exposed by the server
+2. Registers them in the Tool Registry
+3. Makes them available to Jarvis for tool calling
+
+Tools from MCP servers are treated the same as native tools — they go through the Permission Guard before execution.
+
+## Next Steps
+
+- [First MCP Server](/docs/getting-started/first-mcp-server) — basic setup guide
+- [Tool Registry](/docs/core-concepts/tool-registry) — how tools are managed
+- [Connect an MCP App](/docs/guides/connect-mcp-app) — step-by-step walkthrough

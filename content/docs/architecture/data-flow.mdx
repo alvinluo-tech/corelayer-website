@@ -1,0 +1,93 @@
+---
+title: Data Flow
+description: How requests flow through CoreLayer from user input to response.
+icon: ArrowRightLeft
+---
+
+This page traces the complete data flow for common operations in CoreLayer.
+
+## Chat Message Flow
+
+```text
+1. User types message in chat panel
+2. Frontend sends via Tauri IPC
+3. Rust backend proxies to daemon HTTP API
+4. Daemon receives at /api/chat
+5. Jarvis assembles context:
+   - Conversation history
+   - User memory
+   - Available tools
+6. Model Gateway selects provider
+7. Request sent to AI provider (streaming)
+8. Response streams back:
+   - Text chunks → frontend
+   - Tool calls → Permission Guard
+9. If tool call:
+   a. Permission Guard checks risk
+   b. If approval needed → pause, show panel
+   c. User approves → execute tool
+   d. Result sent back to model
+   e. Model continues response
+10. Final response rendered in chat
+```
+
+## Tool Execution Flow
+
+```text
+Tool call requested
+  → Tool Registry resolves tool
+  → Permission Guard classifies risk
+  → Policy check:
+    - allow → execute immediately
+    - confirm → pause for approval
+    - deny → block and log
+  → Execute tool (MCP/native/REST)
+  → Return result to model
+  → Log to audit trail
+```
+
+## MCP Connection Flow
+
+```text
+1. Daemon reads MCP server config
+2. Spawns child process (stdio) or connects via SSE
+3. MCP handshake (initialize)
+4. Server reports available tools
+5. Tool Registry registers tools
+6. Tools available to Jarvis
+7. On disconnect → attempt reconnect
+```
+
+## Data Storage Flow
+
+```text
+Write operation:
+  → Storage layer receives write request
+  → Validates data schema
+  → Writes to active backend (SQLite/Supabase/PostgreSQL)
+  → Returns confirmation
+
+Read operation:
+  → Storage layer receives read request
+  → Queries active backend
+  → Returns results
+```
+
+## Voice Pipeline Flow
+
+```text
+Wake word detected (Picovoice)
+  → Start listening
+  → Audio stream to ASR provider
+  → Transcription returned
+  → Text sent to chat pipeline (same as typed input)
+  → Response generated
+  → TTS streams audio back
+  → Audio plays through system output
+  → Barge-in: if user speaks during playback → restart from ASR
+```
+
+## Next Steps
+
+- [System Overview](/docs/architecture/system-overview) — architecture overview
+- [Security Model](/docs/architecture/security-model) — how data is protected

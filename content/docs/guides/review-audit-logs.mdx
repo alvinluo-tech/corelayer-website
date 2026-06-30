@@ -1,0 +1,69 @@
+---
+title: Review Audit Logs
+description: Understand and work with the Permission Guard audit trail.
+icon: FileText
+---
+
+Every tool execution in CoreLayer is logged. This guide shows how to review and work with audit logs.
+
+## Accessing Audit Logs
+
+Open **Control Center → Permissions → Audit Log**.
+
+## Log Entry Format
+
+Each entry contains:
+
+```text
+[2024-01-15 14:32:01] tool-name
+  Source: mcp | native | skill | rest
+  Risk: read | write | external | destructive
+  Policy: allow | confirm | deny
+  Decision: approved | denied | auto-allowed
+  Parameters: { ... }
+  Result: success | error
+```
+
+## Filtering Logs
+
+Filter by:
+
+- **Date range** — specific time period
+- **Tool name** — find specific tool calls
+- **Risk level** — see only write/destructive operations
+- **Decision** — find denied or approved calls
+
+## Common Use Cases
+
+### Security Review
+
+Check what external API calls were made:
+
+1. Filter by **Risk: external**
+2. Review the tool names and parameters
+3. Verify all calls were expected
+
+### Debugging
+
+Find why a tool call failed:
+
+1. Filter by **Result: error**
+2. Check the error message in the log entry
+3. Verify the tool parameters were correct
+
+### Compliance
+
+Generate a report of all data modifications:
+
+1. Filter by **Risk: write** and **Risk: destructive**
+2. Export the log entries
+3. Review all data changes
+
+## Log Retention
+
+Audit logs are stored locally in the configured database and persist across sessions. By default, logs are kept indefinitely. To limit disk usage, set `permissions.auditRetentionDays` in `config.json` — entries older than the specified number of days are automatically pruned on startup.
+
+## Next Steps
+
+- [Permissions](/docs/configuration/permissions) — configure policies
+- [Permission Guard](/docs/core-concepts/permission-guard) — safety model details

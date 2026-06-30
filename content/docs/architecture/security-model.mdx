@@ -1,0 +1,118 @@
+---
+title: Security Model
+description: How CoreLayer protects your data and controls tool execution.
+icon: Lock
+---
+
+CoreLayer is designed with a local-first, permission-controlled security model.
+
+## Core Principles
+
+1. **Local-first** — data stays on your machine by default
+2. **Permission-controlled** — tool execution requires explicit policies
+3. **Auditable** — all actions are logged
+4. **Visible** — nothing happens without you knowing
+
+## Data Security
+
+### Local Storage
+
+By default, all data is stored in a local SQLite database:
+
+- Conversations
+- Tasks and reading lists
+- Audit logs
+- Model configurations
+- User preferences
+
+The database file is stored in the user's application data directory and is not transmitted anywhere.
+
+### Optional Cloud Sync
+
+When Supabase is enabled:
+
+- Data is encrypted in transit (HTTPS)
+- Supabase handles encryption at rest
+- You control the Supabase project and its access policies
+
+### API Keys
+
+- Stored in the local config file
+- Can reference environment variables
+- Never transmitted to CoreLayer's own servers
+- Only sent to the configured AI provider
+
+## Tool Execution Security
+
+### Permission Guard
+
+Every tool call goes through the Permission Guard:
+
+```text
+Tool call → Risk classification → Policy check → Execute or block
+```
+
+### Risk Levels
+
+| Level | Auto-Execute? | Examples |
+|-------|---------------|----------|
+| Read | Yes | List files, read data |
+| Write | No (confirm) | Create/modify files |
+| External | No (confirm) | API calls |
+| Destructive | No (confirm + warning) | Delete data |
+| Credential-sensitive | No (block) | Access tokens |
+
+### Audit Trail
+
+Every tool execution is logged with:
+
+- Timestamp
+- Tool name and source
+- Parameters (sanitized)
+- Risk level
+- User decision
+- Execution result
+
+## Network Security
+
+### Localhost Only
+
+The daemon API is only accessible from localhost:
+
+- Not exposed to the network
+- No remote access by default
+- Tauri IPC is local only
+
+### External Connections
+
+CoreLayer only connects to:
+
+- **AI providers** you configure (Groq, OpenRouter, etc.)
+- **MCP servers** you add
+- **Supabase** if you enable cloud sync
+
+No telemetry, analytics, or phone-home connections.
+
+## Tauri Security
+
+Tauri provides additional security:
+
+- **Sandboxed webview** — frontend can't access system directly
+- **IPC whitelist** — only registered commands are allowed
+- **Process isolation** — daemon runs as separate process
+
+## Threat Model
+
+| Threat | Mitigation |
+|--------|-----------|
+| Malicious tool call | Permission Guard + audit log |
+| Data exfiltration | Local-first storage, no telemetry |
+| Unauthorized access | Localhost-only API |
+| Model prompt injection | Tool parameter validation, risk classification, Permission Guard confirmation for non-read calls |
+| Compromised MCP server | Permission Guard blocks risky calls |
+
+## Next Steps
+
+- [Permission Guard](/docs/core-concepts/permission-guard) — detailed safety system
+- [Permissions configuration](/docs/configuration/permissions) — configure policies
+- [Runtime Boundaries](/docs/architecture/runtime-boundaries) — component isolation

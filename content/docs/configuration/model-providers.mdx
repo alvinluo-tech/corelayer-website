@@ -1,0 +1,85 @@
+---
+title: Model Providers
+description: Configure AI model providers for Jarvis routing.
+icon: Cpu
+---
+
+CoreLayer's Model Gateway routes requests across multiple AI providers. You can configure one or more providers and let Jarvis select the best model for each task.
+
+## Supported Providers
+
+| Provider | Type | Models |
+|----------|------|--------|
+| **Groq** | Cloud (fast inference) | Llama 3.3, Mixtral, Gemma |
+| **OpenRouter** | Multi-provider gateway | MiMo, Claude, GPT-4, Llama, Mistral |
+| **Ollama** | Local | Any Ollama-compatible model |
+| **OpenAI-compatible** | Any | Any provider with OpenAI-compatible API |
+
+## Configuration
+
+### Via Control Center
+
+1. Open **Settings → Models**
+2. Click **Add Provider**
+3. Select provider type
+4. Enter API key and model preferences
+
+### Via Config File
+
+```json
+{
+  "models": {
+    "providers": [
+      {
+        "name": "groq",
+        "type": "groq",
+        "apiKey": "YOUR_GROQ_API_KEY",
+        "defaultModel": "llama-3.3-70b-versatile"
+      },
+      {
+        "name": "openrouter",
+        "type": "openrouter",
+        "apiKey": "YOUR_OPENROUTER_API_KEY",
+        "defaultModel": "mimo/mimo-v2.5"
+      },
+      {
+        "name": "ollama",
+        "type": "ollama",
+        "endpoint": "http://localhost:11434",
+        "defaultModel": "llama3.2"
+      }
+    ]
+  }
+}
+```
+
+## Model Routing
+
+When multiple providers are configured, the Model Gateway selects based on:
+
+- **Task complexity** — complex reasoning routes to more capable models
+- **Latency requirements** — time-sensitive requests prefer Groq or local models
+- **Cost optimization** — routine tasks use cheaper providers
+- **Availability** — fallback if a provider is down
+
+## Environment Variables
+
+You can use environment variables instead of hardcoding API keys:
+
+```bash
+GROQ_API_KEY=your_groq_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+Reference them in config:
+
+```json
+{
+  "apiKey": "${GROQ_API_KEY}"
+}
+```
+
+## Next Steps
+
+- [Model Gateway](/docs/core-concepts/model-gateway) — understand routing logic
+- [Configure Local Models](/docs/guides/configure-local-models) — set up Ollama

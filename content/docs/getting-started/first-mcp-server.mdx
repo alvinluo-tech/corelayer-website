@@ -1,0 +1,89 @@
+---
+title: First MCP Server
+description: Connect your first MCP (Model Context Protocol) server to CoreLayer.
+icon: Plug
+---
+
+The Model Context Protocol (MCP) is how CoreLayer connects to external tools and data sources. This guide walks you through connecting your first MCP server.
+
+## What is MCP?
+
+MCP is an open protocol that lets AI applications connect to external tools and data sources through a standardized interface. An MCP server exposes tools that Jarvis can discover and call.
+
+## Adding an MCP Server
+
+### Via the Control Center
+
+1. Open **Settings → MCP**
+2. Click **Add Server**
+3. Enter the server configuration:
+
+```json
+{
+  "name": "my-server",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+}
+```
+
+### Via the Config File
+
+Add to your CoreLayer config:
+
+```json
+{
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+      }
+    ]
+  }
+}
+```
+
+## Popular MCP Servers
+
+| Server | Purpose | Command |
+|--------|---------|---------|
+| `@modelcontextprotocol/server-filesystem` | File system access | `npx -y @modelcontextprotocol/server-filesystem /path` |
+| `@modelcontextprotocol/server-github` | GitHub API | `npx -y @modelcontextprotocol/server-github` |
+| `@modelcontextprotocol/server-brave-search` | Web search | `npx -y @modelcontextprotocol/server-brave-search` |
+| `@modelcontextprotocol/server-memory` | Knowledge graph | `npx -y @modelcontextprotocol/server-memory` |
+
+## Verifying the Connection
+
+After adding a server:
+
+1. Go to **Control Center → MCP** to see connected servers
+2. Check that the server status shows **Connected**
+3. Try a command that uses the server's tools
+
+```text
+Read the README.md file in my workspace
+```
+
+If the MCP server is connected, Jarvis will use the filesystem tool to read the file.
+
+## Troubleshooting MCP
+
+**Server won't connect:**
+- Check that the command and args are correct
+- Verify the server package is installed (`npx -y` auto-installs)
+- Check the daemon logs for connection errors
+
+**Tools not appearing:**
+- Some servers require authentication — check the server's documentation
+- Restart the MCP connection from the Control Center
+
+**Permission denied:**
+- The Permission Guard may block certain tool calls — check the approval queue
+- See [Permissions](/docs/configuration/permissions) for details
+
+## Next Steps
+
+- [MCP Servers configuration](/docs/configuration/mcp-servers) — advanced MCP setup
+- [Tool Registry](/docs/core-concepts/tool-registry) — how tools are discovered and routed
+- [Connect an MCP App](/docs/guides/connect-mcp-app) — step-by-step guide

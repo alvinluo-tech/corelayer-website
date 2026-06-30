@@ -1,0 +1,82 @@
+---
+title: Permissions
+description: Configure the permission guard for tool execution.
+icon: Shield
+---
+
+The Permission Guard controls which tool calls require approval, which are auto-allowed, and which are blocked.
+
+## Permission Levels
+
+| Level | Behavior |
+|-------|----------|
+| **Read** | Auto-allowed (reading files, listing data) |
+| **Write** | Requires approval (writing files, modifying data) |
+| **External** | Requires approval (API calls, network requests) |
+| **Destructive** | Requires approval with warning (deleting data) |
+| **Credential-sensitive** | Always blocked unless explicitly allowed |
+
+## Configuration
+
+```json
+{
+  "permissions": {
+    "defaultPolicy": "confirm",
+    "rules": [
+      {
+        "tool": "filesystem:read",
+        "policy": "allow"
+      },
+      {
+        "tool": "filesystem:write",
+        "policy": "confirm"
+      },
+      {
+        "tool": "github:*",
+        "policy": "confirm"
+      },
+      {
+        "tool": "shell:execute",
+        "policy": "deny"
+      }
+    ]
+  }
+}
+```
+
+## Policies
+
+| Policy | Effect |
+|--------|--------|
+| `allow` | Execute without asking |
+| `confirm` | Pause and ask for user approval |
+| `deny` | Block execution entirely |
+
+## Approval Flow
+
+When a tool call requires confirmation:
+
+1. Jarvis explains what it wants to do
+2. The approval panel shows the tool name, parameters, and risk level
+3. You can **Approve**, **Deny**, or **Approve Always** (for this tool)
+4. All decisions are logged in the audit trail
+
+## Audit Logs
+
+Every tool execution is logged:
+
+```text
+[2026-06-15 14:32:01] filesystem:write /workspace/README.md
+  Risk: write
+  Policy: confirm
+  Decision: approved
+  User: manual approval
+```
+
+View audit logs in **Control Center → Permissions → Audit Log**.
+
+## Next Steps
+
+- [Permission Guard](/docs/core-concepts/permission-guard) — deep dive into the safety model
+- [Review Audit Logs](/docs/guides/review-audit-logs) — working with the audit trail
+- [Security Model](/docs/architecture/security-model) — architecture details

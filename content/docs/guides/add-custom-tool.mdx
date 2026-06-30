@@ -1,0 +1,109 @@
+---
+title: Add a Custom Tool
+description: Register your own tools in the Tool Registry.
+icon: Plus
+---
+
+You can extend Jarvis by adding custom tools to the Tool Registry.
+
+## Option 1: MCP Server
+
+The recommended way to add tools is through an MCP server. Create a simple MCP server that exposes your tools:
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
+
+const server = new McpServer({
+  name: "my-tools",
+  version: "1.0.0",
+});
+
+server.tool(
+  "my-tool",
+  "Description of what this tool does",
+  {
+    param1: { type: "string", description: "First parameter" },
+  },
+  async ({ param1 }) => {
+    // Tool implementation
+    return {
+      content: [{ type: "text", text: `Result: ${param1}` }],
+    };
+  }
+);
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+Then add it to CoreLayer:
+
+```json
+{
+  "name": "my-tools",
+  "command": "node",
+  "args": ["./my-mcp-server.js"]
+}
+```
+
+## Option 2: REST Adapter
+
+For tools that are already available as REST APIs, you can register them as REST adapters instead of wrapping them in an MCP server.
+
+Add a REST adapter entry to your CoreLayer config:
+
+```json
+{
+  "name": "weather-api",
+  "type": "rest",
+  "baseUrl": "https://api.weather.example.com/v1",
+  "auth": {
+    "type": "bearer",
+    "token": "${WEATHER_API_KEY}"
+  },
+  "tools": [
+    {
+      "name": "get-forecast",
+      "description": "Get the weather forecast for a location",
+      "method": "GET",
+      "path": "/forecast",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name or coordinates"
+          }
+        },
+        "required": ["location"]
+      }
+    }
+  ]
+}
+```
+
+The REST adapter automatically converts each tool entry into a callable tool in the Tool Registry. Jarvis sends HTTP requests to the configured endpoint and returns the response as the tool result.
+
+> REST adapters are best for existing APIs you don't want to wrap. For new tools, prefer MCP servers — they support streaming, richer error handling, and are easier to test locally.
+
+## Tool Metadata
+
+When registering a tool, provide:
+
+- **Name** — unique, descriptive identifier
+- **Description** — clear explanation of what the tool does
+- **Parameters** — JSON Schema for inputs
+- **Risk level** — helps the Permission Guard classify the tool
+
+## Best Practices
+
+- Use descriptive names: `filesystem:read` not `fs1`
+- Write clear descriptions — Jarvis uses these to decide when to call the tool
+- Define parameter schemas strictly — prevents invalid calls
+- Set appropriate risk levels — don't mark everything as `read`
+
+## Next Steps
+
+- [Tool Registry](/docs/core-concepts/tool-registry) — how tools are managed
+- [Permissions](/docs/configuration/permissions) — configure tool policies

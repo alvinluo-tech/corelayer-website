@@ -1,0 +1,48 @@
+---
+title: CoreLayer Documentation
+description: Start here to install CoreLayer, configure a model provider, connect your first MCP server, and understand the permission model before giving Jarvis access to tools.
+---
+
+Welcome to the CoreLayer documentation. CoreLayer is a local-first desktop AI control layer that connects your personal apps, tools, models, and MCP workflows through a permission-guarded command center.
+
+## Quick Links
+
+<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-6">
+  <a href="/docs/getting-started/install" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **Install CoreLayer**
+    Get the desktop app running on your system.
+  </a>
+  <a href="/docs/getting-started/quickstart" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **Quickstart**
+    Connect your first model and MCP server in 5 minutes.
+  </a>
+  <a href="/docs/core-concepts/permission-guard" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **Permission Guard**
+    Understand how tool execution stays safe and auditable.
+  </a>
+  <a href="/docs/architecture/system-overview" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **Architecture**
+    Learn how the Tauri shell, daemon, and packages work together.
+  </a>
+</div>
+
+## What is CoreLayer?
+
+CoreLayer sits between you and your personal app ecosystem. Instead of a chatbot trapped in a browser tab, it operates as a desktop control layer:
+
+- **Voice-native** — wake word, streaming ASR/TTS, barge-in interruption
+- **MCP-first** — connect external tool servers through the Model Context Protocol
+- **Tool-aware** — unified registry for native modules, MCP tools, skills, and REST adapters
+- **Permission-guarded** — risky actions are classified, paused for approval, and logged
+- **Local-first** — SQLite on your machine, optional Supabase cloud sync
+
+## Documentation Sections
+
+| Section | What you'll find |
+|---------|-----------------|
+| [Getting Started](/docs/getting-started/what-is-corelayer) | Install, quickstart, first MCP connection |
+| [Configuration](/docs/configuration/model-providers) | Model providers, MCP servers, storage, voice, permissions |
+| [Core Concepts](/docs/core-concepts/jarvis) | Jarvis, Control Center, Model Gateway, Tool Registry, Permission Guard |
+| [Guides](/docs/guides/connect-mcp-app) | Step-by-step guides for common workflows |
+| [Reference](/docs/reference/config-file) | Config file, CLI commands, API endpoints |
+| [Architecture](/docs/architecture/system-overview) | System design, runtime boundaries, data flow |

@@ -1,0 +1,62 @@
+---
+title: Connect an MCP App
+description: Step-by-step guide to connecting an external MCP application.
+icon: Link
+---
+
+This guide walks you through connecting an external application to CoreLayer via MCP.
+
+## Prerequisites
+
+- CoreLayer installed and running
+- Node.js 22+ (for npx-based MCP servers)
+
+## Step 1: Choose an MCP Server
+
+Popular options:
+
+| Server | Purpose |
+|--------|---------|
+| `@modelcontextprotocol/server-filesystem` | File system access |
+| `@modelcontextprotocol/server-github` | GitHub API |
+| `@modelcontextprotocol/server-brave-search` | Web search |
+| `@modelcontextprotocol/server-memory` | Knowledge graph |
+
+## Step 2: Add the Server
+
+Open **Control Center → Settings → MCP → Add Server**:
+
+```json
+{
+  "name": "github",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": {
+    "GITHUB_TOKEN": "ghp_..."
+  }
+}
+```
+
+## Step 3: Verify Connection
+
+Check that the server shows **Connected** status in the Control Center.
+
+## Step 4: Test a Tool
+
+Ask Jarvis to use the new tool:
+
+```text
+List my recent GitHub repositories
+```
+
+Jarvis will discover the GitHub tools from the MCP server and use them to fulfill your request.
+
+## Step 5: Review Permissions
+
+The first time a new tool is used, the Permission Guard will ask for approval. Review the tool call details and approve if the action is expected.
+
+## Troubleshooting
+
+- **Server won't start**: Check that the command and args are correct
+- **Authentication errors**: Verify environment variables are set
+- **Tools not found**: Restart the MCP connection from the Control Center

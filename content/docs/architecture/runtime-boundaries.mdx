@@ -1,0 +1,67 @@
+---
+title: Runtime Boundaries
+description: How CoreLayer isolates components for safety and reliability.
+icon: Box
+---
+
+CoreLayer enforces strict boundaries between components to ensure safety, reliability, and maintainability.
+
+## Boundary Model
+
+```text
+Frontend (Browser/Webview)
+  ║ Tauri IPC (typed, serialized)
+  ╚═► Rust Backend
+      ║ HTTP (localhost only)
+      ╚═► Node.js Daemon
+          ║ SDK interfaces
+          ╚═► Shared Packages
+```
+
+Each boundary enforces:
+
+- **Type safety** — typed interfaces between layers
+- **Isolation** — components can't directly access each other's internals
+- **Communication protocol** — well-defined APIs only
+
+## Frontend ↔ Rust
+
+Communication uses Tauri's IPC mechanism:
+
+- Commands are typed (TypeScript ↔ Rust)
+- Serializes to JSON
+- Async by default
+
+## Rust ↔ Daemon
+
+Communication uses HTTP:
+
+- Localhost only (not exposed to network)
+- RESTful endpoints
+- Streaming responses (SSE) for chat
+
+## Daemon ↔ Packages
+
+Communication uses TypeScript imports:
+
+- Direct function calls
+- Shared type definitions
+- Package boundaries enforced by module system
+
+## Daemon ↔ External Services
+
+- **AI Providers** — HTTPS to cloud APIs
+- **MCP Servers** — stdio or SSE protocol
+- **Databases** — native drivers (better-sqlite3, pg)
+
+## Why Boundaries Matter
+
+- **Security** — compromised frontend can't directly access database
+- **Reliability** — daemon crash doesn't take down the frontend
+- **Testability** — each layer can be tested independently
+- **Replaceability** — swap storage or model providers without changing other layers
+
+## Next Steps
+
+- [System Overview](/docs/architecture/system-overview) — full architecture
+- [Security Model](/docs/architecture/security-model) — safety details

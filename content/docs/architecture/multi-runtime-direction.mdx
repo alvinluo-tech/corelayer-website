@@ -1,0 +1,81 @@
+---
+title: Multi-Runtime Direction
+description: The long-term architecture vision for CoreLayer.
+icon: Compass
+---
+
+The current single TypeScript daemon is a transition stage. The long-term target is a multi-runtime architecture supervised by the Tauri/Rust core.
+
+## Current Architecture
+
+```text
+Tauri Desktop App
+  └─ Single Node.js Daemon
+     └─ All services in one process
+```
+
+This works well for the current scope but has limitations:
+
+- Single point of failure
+- All services share the same process
+- TypeScript has inherent performance limits for some workloads
+
+## Target Architecture
+
+```text
+Tauri/Rust Core
+  ├─ Agent Runtime (TypeScript)
+  ├─ Tool Runtime (TypeScript)
+  ├─ Coding Runtime (TypeScript)
+  ├─ Voice Runtime (TypeScript)
+  ├─ Memory Runtime (TypeScript)
+  ├─ Scheduler Runtime (TypeScript)
+  └─ Computer Control Runtime (Rust)
+```
+
+Each runtime:
+
+- Runs as a managed subprocess
+- Communicates through the Runtime Protocol
+- Can be restarted independently
+- Has its own resource limits
+
+## Runtime Protocol
+
+The `@jarvis/runtime-protocol` package defines the communication contract between the Tauri core and managed runtimes:
+
+- **Lifecycle** — start, stop, restart, health check
+- **Messaging** — typed request/response
+- **Events** — runtime-to-core notifications
+- **Resource limits** — memory, CPU, time constraints
+
+## Packages Already in Place
+
+| Package | Status | Purpose |
+|---------|--------|---------|
+| `@jarvis/runtime-core` | Active | Runtime management core |
+| `@jarvis/runtime-protocol` | Active | Protocol definitions |
+| `@jarvis/execution-environment` | New | Execution abstraction |
+
+## Migration Path
+
+The migration is incremental:
+
+1. **Phase 1** (current) — single daemon with package boundaries
+2. **Phase 2** — extract voice pipeline into its own runtime
+3. **Phase 3** — extract tool execution into its own runtime
+4. **Phase 4** — full multi-runtime with Rust core supervision
+
+Each phase is backward-compatible. The frontend doesn't change — it still talks to the same HTTP API.
+
+## Why Multi-Runtime?
+
+- **Reliability** — a crash in one runtime doesn't affect others
+- **Performance** — Rust for performance-critical paths
+- **Scalability** — runtimes can be scaled independently
+- **Flexibility** — mix TypeScript and Rust as appropriate
+
+## Next Steps
+
+- [System Overview](/docs/architecture/system-overview) — current architecture
+- [Runtime Boundaries](/docs/architecture/runtime-boundaries) — current isolation model

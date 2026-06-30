@@ -1,0 +1,90 @@
+---
+title: Voice
+description: "Configure the voice pipeline: wake word, ASR, TTS, and interruption."
+icon: Mic
+---
+
+CoreLayer includes a voice pipeline that lets you interact with Jarvis through speech.
+
+## Voice Pipeline Overview
+
+```text
+Wake Word Detection
+  → Speech Recognition (ASR)
+  → Intent Processing (LLM)
+  → Text-to-Speech (TTS)
+  → Audio Output
+
+  ↕ Barge-in interruption at any point
+```
+
+## Configuration
+
+```json
+{
+  "voice": {
+    "enabled": true,
+    "wakeWord": {
+      "enabled": true,
+      "keyword": "jarvis"
+    },
+    "asr": {
+      "provider": "web-speech",
+      "language": "en-US"
+    },
+    "tts": {
+      "provider": "mimo",
+      "streaming": true,
+      "sentenceLevel": true
+    }
+  }
+}
+```
+
+## Wake Word
+
+Uses Picovoice Porcupine for wake word detection:
+
+- Runs locally in the browser/webview
+- Low CPU usage when idle
+- Configurable keyword (default: "jarvis")
+
+## Speech Recognition (ASR)
+
+Two providers available:
+
+| Provider | Type | Quality |
+|----------|------|---------|
+| **Web Speech API** | Browser-native | Good, no API key needed |
+| **Groq Whisper** | Cloud | High accuracy, requires API key |
+
+## Text-to-Speech (TTS)
+
+| Provider | Type | Features |
+|----------|------|----------|
+| **MiMo TTS** (`mimo`) | Cloud | Sentence-level streaming, natural voice |
+
+MiMo TTS is a cloud-based text-to-speech service that supports sentence-level streaming — it starts speaking each sentence as soon as it's generated, rather than waiting for the full response. This reduces perceived latency significantly.
+
+Streaming TTS speaks responses as they're generated, reducing perceived latency.
+
+## Barge-in Interruption
+
+When enabled, you can interrupt Jarvis mid-response by speaking. The pipeline will:
+
+1. Stop the current TTS playback
+2. Process your new input
+3. Respond to the interruption
+
+## Voice Overlay
+
+When voice is active, a floating overlay appears showing:
+
+- Current state (listening, processing, speaking)
+- Waveform visualization
+- Transcription text
+
+## Next Steps
+
+- [Enable Voice Workflow](/docs/guides/enable-voice) — step-by-step setup
+- [Core Concepts: Jarvis](/docs/core-concepts/jarvis) — how voice integrates with the assistant

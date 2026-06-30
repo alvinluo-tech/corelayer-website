@@ -1,0 +1,95 @@
+---
+title: System Overview
+description: "CoreLayer architecture: three-layer proxy model."
+icon: Layers
+---
+
+CoreLayer uses a three-layer proxy model that separates the user interface, business logic, and data access.
+
+## Architecture Diagram
+
+```text
+┌─────────────────────────────────────────────┐
+│              Tauri Desktop App              │
+│  ┌───────────────────────────────────────┐  │
+│  │     React 19 + Vite + Tailwind 4     │  │
+│  │         (Frontend UI Layer)           │  │
+│  └──────────────┬────────────────────────┘  │
+│                 │ Tauri IPC                  │
+│  ┌──────────────┴────────────────────────┐  │
+│  │      Rust Backend (lib.rs)            │  │
+│  │   Daemon Supervisor + HTTP Proxy      │  │
+│  └──────────────┬────────────────────────┘  │
+└─────────────────┼───────────────────────────┘
+                  │ HTTP
+┌─────────────────┴───────────────────────────┐
+│          Node.js Daemon (Hono)              │
+│  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
+│  │  Model   │ │   Tool   │ │ Permission  │ │
+│  │ Gateway  │ │ Registry │ │   Guard     │ │
+│  └──────────┘ └──────────┘ └─────────────┘ │
+│  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
+│  │   MCP    │ │ Runtime  │ │  Storage    │ │
+│  │  Client  │ │  Core    │ │   Layer     │ │
+│  └──────────┘ └──────────┘ └─────────────┘ │
+└─────────────────────────────────────────────┘
+         │              │              │
+    MCP Servers    AI Providers    Database
+```
+
+## Layer Responsibilities
+
+### Frontend (React)
+
+- User interface rendering
+- State management (Zustand)
+- User input handling
+- Display of AI responses and tool results
+
+### Tauri Bridge (Rust)
+
+- IPC between frontend and daemon
+- Daemon lifecycle management (start, stop, restart)
+- Native system integration (file system, notifications)
+- HTTP proxy to daemon
+
+### Daemon (Node.js)
+
+- AI orchestration and model routing
+- Tool registration and execution
+- Permission checking and audit logging
+- MCP server management
+- Data persistence
+
+## Communication Flow
+
+```text
+User types message
+  → React frontend captures input
+  → Tauri IPC sends to Rust backend
+  → Rust proxies HTTP to daemon
+  → Daemon processes with Jarvis
+  → Response streams back through the same path
+  → Frontend renders response
+```
+
+## Package Architecture
+
+The daemon consumes shared packages from the monorepo:
+
+| Package | Role |
+|---------|------|
+| `@jarvis/types` | Shared TypeScript types |
+| `@jarvis/model-gateway` | Multi-provider model routing |
+| `@jarvis/mcp-client` | MCP server connections |
+| `@jarvis/tool-registry` | Tool management |
+| `@jarvis/permission-guard` | Safety system |
+| `@jarvis/runtime-core` | Runtime management |
+| `@jarvis/runtime-protocol` | Protocol definitions |
+| `@jarvis/execution-environment` | Execution abstraction |
+
+## Next Steps
+
+- [Runtime Boundaries](/docs/architecture/runtime-boundaries) — how components are isolated
+- [Data Flow](/docs/architecture/data-flow) — detailed request/response flow
+- [Security Model](/docs/architecture/security-model) — safety architecture

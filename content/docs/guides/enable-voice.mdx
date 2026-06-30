@@ -1,0 +1,75 @@
+---
+title: Enable Voice Workflow
+description: Set up voice interaction with Jarvis.
+icon: Mic
+---
+
+This guide walks you through enabling the voice pipeline in CoreLayer.
+
+## Prerequisites
+
+- CoreLayer installed
+- Microphone access granted to the app
+
+## Step 1: Enable Voice
+
+Open **Settings → Voice** and toggle **Enable Voice Pipeline**.
+
+## Step 2: Configure Wake Word
+
+Enable wake word detection to activate Jarvis by voice:
+
+```json
+{
+  "voice": {
+    "wakeWord": {
+      "enabled": true,
+      "keyword": "jarvis"
+    }
+  }
+}
+```
+
+The wake word runs locally using Picovoice Porcupine — no cloud processing.
+
+## Step 3: Choose ASR Provider
+
+| Provider | Setup |
+|----------|-------|
+| **Web Speech API** | No setup needed — works out of the box |
+| **Groq Whisper** | Requires Groq API key in Settings → Models |
+
+Web Speech API is recommended for getting started. Groq Whisper provides higher accuracy.
+
+## Step 4: Test Voice
+
+Say the wake word ("Jarvis") or click the microphone button in the Control Center. Then speak your request:
+
+```text
+What tasks do I have for today?
+```
+
+Jarvis will process your speech, generate a response, and speak it back using TTS.
+
+## Voice Overlay
+
+When voice is active, a floating overlay shows:
+
+- **Listening** — waveform animation, cyan accent
+- **Processing** — spinning indicator, violet accent
+- **Speaking** — playback progress, emerald accent
+
+## Barge-in Interruption
+
+You can interrupt Jarvis mid-response by speaking again. The pipeline will stop the current response and process your new input.
+
+## Troubleshooting
+
+- **Wake word not detected**: Check microphone permissions and reduce background noise
+- **Speech not recognized**: Try speaking more clearly or switch to Groq Whisper
+- **No audio output**: Check system audio and TTS configuration
+
+## Next Steps
+
+- [Voice Configuration](/docs/configuration/voice) — advanced voice settings
+- [Jarvis](/docs/core-concepts/jarvis) — how voice integrates with the assistant

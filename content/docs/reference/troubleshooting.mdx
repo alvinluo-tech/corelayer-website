@@ -1,0 +1,95 @@
+---
+title: Troubleshooting
+description: Common issues and solutions.
+icon: Bug
+---
+
+## App Won't Start
+
+**Symptom:** CoreLayer fails to launch or crashes immediately.
+
+**Solutions:**
+- Verify Node.js 22+ is installed: `node --version`
+- Verify pnpm 9+ is installed: `pnpm --version`
+- Check platform-specific Tauri prerequisites
+- Try rebuilding: `pnpm clean && pnpm build`
+
+## Daemon Not Starting
+
+**Symptom:** "Daemon unhealthy" or connection errors.
+
+**Solutions:**
+- Check if port 3001 is in use: `lsof -i :3001` (macOS/Linux) or `netstat -ano | findstr 3001` (Windows)
+- Kill conflicting processes: `pnpm clean:daemon`
+- Check daemon logs in the Control Center
+- Verify database file permissions
+
+## Model Not Responding
+
+**Symptom:** Jarvis doesn't respond or shows "No model available".
+
+**Solutions:**
+- Verify API key is correct in Settings → Models
+- Check provider status (Groq, OpenRouter, etc.)
+- Try a different model/provider
+- Check network connectivity
+
+## MCP Server Won't Connect
+
+**Symptom:** Server shows "Disconnected" or "Error" status.
+
+**Solutions:**
+- Verify the command and args are correct
+- Test the command manually in a terminal
+- Check that npx can install the package: `npx -y @modelcontextprotocol/server-filesystem`
+- Check environment variables are set
+- Restart the MCP connection from the Control Center
+
+## Voice Not Working
+
+**Symptom:** Wake word not detected or speech not recognized.
+
+**Solutions:**
+- Check microphone permissions in system settings
+- Reduce background noise
+- Try clicking the microphone button instead of wake word
+- Switch ASR provider to Groq Whisper for better accuracy
+- Check audio output settings for TTS
+
+## Permission Guard Blocking Everything
+
+**Symptom:** All tool calls require approval.
+
+**Solutions:**
+- Check permission policies in Settings → Permissions
+- Add `allow` rules for trusted tools
+- Use "Approve Always" for tools you trust
+
+## Build Failures
+
+**Symptom:** `pnpm build` fails.
+
+**Solutions:**
+- Clean and rebuild: `pnpm clean && pnpm install && pnpm build`
+- Check Rust toolchain: `rustc --version`, `cargo --version`
+- Verify platform prerequisites for Tauri
+- Check for TypeScript errors: `pnpm typecheck`
+
+## Database Issues
+
+**Symptom:** Data not saving or loading errors.
+
+**Solutions:**
+- Check storage configuration in Settings → Storage
+- Verify database file exists and is writable
+- Try switching to a different storage mode
+- For Supabase: verify URL and anon key
+
+## Still Stuck?
+
+- Check the [GitHub Issues](https://github.com/alvinluo-tech/CoreLayer/issues) for known problems
+- Open a new issue with:
+  - Your platform and versions
+  - Steps to reproduce
+  - Error messages or logs
+  - Expected vs actual behavior

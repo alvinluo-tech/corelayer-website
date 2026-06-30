@@ -1,0 +1,49 @@
+---
+title: What is CoreLayer?
+description: A local-first AI control layer for your desktop apps, tools, models, and MCP workflows.
+icon: Layers
+---
+
+CoreLayer is a desktop AI command layer powered by Jarvis. It is not a generic chatbot, not an IDE copilot, and not a cloud automation tool. It sits locally between your personal apps, tools, models, and MCP servers so Jarvis can coordinate work through explicit permissions.
+
+## Key Capabilities
+
+- **Multi-model routing** across MiMo, Groq, OpenRouter, Ollama, and OpenAI-compatible providers
+- **MCP-first integration** with external tools and servers
+- **Unified tool calling** from native modules, MCP, skills, and REST adapters
+- **Permission guard** with risk-based execution and audit logs
+- **Voice pipeline** with wake word, ASR, streaming TTS, and barge-in interruption
+- **Three storage modes** (local SQLite, Supabase, PostgreSQL) hot-swappable at runtime
+- **Command palette** (Alt+Space) for quick actions
+- **Task management** with AI-powered natural language queries
+- **Reading list tracking** with AI recommendations
+- **Daily/weekly review summaries** with pattern recognition
+
+## Architecture at a Glance
+
+```text
+Tauri 2 Desktop App
+  └─ React 19 + Vite + Tailwind 4 Frontend
+     └─ Tauri IPC Bridge
+        └─ Node.js Daemon (Hono)
+           ├─ Model Gateway (Vercel AI SDK)
+           ├─ Tool Registry
+           ├─ Permission Guard
+           ├─ MCP Client Manager
+           └─ SQLite / Supabase / PostgreSQL
+```
+
+CoreLayer uses a three-layer proxy model: the React frontend communicates with the Node.js daemon through Tauri IPC, and the daemon manages all AI orchestration, tool execution, and data storage.
+
+## Who is CoreLayer For?
+
+- **Technical users** who want local control over AI workflows
+- **Indie developers** building with MCP and local AI tools
+- **Power users** experimenting with multi-model routing and voice interfaces
+- **Future contributors** interested in the open-source desktop AI space
+
+## Next Steps
+
+- [Install CoreLayer](/docs/getting-started/install) — get the desktop app running
+- [Quickstart](/docs/getting-started/quickstart) — connect your first model and MCP server
+- [Architecture](/docs/architecture/system-overview) — understand the system design
