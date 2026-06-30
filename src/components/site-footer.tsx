@@ -17,7 +17,7 @@ const footerSections = [
     title: "Developers",
     links: [
       { href: "/docs/architecture/system-overview", label: "Architecture" },
-      { href: "/docs/configuration/mcp-servers", label: "MCP" },
+      { href: "/docs/configuration/mcp-servers", label: "MCP Integration" },
       { href: "/docs/configuration/permissions", label: "Permissions" },
     ],
   },
@@ -102,12 +102,14 @@ export function SiteFooter() {
             Permission-guarded.
           </p>
           <div className="flex gap-4">
-            <Link
-              href="/docs"
+            <a
+              href="https://github.com/alvinluo-tech/CoreLayer/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-xs text-text-tertiary transition-colors hover:text-text-secondary"
             >
               License
-            </Link>
+            </a>
             <Link
               href="/docs/architecture/security-model"
               className="text-xs text-text-tertiary transition-colors hover:text-text-secondary"

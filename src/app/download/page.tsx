@@ -65,16 +65,17 @@ export default function DownloadPage() {
 
         {/* Platform Cards */}
         <div className="mx-auto mt-12 grid max-w-3xl gap-4 sm:grid-cols-3">
-          {platforms.map((p) => (
-            <a
+          {platforms.map((p) => {
+            const isAvailable = p.status === "available";
+            const Wrapper = isAvailable ? "a" : "div";
+            return (
+            <Wrapper
               key={p.name}
-              href={p.href}
-              target={p.status === "available" ? "_blank" : undefined}
-              rel={p.status === "available" ? "noopener noreferrer" : undefined}
+              {...(isAvailable ? { href: p.href, target: "_blank", rel: "noopener noreferrer" } : {})}
               className={`group rounded-lg border p-5 transition-colors ${
-                p.status === "available"
-                  ? "border-border-subtle bg-panel hover:border-border-cyan"
-                  : "border-border-subtle bg-panel/50 opacity-60"
+                isAvailable
+                  ? "border-border-subtle bg-panel hover:border-border-cyan cursor-pointer"
+                  : "border-border-subtle bg-panel/50 opacity-60 cursor-default"
               }`}
             >
               <p.icon className="h-5 w-5 text-cyan" />
@@ -92,8 +93,8 @@ export default function DownloadPage() {
                   <span className="text-amber">Planned</span>
                 )}
               </div>
-            </a>
-          ))}
+            </Wrapper>
+          )})}
         </div>
 
         {/* Source Install */}
