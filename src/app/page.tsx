@@ -78,7 +78,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative hidden md:block">
+          <div className="relative mt-10 md:mt-0">
             <div className="product-frame">
               <div className="frame-bar">
                 <span className="h-2.5 w-2.5 rounded-full bg-rose/60" />

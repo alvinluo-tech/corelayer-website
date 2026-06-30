@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 
@@ -52,7 +53,7 @@ export function SiteFooter() {
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           <div className="col-span-2 sm:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <img src="/assets/icon.png" alt="CoreLayer" className="h-6 w-6" />
+              <Image src="/assets/icon.png" alt="CoreLayer" width={24} height={24} />
               <span className="text-sm font-semibold text-text-primary">
                 CoreLayer
               </span>

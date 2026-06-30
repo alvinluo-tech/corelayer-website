@@ -183,33 +183,6 @@ body {
   overflow-x: auto;
 }
 
-.code-block .copy-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-tertiary);
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.code-block .copy-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-secondary);
-}
-
-.light .code-block .copy-btn {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.light .code-block .copy-btn:hover {
-  background: rgba(0, 0, 0, 0.08);
-}
-
 /* Callout */
 .callout {
   border-left: 3px solid var(--cyan);

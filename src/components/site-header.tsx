@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Download, Menu, X, ExternalLink } from "lucide-react";
@@ -25,7 +26,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-border-subtle bg-void/80 backdrop-blur-md">
       <div className="site-container flex h-14 items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <img src="/assets/icon.png" alt="CoreLayer" className="h-7 w-7" />
+          <Image src="/assets/icon.png" alt="CoreLayer" width={28} height={28} />
           <span className="text-sm font-semibold tracking-tight text-text-primary">
             CoreLayer
           </span>
