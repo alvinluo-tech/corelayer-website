@@ -19,10 +19,12 @@ export default async function Page(props: {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const MDX = (page.data as any).body;
+  const data = page.data as any;
+  const MDX = data.body;
+  const toc = data.toc;
 
   return (
-    <DocsPage>
+    <DocsPage toc={toc}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
