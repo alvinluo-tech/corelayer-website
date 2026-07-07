@@ -1,0 +1,90 @@
+---
+title: 存储
+description: "配置数据存储模式：本地 SQLite、Supabase 或 PostgreSQL。"
+---
+
+CoreLayer 支持三种存储后端，可在运行时热切换。
+
+## 存储模式
+
+| 模式 | 描述 | 用例 |
+|------|------|------|
+| **SQLite** | 本地文件数据库（默认） | 个人使用，离线优先 |
+| **Supabase** | 带实时同步的云端 PostgreSQL | 多设备同步 |
+| **PostgreSQL** | 自托管 PostgreSQL | 团队/企业使用 |
+
+## SQLite（默认）
+
+SQLite 是默认存储模式。数据存储在本地 `.db` 文件中：
+
+```json
+{
+  "storage": {
+    "mode": "sqlite",
+    "path": "~/.corelayer/data.db"
+  }
+}
+```
+
+无需外部依赖。完全离线运行。
+
+## Supabase
+
+连接到 Supabase 进行云同步：
+
+```json
+{
+  "storage": {
+    "mode": "supabase",
+    "url": "https://your-project.supabase.co",
+    "anonKey": "eyJ..."
+  }
+}
+```
+
+设置 Supabase：
+1. 在 [supabase.com](https://supabase.com) 创建项目
+2. 运行 CoreLayer 迁移脚本
+3. 添加你的项目 URL 和匿名密钥
+
+## PostgreSQL
+
+连接到自托管的 PostgreSQL 实例：
+
+```json
+{
+  "storage": {
+    "mode": "postgres",
+    "connectionString": "postgresql://user:pass@localhost:5432/corelayer"
+  }
+}
+```
+
+## 热切换
+
+你可以在运行时从控制中心切换存储模式：
+
+1. 打开**设置 → 存储**
+2. 选择新模式
+3. 输入连接详情
+4. 点击**切换**
+
+CoreLayer 会自动在模式之间迁移数据。
+
+## 数据模式
+
+CoreLayer 存储以下主要实体：
+
+- **tasks** — 任务管理项目
+- **articles** — 阅读列表条目
+- **reviews** — 每日/每周回顾摘要
+- **conversations** — 聊天历史
+- **messages** — 单条消息
+- **tool_call_logs** — 工具执行的审计追踪
+- **model_profiles** — 模型提供商配置
+- **memories** — Jarvis 长期记忆
+
+## 下一步
+
+- [权限守卫](/docs/core-concepts/permission-guard) — 数据访问如何被控制
+- [安全模型](/docs/architecture/security-model) — 存储安全细节

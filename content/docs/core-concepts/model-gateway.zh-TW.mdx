@@ -1,0 +1,52 @@
+---
+title: 模型閘道
+description: 多供應商模型路由和選擇。
+---
+
+模型閘道管理與 AI 模型供應商的連接，並將請求路由到最佳可用模型。
+
+## 架構
+
+```text
+Jarvis 請求
+  → 模型閘道
+  → 供應商選擇邏輯
+  → Vercel AI SDK
+  → 供應商 API（Groq / OpenRouter / Ollama / OpenAI 相容）
+  → 回應串流回傳到 Jarvis
+```
+
+## 基於 Vercel AI SDK 建構
+
+模型閘道使用 [Vercel AI SDK v6+](https://sdk.vercel.ai) 來實現：
+
+- 跨供應商的統一介面
+- 串流回應
+- 工具呼叫支援
+- 結構化輸出
+
+## 路由邏輯
+
+閘道根據以下條件選擇模型：
+
+1. **任務類型** — 推理、程式碼生成、摘要、分類
+2. **延遲需求** — 即時語音需要快速模型
+3. **成本** — 日常任務使用較便宜的模型
+4. **備用方案** — 主要供應商不可用時的備選
+
+## 供應商設定
+
+參閱[模型供應商](/docs/configuration/model-providers)了解設定詳情。
+
+## 串流
+
+所有模型回應預設為串流。這意味著：
+
+- 文字在生成時就出現
+- TTS 可以在句子完成時就播放（句級串流）
+- 工具呼叫在被識別後就立即執行
+
+## 下一步
+
+- [模型供應商](/docs/configuration/model-providers) — 設定供應商
+- [設定本地模型](/docs/guides/configure-local-models) — 設定 Ollama

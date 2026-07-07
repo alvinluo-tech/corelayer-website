@@ -1,0 +1,92 @@
+---
+title: Flujo de Solicitudes y Datos
+description: Como las solicitudes fluyen a traves de CoreLayer desde la entrada del usuario hasta la respuesta.
+---
+
+Esta pagina rastrea el flujo completo de datos para las operaciones comunes en CoreLayer.
+
+## Flujo de Mensajes de Chat
+
+```text
+1. El usuario escribe un mensaje en el panel de chat
+2. El frontend envia via Tauri IPC
+3. El backend Rust hace proxy al HTTP API del daemon
+4. El daemon recibe en /api/chat
+5. Jarvis ensambla el contexto:
+   - Historial de conversacion
+   - Memoria del usuario
+   - Herramientas disponibles
+6. Model Gateway selecciona el proveedor
+7. La solicitud se envia al proveedor de IA (streaming)
+8. La respuesta se transmite de vuelta:
+   - Fragmentos de texto → frontend
+   - Llamadas a herramientas → Permission Guard
+9. Si es una llamada a herramienta:
+   a. Permission Guard verifica el riesgo
+   b. Si se necesita aprobacion → pausa, muestra panel
+   c. El usuario aprueba → ejecuta la herramienta
+   d. El resultado se envia de vuelta al modelo
+   e. El modelo continua la respuesta
+10. La respuesta final se renderiza en el chat
+```
+
+## Flujo de Ejecucion de Herramientas
+
+```text
+Solicitud de llamada a herramienta
+  → Tool Registry resuelve la herramienta
+  → Permission Guard clasifica el riesgo
+  → Verificacion de politica:
+    - allow → ejecutar inmediatamente
+    - confirm → pausar para aprobacion
+    - deny → bloquear y registrar
+  → Ejecutar herramienta (MCP/nativa/REST)
+  → Devolver resultado al modelo
+  → Registrar en el registro de auditoria
+```
+
+## Flujo de Conexion MCP
+
+```text
+1. El daemon lee la configuracion del servidor MCP
+2. Genera un proceso hijo (stdio) o se conecta via SSE
+3. Handshake MCP (initialize)
+4. El servidor reporta las herramientas disponibles
+5. Tool Registry registra las herramientas
+6. Las herramientas estan disponibles para Jarvis
+7. Al desconectar → intentar reconectar
+```
+
+## Flujo de Almacenamiento de Datos
+
+```text
+Operacion de escritura:
+  → La capa de almacenamiento recibe la solicitud de escritura
+  → Valida el esquema de datos
+  → Escribe en el backend activo (SQLite/Supabase/PostgreSQL)
+  → Devuelve confirmacion
+
+Operacion de lectura:
+  → La capa de almacenamiento recibe la solicitud de lectura
+  → Consulta el backend activo
+  → Devuelve resultados
+```
+
+## Flujo de la Pipeline de Voz
+
+```text
+Palabra de activacion detectada (Picovoice)
+  → Iniciar escucha
+  → Transmision de audio al proveedor ASR
+  → Transcripcion devuelta
+  → Texto enviado al pipeline de chat (igual que la entrada escrita)
+  → Respuesta generada
+  → TTS transmite el audio de vuelta
+  → El audio se reproduce por la salida del sistema
+  → Interrupcion: si el usuario habla durante la reproduccion → reiniciar desde ASR
+```
+
+## Siguientes Pasos
+
+- [Vista General del Sistema](/docs/architecture/system-overview) — resumen de la arquitectura
+- [Modelo de Seguridad](/docs/architecture/security-model) — como se protegen los datos

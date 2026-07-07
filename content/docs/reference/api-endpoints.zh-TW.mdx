@@ -1,0 +1,168 @@
+---
+title: API 端點參考
+description: 守護程式 HTTP API 參考。
+---
+
+CoreLayer 守護程式在 `localhost:3001` 上公開 HTTP API。Tauri 前端透過 Tauri 的 IPC 橋接使用此 API。
+
+## 基礎 URL
+
+```text
+http://localhost:3001
+```
+
+## 聊天
+
+### POST `/api/chat`
+
+向 Jarvis 發送訊息並接收串流回應。
+
+```json
+{
+  "message": "What tasks do I have?",
+  "conversationId": "conv_123"
+}
+```
+
+回應：伺服器推送事件（SSE）串流。
+
+## 任務
+
+### GET `/api/tasks`
+
+列出所有任務。
+
+```json
+// 回應
+[
+  {
+    "id": "task_abc123",
+    "title": "Review PR #42",
+    "status": "pending",
+    "priority": "high",
+    "dueDate": "2026-06-30T00:00:00Z",
+    "createdAt": "2026-06-28T10:00:00Z"
+  }
+]
+```
+
+### POST `/api/tasks`
+
+建立新任務。
+
+```json
+// 請求
+{
+  "title": "Review PR #42",
+  "priority": "high",
+  "dueDate": "2026-06-30"
+}
+
+// 回應
+{
+  "id": "task_abc123",
+  "title": "Review PR #42",
+  "status": "pending",
+  "priority": "high",
+  "dueDate": "2026-06-30T00:00:00Z"
+}
+```
+
+### PATCH `/api/tasks/:id`
+
+更新任務。接受部分任務物件。
+
+### DELETE `/api/tasks/:id`
+
+刪除任務。
+
+## 文章（閱讀清單）
+
+### GET `/api/articles`
+
+列出所有文章。
+
+### POST `/api/articles`
+
+新增文章。
+
+### DELETE `/api/articles/:id`
+
+移除文章。
+
+## 回顧
+
+### GET `/api/reviews`
+
+列出回顧。
+
+### POST `/api/reviews/generate`
+
+生成新的回顧。
+
+## 模型
+
+### GET `/api/models`
+
+列出已設定的模型供應商。
+
+### POST `/api/models`
+
+新增模型供應商。
+
+## MCP
+
+### GET `/api/mcp/servers`
+
+列出 MCP 伺服器。
+
+### POST `/api/mcp/servers`
+
+新增 MCP 伺服器。
+
+### POST `/api/mcp/servers/:id/restart`
+
+重新啟動 MCP 伺服器。
+
+## 工具
+
+### GET `/api/tools`
+
+列出所有已註冊的工具。
+
+## 權限
+
+### GET `/api/permissions/audit`
+
+取得稽核日誌條目。
+
+### POST `/api/permissions/approve`
+
+核准待處理的工具呼叫。
+
+### POST `/api/permissions/deny`
+
+拒絕待處理的工具呼叫。
+
+## 健康
+
+### GET `/api/health`
+
+檢查守護程式健康狀態。
+
+```json
+{
+  "status": "healthy",
+  "uptime": 3600,
+  "version": "<current-version>"
+}
+```
+
+## 認證
+
+守護程式 API 僅可從本機存取。本機存取無需認證。
+
+## 下一步
+
+- [設定檔](/docs/reference/config-file) — 設定參考
+- [CLI 指令](/docs/reference/cli-commands) — 命令列介面

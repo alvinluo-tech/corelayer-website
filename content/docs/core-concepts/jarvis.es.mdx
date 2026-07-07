@@ -1,0 +1,47 @@
+---
+title: Asistente IA Jarvis
+description: La persona del asistente IA que coordina el trabajo en CoreLayer.
+---
+
+Jarvis es el asistente IA integrado que opera dentro de CoreLayer. No es un chatbot independiente — es un coordinador que enruta solicitudes a traves del Model Gateway, descubre herramientas via el Tool Registry y aplica seguridad a traves del Permission Guard.
+
+## Como Funciona Jarvis
+
+```text
+Entrada del Usuario (voz, texto, atajo)
+  → Interpretacion de intencion
+  → Ensamblaje de contexto (historial de conversacion, memoria, herramientas)
+  → Seleccion de modelo via Model Gateway
+  → Generacion de respuesta con llamadas a herramientas
+  → Verificacion de permisos antes de ejecutar herramientas
+  → Entrega de resultados
+```
+
+## Capacidades
+
+- **Gestion de tareas en lenguaje natural** — crear, consultar y actualizar tareas
+- **Gestion de lista de lectura** — rastrear articulos con recomendaciones impulsadas por IA
+- **Revisiones diarias/semanales** — resumir actividad con reconocimiento de patrones
+- **Llamadas a herramientas** — ejecutar herramientas de modulos nativos, servidores MCP, habilidades o adaptadores REST
+- **Interaccion por voz** — pipeline de voz completa con palabra de activacion, ASR, TTS e interrupcion
+
+## Memoria
+
+Jarvis mantiene memoria a largo plazo entre conversaciones. La memoria se almacena localmente en la base de datos configurada (SQLite por defecto) y persiste entre sesiones.
+
+- **Contexto de conversacion** — historial de la sesion actual, mantenido en memoria durante conversaciones activas y guardado en la base de datos al finalizar la sesion
+- **Preferencias del usuario** — patrones aprendidos (ej., modelos preferidos, herramientas frecuentes, estilo de respuesta) acumulados con el tiempo
+- **Contexto de tareas** — tareas activas, fechas limite y estado — Jarvis referencia esto cuando preguntas sobre tu trabajo
+- **Contexto de herramientas** — herramientas usadas recientemente y sus resultados, para que Jarvis pueda hacer seguimiento de acciones anteriores sin volver a consultar
+
+La memoria esta alcance por usuario y nunca se comparte entre instancias de CoreLayer a menos que habilites la sincronizacion en la nube con Supabase.
+
+## Enrutamiento Multi-Modelo
+
+Jarvis no depende de un solo modelo. El Model Gateway selecciona el mejor modelo para cada solicitud basandose en la complejidad, requisitos de latencia y disponibilidad.
+
+## Siguientes Pasos
+
+- [Centro de Control](/docs/core-concepts/control-center) — la interfaz que aloja a Jarvis
+- [Model Gateway](/docs/core-concepts/model-gateway) — como se seleccionan los modelos
+- [Pipeline de Voz](/docs/configuration/voice) — configuracion de interaccion por voz

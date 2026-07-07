@@ -1,0 +1,66 @@
+---
+title: Limites de Runtime
+description: Como CoreLayer aísla los componentes para seguridad y fiabilidad.
+---
+
+CoreLayer aplica limites estrictos entre componentes para garantizar seguridad, fiabilidad y mantenibilidad.
+
+## Modelo de Limites
+
+```text
+Frontend (Browser/Webview)
+  ║ Tauri IPC (tipado, serializado)
+  ╚═► Backend Rust
+      ║ HTTP (solo localhost)
+      ╚═► Daemon Node.js
+          ║ Interfaces SDK
+          ╚═► Paquetes Compartidos
+```
+
+Cada limite aplica:
+
+- **Seguridad de tipos** — interfaces tipadas entre capas
+- **Aislamiento** — los componentes no pueden acceder directamente a los internos de otros
+- **Protocolo de comunicacion** — solo APIs bien definidas
+
+## Frontend ↔ Rust
+
+La comunicacion usa el mecanismo IPC de Tauri:
+
+- Los comandos son tipados (TypeScript ↔ Rust)
+- Serializados a JSON
+- Asincronos por defecto
+
+## Rust ↔ Daemon
+
+La comunicacion usa HTTP:
+
+- Solo localhost (no expuesto a la red)
+- Endpoints RESTful
+- Respuestas en streaming (SSE) para el chat
+
+## Daemon ↔ Paquetes
+
+La comunicacion usa importaciones de TypeScript:
+
+- Llamadas directas a funciones
+- Definiciones de tipos compartidas
+- Limites de paquete aplicados por el sistema de modulos
+
+## Daemon ↔ Servicios Externos
+
+- **Proveedores de IA** — HTTPS a APIs en la nube
+- **Servidores MCP** — protocolo stdio o SSE
+- **Bases de datos** — drivers nativos (better-sqlite3, pg)
+
+## Por Que Importan Los Limites
+
+- **Seguridad** — un frontend comprometido no puede acceder directamente a la base de datos
+- **Fiabilidad** — un fallo del daemon no tumba el frontend
+- **Testabilidad** — cada capa puede probarse de forma independiente
+- **Reemplazabilidad** — cambiar almacenamiento o proveedores de modelo sin modificar otras capas
+
+## Siguientes Pasos
+
+- [Vista General del Sistema](/docs/architecture/system-overview) — arquitectura completa
+- [Modelo de Seguridad](/docs/architecture/security-model) — detalles de seguridad

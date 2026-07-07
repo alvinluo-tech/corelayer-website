@@ -1,0 +1,48 @@
+---
+title: Que es CoreLayer?
+description: Una capa de control de IA local para tus aplicaciones de escritorio, herramientas, modelos y flujos de trabajo MCP.
+---
+
+CoreLayer es una capa de comandos de IA de escritorio impulsada por Jarvis. No es un chatbot generico, no es un copiloto de IDE y no es una herramienta de automatizacion en la nube. Se situa localmente entre tus aplicaciones personales, herramientas, modelos y servidores MCP para que Jarvis pueda coordinar el trabajo a traves de permisos explicitos.
+
+## Capacidades Clave
+
+- **Enrutamiento multi-modelo** a traves de MiMo, Groq, OpenRouter, Ollama y proveedores compatibles con OpenAI
+- **Integracion MCP primero** con herramientas y servidores externos
+- **Llamadas a herramientas unificadas** desde modulos nativos, MCP, habilidades y adaptadores REST
+- **Permission Guard** con ejecucion basada en riesgo y registros de auditoria
+- **Pipeline de voz** con palabra de activacion, ASR, TTS en streaming e interrupcion por voz
+- **Tres modos de almacenamiento** (SQLite local, Supabase, PostgreSQL) intercambiables en caliente
+- **Paleta de comandos** (Alt+Space) para acciones rapidas
+- **Gestion de tareas** con consultas en lenguaje natural impulsadas por IA
+- **Seguimiento de lista de lectura** con recomendaciones de IA
+- **Resumenes de revision diaria/semanal** con reconocimiento de patrones
+
+## Arquitectura de un Vistazo
+
+```text
+Aplicacion Escritorio Tauri 2
+  └─ Frontend React 19 + Vite + Tailwind 4
+     └─ Puente Tauri IPC
+        └─ Daemon Node.js (Hono)
+           ├─ Model Gateway (Vercel AI SDK)
+           ├─ Tool Registry
+           ├─ Permission Guard
+           ├─ Gestor de Clientes MCP
+           └─ SQLite / Supabase / PostgreSQL
+```
+
+CoreLayer utiliza un modelo de proxy de tres capas: el frontend React se comunica con el daemon Node.js a traves de Tauri IPC, y el daemon gestiona toda la orquestacion de IA, ejecucion de herramientas y almacenamiento de datos.
+
+## Para Quien es CoreLayer?
+
+- **Usuarios tecnicos** que quieren control local sobre flujos de trabajo de IA
+- **Desarrolladores independientes** que construyen con MCP y herramientas de IA locales
+- **Usuarios avanzados** que experimentan con enrutamiento multi-modelo e interfaces de voz
+- **Futuros contribuidores** interesados en el espacio de IA de escritorio de codigo abierto
+
+## Siguientes Pasos
+
+- [Instalar CoreLayer](/docs/getting-started/install) — ejecuta la aplicacion de escritorio
+- [Inicio Rapido](/docs/getting-started/quickstart) — conecta tu primer modelo y servidor MCP
+- [Arquitectura](/docs/architecture/system-overview) — entiende el diseno del sistema

@@ -1,0 +1,61 @@
+---
+title: Conectar una Aplicacion MCP a CoreLayer
+description: Guia paso a paso para conectar una aplicacion MCP externa.
+---
+
+Esta guia te acompana en la conexion de una aplicacion externa a CoreLayer via MCP.
+
+## Requisitos Previos
+
+- CoreLayer instalado y en ejecucion
+- Node.js 22+ (para servidores MCP basados en npx)
+
+## Paso 1: Elegir un Servidor MCP
+
+Opciones populares:
+
+| Servidor | Proposito |
+|----------|-----------|
+| `@modelcontextprotocol/server-filesystem` | Acceso al sistema de archivos |
+| `@modelcontextprotocol/server-github` | API de GitHub |
+| `@modelcontextprotocol/server-brave-search` | Busqueda web |
+| `@modelcontextprotocol/server-memory` | Grafo de conocimiento |
+
+## Paso 2: Aniadir el Servidor
+
+Abre **Centro de Control → Ajustes → MCP → Aniadir Servidor**:
+
+```json
+{
+  "name": "github",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": {
+    "GITHUB_TOKEN": "ghp_..."
+  }
+}
+```
+
+## Paso 3: Verificar la Conexion
+
+Verifica que el servidor muestre el estado **Conectado** en el Centro de Control.
+
+## Paso 4: Probar una Herramienta
+
+Pide a Jarvis que use la nueva herramienta:
+
+```text
+Lista mis repositorios recientes de GitHub
+```
+
+Jarvis descubrira las herramientas de GitHub del servidor MCP y las usara para cumplir tu solicitud.
+
+## Paso 5: Revisar Permisos
+
+La primera vez que se usa una herramienta nueva, el Permission Guard pedira aprobacion. Revisa los detalles de la llamada a herramienta y aprueba si la accion es la esperada.
+
+## Solucion de Problemas
+
+- **El servidor no inicia**: Verifica que el comando y los argumentos sean corrects
+- **Errores de autenticacion**: Verifica que las variables de entorno esten configuradas
+- **Herramientas no encontradas**: Reinicia la conexion MCP desde el Centro de Control

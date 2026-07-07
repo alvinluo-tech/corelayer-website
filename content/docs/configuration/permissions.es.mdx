@@ -1,0 +1,81 @@
+---
+title: Permisos
+description: Configura el permission guard para la ejecucion de herramientas.
+---
+
+El Permission Guard controla cuales llamadas a herramientas requieren aprobacion, cuales se permiten automaticamente y cuales se bloquean.
+
+## Niveles de Permiso
+
+| Nivel | Comportamiento |
+|-------|----------------|
+| **Lectura** | Permitido automaticamente (leer archivos, listar datos) |
+| **Escritura** | Requiere aprobacion (escribir archivos, modificar datos) |
+| **Externo** | Requiere aprobacion (llamadas API, solicitudes de red) |
+| **Destructivo** | Requiere aprobacion con advertencia (eliminar datos) |
+| **Sensible a credenciales** | Siempre bloqueado salvo que se permita explicitamente |
+
+## Configuracion
+
+```json
+{
+  "permissions": {
+    "defaultPolicy": "confirm",
+    "rules": [
+      {
+        "tool": "filesystem:read",
+        "policy": "allow"
+      },
+      {
+        "tool": "filesystem:write",
+        "policy": "confirm"
+      },
+      {
+        "tool": "github:*",
+        "policy": "confirm"
+      },
+      {
+        "tool": "shell:execute",
+        "policy": "deny"
+      }
+    ]
+  }
+}
+```
+
+## Politicas
+
+| Politica | Efecto |
+|----------|--------|
+| `allow` | Ejecutar sin preguntar |
+| `confirm` | Pausar y pedir aprobacion del usuario |
+| `deny` | Bloquear la ejecucion por completo |
+
+## Flujo de Aprobacion
+
+Cuando una llamada a herramienta requiere confirmacion:
+
+1. Jarvis explica que quiere hacer
+2. El panel de aprobacion muestra el nombre de la herramienta, los parametros y el nivel de riesgo
+3. Puedes **Aprobar**, **Denegar** o **Aprobar Siempre** (para esta herramienta)
+4. Todas las decisiones se registran en el registro de auditoria
+
+## Registros de Auditoria
+
+Cada ejecucion de herramienta se registra:
+
+```text
+[2026-06-15 14:32:01] filesystem:write /workspace/README.md
+  Riesgo: write
+  Politica: confirm
+  Decision: approved
+  Usuario: aprobacion manual
+```
+
+Consulta los registros de auditoria en **Centro de Control → Permisos → Registro de Auditoria**.
+
+## Siguientes Pasos
+
+- [Permission Guard](/docs/core-concepts/permission-guard) — profundiza en el modelo de seguridad
+- [Revisar Registros de Auditoria](/docs/guides/review-audit-logs) — trabajar con el registro de auditoria
+- [Modelo de Seguridad](/docs/architecture/security-model) — detalles de arquitectura

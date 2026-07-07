@@ -1,0 +1,92 @@
+---
+title: Configuracion de Servidores MCP
+description: Configura las conexiones a servidores del Model Context Protocol.
+---
+
+CoreLayer se conecta a herramientas y fuentes de datos externas a traves de servidores MCP. Cada servidor expone herramientas que Jarvis puede llamar durante las conversaciones, sujeto al Permission Guard.
+
+## Configuracion del Servidor
+
+Cada servidor MCP se define por un nombre, comando y argumentos opcionales:
+
+```json
+{
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+        "env": {}
+      },
+      {
+        "name": "github",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": {
+          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        }
+      }
+    ]
+  }
+}
+```
+
+## Tipos de Servidores
+
+### Servidores Stdio
+
+La mayoria de los servidores MCP usan stdio (entrada/salida estandar) para comunicarse:
+
+```json
+{
+  "name": "my-server",
+  "command": "node",
+  "args": ["./my-mcp-server.js"]
+}
+```
+
+### Servidores SSE
+
+Para servidores remotos que usan Server-Sent Events:
+
+```json
+{
+  "name": "remote-server",
+  "url": "https://my-server.example.com/mcp"
+}
+```
+
+## Gestion de Servidores
+
+### Via Centro de Control
+
+- **Aniadir** — Ajustes → MCP → Aniadir Servidor
+- **Eliminar** — haz clic en el boton de eliminar en la tarjeta del servidor
+- **Reiniciar** — haz clic en el boton de reiniciar para reconectar
+- **Ver herramientas** — mira todas las herramientas expuestas por un servidor conectado
+
+### Estado de Conexion
+
+| Estado | Significado |
+|--------|-------------|
+| Conectado | El servidor esta ejecutandose y las herramientas estan disponibles |
+| Conectando | El servidor esta iniciando |
+| Desconectado | El servidor se detuvo o fallo |
+| Error | El servidor no pudo iniciar — revisa los registros |
+
+## Descubrimiento de Herramientas
+
+Cuando un servidor MCP se conecta, CoreLayer automaticamente:
+
+1. Descubre todas las herramientas expuestas por el servidor
+2. Las registra en el Tool Registry
+3. Las pone a disposicion de Jarvis para llamadas a herramientas
+
+Las herramientas de los servidores MCP se tratan igual que las herramientas nativas — pasan por el Permission Guard antes de ejecutarse.
+
+## Siguientes Pasos
+
+- [Primer Servidor MCP](/docs/getting-started/first-mcp-server) — guia basica de configuracion
+- [Tool Registry](/docs/core-concepts/tool-registry) — como se gestionan las herramientas
+- [Conectar una Aplicacion MCP](/docs/guides/connect-mcp-app) — guia paso a paso

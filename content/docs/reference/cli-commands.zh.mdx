@@ -1,0 +1,56 @@
+---
+title: CLI 命令
+description: CoreLayer 的命令行接口。
+---
+
+CoreLayer 为常见操作提供 CLI 命令。
+
+## 开发命令
+
+| 命令 | 描述 |
+|------|------|
+| `pnpm dev` | 以开发模式启动守护进程 + Tauri 前端 |
+| `pnpm dev:web` | 以纯 Web 模式启动前端（无 Tauri） |
+| `pnpm dev:daemon` | 仅启动守护进程 |
+| `pnpm dev:frontend` | 仅启动 Tauri 前端 |
+
+## 构建命令
+
+| 命令 | 描述 |
+|------|------|
+| `pnpm build` | 完整的生产构建（旁路二进制 + Tauri） |
+| `pnpm build:daemon` | 仅构建守护进程 |
+| `pnpm build:daemon:sidecar` | 将守护进程构建为旁路二进制文件 |
+
+## 质量命令
+
+| 命令 | 描述 |
+|------|------|
+| `pnpm lint` | 对源文件运行 ESLint |
+| `pnpm lint:fix` | 自动修复 ESLint 问题 |
+| `pnpm format` | 使用 Prettier 格式化代码 |
+| `pnpm format:check` | 检查格式化但不写入 |
+| `pnpm test` | 运行所有测试 |
+| `pnpm typecheck` | 运行 TypeScript 类型检查 |
+
+## 清理命令
+
+| 命令 | 描述 |
+|------|------|
+| `pnpm clean` | 清理所有构建输出 |
+| `pnpm clean:app` | 终止正在运行的 CoreLayer 应用 |
+| `pnpm clean:daemon` | 终止端口 3001 上的守护进程 |
+| `pnpm clean:all` | 清理应用 + 守护进程 |
+
+## 发布命令
+
+| 命令 | 描述 |
+|------|------|
+| `pnpm release` | 创建新发布版本（补丁） |
+| `pnpm release:minor` | 创建次版本 |
+| `pnpm release:major` | 创建主版本 |
+
+## 下一步
+
+- [从源码构建](/docs/guides/build-from-source) — 完整构建指南
+- [API 端点](/docs/reference/api-endpoints) — 守护进程 HTTP API

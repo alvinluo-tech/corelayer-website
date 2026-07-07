@@ -1,0 +1,66 @@
+---
+title: El Daemon
+description: El backend Node.js que alimenta la orquestacion de IA de CoreLayer.
+---
+
+El Daemon es un proceso Node.js que se ejecuta en segundo plano, gestionando toda la orquestacion de IA, ejecucion de herramientas y administracion de datos.
+
+## Arquitectura
+
+```text
+Aplicacion Escritorio Tauri (Rust)
+  └─ Supervisor Daemon (Rust)
+     └─ Daemon Node.js (servidor HTTP Hono)
+        ├─ Model Gateway
+        ├─ Tool Registry
+        ├─ Permission Guard
+        ├─ Gestor de Clientes MCP
+        └─ Base de datos (SQLite / Supabase / PostgreSQL)
+```
+
+## Supervisor Daemon
+
+La aplicacion Tauri incluye un Supervisor Daemon basado en Rust que:
+
+- **Inicia** el proceso del daemon cuando se abre la aplicacion
+- **Monitorea** la salud del daemon
+- **Reinicia** el daemon si falla
+- **Detiene** el daemon cuando se cierra la aplicacion
+
+## HTTP API
+
+El daemon expone un HTTP API en `localhost:3001` (configurable via el campo `daemon.port` en `config.json`). El frontend de Tauri se comunica con el daemon a traves de esta API mediante el puente IPC de Tauri.
+
+## Modo de Desarrollo
+
+En desarrollo, el daemon se ejecuta con recarga en caliente:
+
+```bash
+pnpm dev:daemon
+```
+
+Esto usa `tsx watch` para reiniciar al detectar cambios en los archivos.
+
+## Modo de Produccion
+
+En las compilaciones de produccion, el daemon se empaqueta como binario sidecar:
+
+```bash
+pnpm build:daemon:sidecar
+```
+
+El sidecar se incluye con la aplicacion Tauri y se ejecuta como un proceso separado.
+
+## Monitoreo de Salud
+
+El Centro de Control muestra el estado del daemon:
+
+- **Saludable** — el daemon esta ejecutandose y respondiendo
+- **Iniciando** — el daemon esta inicializandose
+- **No saludable** — el daemon no esta respondiendo
+- **Detenido** — el daemon fue detenido intencionalmente
+
+## Siguientes Pasos
+
+- [Vista General del Sistema](/docs/architecture/system-overview) — arquitectura completa
+- [Compilar desde Fuente](/docs/guides/build-from-source) — compilar el daemon

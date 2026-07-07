@@ -1,0 +1,80 @@
+---
+title: Hoja de Ruta Multi-Runtime
+description: La vision de arquitectura a largo plazo para CoreLayer.
+---
+
+El daemon unico actual de TypeScript es una etapa de transicion. El objetivo a largo plazo es una arquitectura multi-runtime supervisada por el nucleo Tauri/Rust.
+
+## Arquitectura Actual
+
+```text
+Aplicacion de Escritorio Tauri
+  └─ Unico Daemon Node.js
+     └─ Todos los servicios en un solo proceso
+```
+
+Esto funciona bien para el alcance actual, pero tiene limitaciones:
+
+- Un solo punto de fallo
+- Todos los servicios comparten el mismo proceso
+- TypeScript tiene limites inherentes de rendimiento para algunas cargas de trabajo
+
+## Arquitectura Objetivo
+
+```text
+Nucleo Tauri/Rust
+  ├─ Runtime de Agentes (TypeScript)
+  ├─ Runtime de Herramientas (TypeScript)
+  ├─ Runtime de Codificacion (TypeScript)
+  ├─ Runtime de Voz (TypeScript)
+  ├─ Runtime de Memoria (TypeScript)
+  ├─ Runtime de Planificador (TypeScript)
+  └─ Runtime de Control de Computadora (Rust)
+```
+
+Cada runtime:
+
+- Se ejecuta como un subproceso gestionado
+- Se comunica a traves del Runtime Protocol
+- Puede reiniciarse de forma independiente
+- Tiene sus propios limites de recursos
+
+## Runtime Protocol
+
+El paquete `@jarvis/runtime-protocol` define el contrato de comunicacion entre el nucleo Tauri y los runtimes gestionados:
+
+- **Ciclo de vida** — inicio, parada, reinicio, verificacion de salud
+- **Mensajeria** — solicitud/respuesta tipada
+- **Eventos** — notificaciones del runtime al nucleo
+- **Limites de recursos** — restricciones de memoria, CPU y tiempo
+
+## Paquetes Ya Existentes
+
+| Paquete | Estado | Proposito |
+|---------|--------|-----------|
+| `@jarvis/runtime-core` | Activo | Nucleo de gestion de runtime |
+| `@jarvis/runtime-protocol` | Activo | Definiciones de protocolo |
+| `@jarvis/execution-environment` | Nuevo | Abstraccion de ejecucion |
+
+## Ruta de Migracion
+
+La migracion es incremental:
+
+1. **Fase 1** (actual) — daemon unico con limites de paquete
+2. **Fase 2** — extraer la pipeline de voz a su propio runtime
+3. **Fase 3** — extraer la ejecucion de herramientas a su propio runtime
+4. **Fase 4** — multi-runtime completo con supervision del nucleo Rust
+
+Cada fase es compatible con versiones anteriores. El frontend no cambia — sigue hablando con el mismo HTTP API.
+
+## Por Que Multi-Runtime?
+
+- **Fiabilidad** — un fallo en un runtime no afecta a los demas
+- **Rendimiento** — Rust para rutas criticas de rendimiento
+- **Escalabilidad** — los runtimes pueden escalarse de forma independiente
+- **Flexibilidad** — combinar TypeScript y Rust segun convenga
+
+## Siguientes Pasos
+
+- [Vista General del Sistema](/docs/architecture/system-overview) — arquitectura actual
+- [Limites de Runtime](/docs/architecture/runtime-boundaries) — modelo de aislamiento actual

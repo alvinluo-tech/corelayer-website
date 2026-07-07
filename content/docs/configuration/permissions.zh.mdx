@@ -1,0 +1,81 @@
+---
+title: 权限
+description: 配置工具执行的权限守卫。
+---
+
+权限守卫控制哪些工具调用需要审批、哪些被自动允许、哪些被阻止。
+
+## 权限级别
+
+| 级别 | 行为 |
+|------|------|
+| **读取** | 自动允许（读取文件、列出数据） |
+| **写入** | 需要审批（写入文件、修改数据） |
+| **外部** | 需要审批（API 调用、网络请求） |
+| **破坏性** | 需要审批并显示警告（删除数据） |
+| **凭据敏感** | 除非明确允许，否则始终阻止 |
+
+## 配置
+
+```json
+{
+  "permissions": {
+    "defaultPolicy": "confirm",
+    "rules": [
+      {
+        "tool": "filesystem:read",
+        "policy": "allow"
+      },
+      {
+        "tool": "filesystem:write",
+        "policy": "confirm"
+      },
+      {
+        "tool": "github:*",
+        "policy": "confirm"
+      },
+      {
+        "tool": "shell:execute",
+        "policy": "deny"
+      }
+    ]
+  }
+}
+```
+
+## 策略
+
+| 策略 | 效果 |
+|------|------|
+| `allow` | 无需询问直接执行 |
+| `confirm` | 暂停并请求用户审批 |
+| `deny` | 完全阻止执行 |
+
+## 审批流程
+
+当工具调用需要确认时：
+
+1. Jarvis 解释它想要做什么
+2. 审批面板显示工具名称、参数和风险级别
+3. 你可以**批准**、**拒绝**或**始终批准**（针对此工具）
+4. 所有决策都记录在审计日志中
+
+## 审计日志
+
+每次工具执行都被记录：
+
+```text
+[2026-06-15 14:32:01] filesystem:write /workspace/README.md
+  风险: write
+  策略: confirm
+  决策: approved
+  用户: manual approval
+```
+
+在**控制中心 → 权限 → 审计日志**中查看审计日志。
+
+## 下一步
+
+- [权限守卫](/docs/core-concepts/permission-guard) — 深入了解安全模型
+- [查看审计日志](/docs/guides/review-audit-logs) — 使用审计追踪
+- [安全模型](/docs/architecture/security-model) — 架构细节

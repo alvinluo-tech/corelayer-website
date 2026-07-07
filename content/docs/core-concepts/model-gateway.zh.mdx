@@ -1,0 +1,52 @@
+---
+title: 模型网关
+description: 多提供商模型路由和选择。
+---
+
+模型网关管理与 AI 模型提供商的连接，并将请求路由到最佳可用模型。
+
+## 架构
+
+```text
+Jarvis 请求
+  → 模型网关
+  → 提供商选择逻辑
+  → Vercel AI SDK
+  → 提供商 API（Groq / OpenRouter / Ollama / OpenAI 兼容）
+  → 响应流式返回给 Jarvis
+```
+
+## 基于 Vercel AI SDK 构建
+
+模型网关使用 [Vercel AI SDK v6+](https://sdk.vercel.ai) 实现：
+
+- 跨提供商的统一接口
+- 流式响应
+- 工具调用支持
+- 结构化输出
+
+## 路由逻辑
+
+网关基于以下条件选择模型：
+
+1. **任务类型** — 推理、代码生成、摘要、分类
+2. **延迟要求** — 实时语音需要快速模型
+3. **成本** — 常规任务使用更便宜的模型
+4. **回退** — 主提供商不可用时的备选方案
+
+## 提供商配置
+
+详见[模型提供商](/docs/configuration/model-providers)了解配置详情。
+
+## 流式传输
+
+所有模型响应默认使用流式传输。这意味着：
+
+- 文本在生成时逐字显示
+- TTS 可以在句子完成时同步朗读（句级流式传输）
+- 工具调用在识别后立即执行
+
+## 下一步
+
+- [模型提供商](/docs/configuration/model-providers) — 配置提供商
+- [配置本地模型](/docs/guides/configure-local-models) — 设置 Ollama

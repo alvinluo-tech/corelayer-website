@@ -1,0 +1,68 @@
+---
+title: Revisar el Registro de Auditoria
+description: Entiende y trabaja con el registro de auditoria del Permission Guard.
+---
+
+Cada ejecucion de herramienta en CoreLayer se registra. Esta guia muestra como revisar y trabajar con los registros de auditoria.
+
+## Acceder a los Registros de Auditoria
+
+Abre **Centro de Control → Permisos → Registro de Auditoria**.
+
+## Formato de Entrada de Registro
+
+Cada entrada contiene:
+
+```text
+[2026-06-15 14:32:01] tool-name
+  Fuente: mcp | native | skill | rest
+  Riesgo: read | write | external | destructive
+  Politica: allow | confirm | deny
+  Decision: approved | denied | auto-allowed
+  Parametros: { ... }
+  Resultado: success | error
+```
+
+## Filtrar Registros
+
+Filtra por:
+
+- **Rango de fechas** — periodo de tiempo especifico
+- **Nombre de herramienta** — buscar llamadas a herramientas especificas
+- **Nivel de riesgo** — ver solo operaciones de escritura/destructivas
+- **Decision** — buscar llamadas denegadas o aprobadas
+
+## Casos de Uso Comunes
+
+### Revision de Seguridad
+
+Verifica que llamadas API externas se hicieron:
+
+1. Filtra por **Riesgo: externo**
+2. Revisa los nombres de herramientas y parametros
+3. Verifica que todas las llamadas fueran esperadas
+
+### Depuracion
+
+Encuentra por que fallo una llamada a herramienta:
+
+1. Filtra por **Resultado: error**
+2. Revisa el mensaje de error en la entrada del registro
+3. Verifica que los parametros de la herramienta fueran correctos
+
+### Cumplimiento
+
+Genera un reporte de todas las modificaciones de datos:
+
+1. Filtra por **Riesgo: escritura** y **Riesgo: destructivo**
+2. Exporta las entradas del registro
+3. Revisa todos los cambios de datos
+
+## Retencion de Registros
+
+Los registros de auditoria se almacenan localmente en la base de datos configurada y persisten entre sesiones. Por defecto, los registros se conservan indefinidamente. Para limitar el uso de disco, configura `permissions.auditRetentionDays` en `config.json` — las entradas mas antiguas que el numero de dias especificado se eliminan automaticamente al inicio.
+
+## Siguientes Pasos
+
+- [Permisos](/docs/configuration/permissions) — configurar politicas
+- [Permission Guard](/docs/core-concepts/permission-guard) — detalles del modelo de seguridad

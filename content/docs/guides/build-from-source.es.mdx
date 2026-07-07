@@ -1,0 +1,122 @@
+---
+title: Compilar desde Fuente
+description: Compila CoreLayer desde el repositorio fuente.
+---
+
+Esta guia cubre la compilacion de CoreLayer desde el codigo fuente para desarrollo o cuando no hay binarios precompilados disponibles.
+
+## Requisitos Previos
+
+| Requisito | Version |
+|-----------|---------|
+| Node.js | >= 22 |
+| pnpm | >= 9 |
+| Rust | Ultima estable |
+| Herramientas de plataforma | Ver [prerrequisitos de Tauri](https://tauri.app/start/prerequisites/) |
+
+### Requisitos Especificos por Plataforma
+
+**Windows:**
+- Herramientas de Compilacion C++ de Microsoft Visual Studio
+- Windows SDK
+
+**macOS:**
+- Xcode Command Line Tools
+
+**Linux:**
+- Varias bibliotecas del sistema (ver documentacion de Tauri)
+
+## Clonar e Instalar
+
+```bash
+git clone https://github.com/alvinluo-tech/CoreLayer.git
+cd CoreLayer
+pnpm install
+```
+
+## Modo de Desarrollo
+
+Ejecuta la aplicacion completa en modo de desarrollo con recarga en caliente:
+
+```bash
+pnpm dev
+```
+
+Esto inicia:
+- El daemon en el puerto 3001
+- El servidor de desarrollo Vite para el frontend
+- La aplicacion Tauri con recarga en caliente
+
+## Compilar para Produccion
+
+```bash
+pnpm build
+```
+
+Esto:
+1. Compila el sidecar del daemon
+2. Compila la aplicacion Tauri con optimizaciones de produccion
+3. Genera instaladores especificos por plataforma
+
+## Compilar Componentes Individuales
+
+### Solo el daemon
+
+```bash
+pnpm build:daemon
+```
+
+### Sidecar del daemon (para empaquetado)
+
+```bash
+pnpm build:daemon:sidecar
+```
+
+### Solo el frontend (modo web)
+
+```bash
+pnpm dev:web
+```
+
+## Estructura del Proyecto
+
+```text
+CoreLayer/
+├── frontend/              # Frontend Tauri + React
+│   ├── src/               # Codigo fuente React
+│   └── src-tauri/         # Codigo nativo Rust
+├── daemon/                # Backend Node.js
+├── packages/              # Paquetes compartidos
+│   ├── types/             # Tipos TypeScript
+│   ├── model-gateway/     # Enrutamiento de modelos de IA
+│   ├── mcp-client/        # Conexiones MCP
+│   ├── tool-registry/     # Gestion de herramientas
+│   ├── permission-guard/  # Sistema de seguridad
+│   ├── runtime-core/      # Gestion de runtime
+│   ├── runtime-protocol/  # Definiciones de protocolo
+│   └── execution-environment/ # Abstraccion de ejecucion
+├── skills/                # Definiciones de habilidades integradas
+├── scripts/               # Scripts de compilacion
+└── supabase/              # Migraciones de base de datos
+```
+
+## Solucion de Problemas
+
+**pnpm install falla:**
+- Asegurate de que Node.js 22+ y pnpm 9+ esten instalados
+- Prueba `pnpm install --frozen-lockfile`
+
+**La compilacion de Tauri falla:**
+- Verifica que la cadena de herramientas de Rust este instalada: `rustc --version`
+- Revisa los prerrequisitos especificos de tu plataforma
+- Consulta [solucion de problemas de Tauri](https://tauri.app/start/troubleshooting/)
+
+**El daemon no inicia:**
+- Verifica que el puerto 3001 no este en uso
+- Confirma los permisos de la base de datos
+- Revisa los registros del daemon para errores
+
+## Siguientes Pasos
+
+- [Vista General del Sistema](/docs/architecture/system-overview) — entiende la arquitectura
+- [Daemon](/docs/core-concepts/daemon) — detalles del daemon

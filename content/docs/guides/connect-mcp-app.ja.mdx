@@ -1,0 +1,61 @@
+---
+title: MCPアプリをCoreLayerに接続
+description: 外部MCPアプリケーションを接続するステップバイステップガイド。
+---
+
+このガイドでは、MCP経由で外部アプリケーションをCoreLayerに接続する手順を説明します。
+
+## 前提条件
+
+- CoreLayerがインストール済みで実行中
+- Node.js 22以上（npxベースのMCPサーバー用）
+
+## ステップ1: MCPサーバーを選択
+
+人気のオプション:
+
+| サーバー | 用途 |
+|--------|---------|
+| `@modelcontextprotocol/server-filesystem` | ファイルシステムアクセス |
+| `@modelcontextprotocol/server-github` | GitHub API |
+| `@modelcontextprotocol/server-brave-search` | Web検索 |
+| `@modelcontextprotocol/server-memory` | ナレッジグラフ |
+
+## ステップ2: サーバーを追加
+
+**コントロールセンター → 設定 → MCP → サーバー追加**を開く:
+
+```json
+{
+  "name": "github",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": {
+    "GITHUB_TOKEN": "ghp_..."
+  }
+}
+```
+
+## ステップ3: 接続を確認
+
+コントロールセンターでサーバーのステータスが**Connected**であることを確認。
+
+## ステップ4: ツールをテスト
+
+Jarvisに新しいツールを使用するよう依頼:
+
+```text
+最近のGitHubリポジトリを一覧表示して
+```
+
+JarvisはMCPサーバーからGitHubツールを発見し、リクエストを満たすために使用します。
+
+## ステップ5: 権限を確認
+
+新しいツールが初めて使用されると、パーミッションガードが承認を求めます。ツール呼び出しの詳細を確認し、アクションが想定通りであれば承認します。
+
+## トラブルシューティング
+
+- **サーバーが起動しない**: コマンドとargsが正しいか確認
+- **認証エラー**: 環境変数が設定されているか確認
+- **ツールが見つからない**: コントロールセンターからMCP接続を再起動

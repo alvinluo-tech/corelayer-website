@@ -1,0 +1,73 @@
+---
+title: Permission Guard
+description: Control de ejecucion basado en riesgo con flujos de aprobacion y registros de auditoria.
+---
+
+El Permission Guard es el sistema de seguridad de CoreLayer. Clasifica las llamadas a herramientas por nivel de riesgo, pausa las operaciones riesgosas para aprobacion del usuario y mantiene un registro de auditoria completo.
+
+## Por Que Existe
+
+Los agentes de IA que pueden llamar herramientas necesitan limites. Sin un sistema de permisos, un agente podria:
+
+- Eliminar archivos sin preguntar
+- Hacer llamadas API externas con tus credenciales
+- Modificar datos que no pretendias cambiar
+
+El Permission Guard hace que la ejecucion de herramientas sea **visible, controlable y auditable**.
+
+## Clasificacion de Riesgo
+
+Cada llamada a herramienta se clasifica:
+
+| Nivel de Riesgo | Ejemplos | Politica por Defecto |
+|-----------------|----------|----------------------|
+| **Lectura** | Listar archivos, leer datos, buscar | Permitir automaticamente |
+| **Escritura** | Crear/modificar archivos, actualizar registros | Confirmar |
+| **Externo** | Llamadas API, solicitudes web | Confirmar |
+| **Destructivo** | Eliminar archivos, eliminar tablas | Confirmar + advertencia |
+| **Sensible a credenciales** | Tokens de acceso, contrasenas | Bloquear salvo explicito |
+
+## Flujo de Aprobacion
+
+```text
+Solicitud de llamada a herramienta
+  → Clasificacion de riesgo
+  → Verificacion de politica (allow / confirm / deny)
+  → Si es confirm: pausar, mostrar panel de aprobacion
+  → El usuario aprueba o deniega
+  → Ejecutar u omitir
+  → Registrar decision en el registro de auditoria
+```
+
+## Panel de Aprobacion
+
+Cuando se necesita aprobacion, el Centro de Control muestra:
+
+- **Nombre de la herramienta** y origen
+- **Parametros** que se pasan
+- Indicador de **nivel de riesgo**
+- **Explicacion** de lo que ocurrira
+- Botones de **Aprobar** / **Denegar** / **Aprobar Siempre**
+
+## Registros de Auditoria
+
+Cada ejecucion de herramienta se registra con:
+
+- Marca de tiempo
+- Nombre y origen de la herramienta
+- Parametros (sanitizados)
+- Nivel de riesgo
+- Decision del usuario (aprobada/denegada/permitida automaticamente)
+- Resultado de la ejecucion
+
+Consulta los registros en **Centro de Control → Permisos → Registro de Auditoria**.
+
+## Configuracion
+
+Consulta [Configuracion de Permisos](/docs/configuration/permissions) para las reglas de politica.
+
+## Siguientes Pasos
+
+- [Permisos](/docs/configuration/permissions) — configurar politicas
+- [Revisar Registros de Auditoria](/docs/guides/review-audit-logs) — trabajar con el registro de auditoria
+- [Modelo de Seguridad](/docs/architecture/security-model) — detalles de arquitectura

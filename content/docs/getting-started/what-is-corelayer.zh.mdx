@@ -1,0 +1,48 @@
+---
+title: 什么是 CoreLayer？
+description: 面向桌面应用、工具、模型和 MCP 工作流的本地优先 AI 控制层。
+---
+
+CoreLayer 是一个由 Jarvis 驱动的桌面 AI 命令层。它不是通用聊天机器人，不是 IDE 副驾驶，也不是云自动化工具。它本地运行在你的个人应用、工具、模型和 MCP 服务器之间，让 Jarvis 通过明确的权限协调工作。
+
+## 核心能力
+
+- **多模型路由** — 跨 MiMo、Groq、OpenRouter、Ollama 和 OpenAI 兼容提供商
+- **MCP 优先集成** — 与外部工具和服务器集成
+- **统一工具调用** — 来自原生模块、MCP、技能和 REST 适配器
+- **权限守卫** — 基于风险的执行和审计日志
+- **语音管线** — 唤醒词、ASR、流式 TTS 和打断式交互
+- **三种存储模式**（本地 SQLite、Supabase、PostgreSQL）运行时热切换
+- **命令面板**（Alt+Space）快速操作
+- **任务管理** — AI 驱动的自然语言查询
+- **阅读列表跟踪** — AI 推荐
+- **每日/每周回顾摘要** — 模式识别
+
+## 架构一览
+
+```text
+Tauri 2 桌面应用
+  └─ React 19 + Vite + Tailwind 4 前端
+     └─ Tauri IPC 桥接
+        └─ Node.js 守护进程（Hono）
+           ├─ 模型网关（Vercel AI SDK）
+           ├─ 工具注册
+           ├─ 权限守卫
+           ├─ MCP 客户端管理器
+           └─ SQLite / Supabase / PostgreSQL
+```
+
+CoreLayer 使用三层代理模型：React 前端通过 Tauri IPC 与 Node.js 守护进程通信，守护进程管理所有 AI 编排、工具执行和数据存储。
+
+## CoreLayer 适合谁？
+
+- **技术用户** — 希望本地控制 AI 工作流
+- **独立开发者** — 使用 MCP 和本地 AI 工具构建
+- **高级用户** — 尝试多模型路由和语音界面
+- **未来贡献者** — 对开源桌面 AI 领域感兴趣
+
+## 下一步
+
+- [安装 CoreLayer](/docs/getting-started/install) — 运行桌面应用
+- [快速入门](/docs/getting-started/quickstart) — 连接你的第一个模型和 MCP 服务器
+- [架构](/docs/architecture/system-overview) — 了解系统设计

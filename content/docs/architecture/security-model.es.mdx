@@ -1,0 +1,117 @@
+---
+title: Modelo de Seguridad
+description: Como CoreLayer protege tus datos y controla la ejecucion de herramientas.
+---
+
+CoreLayer esta diseniado con un modelo de seguridad local con control de permisos.
+
+## Principios Fundamentales
+
+1. **Local primero** — los datos permanecen en tu maquina por defecto
+2. **Control de permisos** — la ejecucion de herramientas requiere politicas explicitas
+3. **Auditable** — todas las acciones se registran
+4. **Visible** — nada ocurre sin que lo sepas
+
+## Seguridad de Datos
+
+### Almacenamiento Local
+
+Por defecto, todos los datos se almacenan en una base de datos SQLite local:
+
+- Conversaciones
+- Tareas y listas de lectura
+- Registros de auditoria
+- Configuraciones de modelo
+- Preferencias del usuario
+
+El archivo de base de datos se almacena en el directorio de datos de la aplicacion del usuario y no se transmite a ningun lugar.
+
+### Sincronizacion en la Nube Opcional
+
+Cuando Supabase esta habilitado:
+
+- Los datos se cifran en transito (HTTPS)
+- Supabase gestiona el cifrado en reposo
+- Tu controlas el proyecto de Supabase y sus politicas de acceso
+
+### Claves API
+
+- Se almacenan en el archivo de configuracion local
+- Pueden referenciar variables de entorno
+- Nunca se transmiten a los servidores propios de CoreLayer
+- Solo se envian al proveedor de IA configurado
+
+## Seguridad de Ejecucion de Herramientas
+
+### Permission Guard
+
+Cada llamada a herramienta pasa por el Permission Guard:
+
+```text
+Llamada a herramienta → Clasificacion de riesgo → Verificacion de politica → Ejecutar o bloquear
+```
+
+### Niveles de Riesgo
+
+| Nivel | Auto-ejecutar? | Ejemplos |
+|-------|----------------|----------|
+| Lectura | Si | Listar archivos, leer datos |
+| Escritura | No (confirmar) | Crear/modificar archivos |
+| Externo | No (confirmar) | Llamadas API |
+| Destructivo | No (confirmar + advertencia) | Eliminar datos |
+| Sensible a credenciales | No (bloquear) | Tokens de acceso |
+
+### Registro de Auditoria
+
+Cada ejecucion de herramienta se registra con:
+
+- Marca de tiempo
+- Nombre y origen de la herramienta
+- Parametros (sanitizados)
+- Nivel de riesgo
+- Decision del usuario
+- Resultado de la ejecucion
+
+## Seguridad de Red
+
+### Solo Localhost
+
+La API del daemon solo es accesible desde localhost:
+
+- No expuesta a la red
+- Sin acceso remoto por defecto
+- Tauri IPC es solo local
+
+### Conexiones Externas
+
+CoreLayer solo se conecta a:
+
+- **Proveedores de IA** que configures (Groq, OpenRouter, etc.)
+- **Servidores MCP** que aniadas
+- **Supabase** si habilitas la sincronizacion en la nube
+
+Sin telemetria, analiticas ni conexiones de reporte.
+
+## Seguridad de Tauri
+
+Tauri proporciona seguridad adicional:
+
+- **Webview aislado** — el frontend no puede acceder al sistema directamente
+- **Lista blanca de IPC** — solo los comandos registrados estan permitidos
+- **Aislamiento de procesos** — el daemon se ejecuta como proceso separado
+
+## Modelo de Amenazas
+
+| Amenaza | Mitigacion |
+|---------|-----------|
+| Llamada a herramienta maliciosa | Permission Guard + registro de auditoria |
+| Exfiltracion de datos | Almacenamiento local, sin telemetria |
+| Acceso no autorizado | API solo en localhost |
+| Inyeccion de prompt al modelo | Validacion de parametros de herramientas, clasificacion de riesgo, confirmacion de Permission Guard para llamadas no lecturas |
+| Servidor MCP comprometido | Permission Guard bloquea llamadas riesgosas |
+
+## Siguientes Pasos
+
+- [Permission Guard](/docs/core-concepts/permission-guard) — sistema de seguridad detallado
+- [Configuracion de Permisos](/docs/configuration/permissions) — configurar politicas
+- [Limites de Runtime](/docs/architecture/runtime-boundaries) — aislamiento de componentes

@@ -1,0 +1,61 @@
+---
+title: 將 MCP 應用程式連接到 CoreLayer
+description: 連接外部 MCP 應用程式的逐步指南。
+---
+
+本指南將引導你透過 MCP 將外部應用程式連接到 CoreLayer。
+
+## 前置條件
+
+- CoreLayer 已安裝並運行
+- Node.js 22+（用於基於 npx 的 MCP 伺服器）
+
+## 步驟 1：選擇 MCP 伺服器
+
+熱門選項：
+
+| 伺服器 | 用途 |
+|--------|---------|
+| `@modelcontextprotocol/server-filesystem` | 檔案系統存取 |
+| `@modelcontextprotocol/server-github` | GitHub API |
+| `@modelcontextprotocol/server-brave-search` | 網路搜尋 |
+| `@modelcontextprotocol/server-memory` | 知識圖譜 |
+
+## 步驟 2：新增伺服器
+
+開啟 **控制中心 → 設定 → MCP → 新增伺服器**：
+
+```json
+{
+  "name": "github",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": {
+    "GITHUB_TOKEN": "ghp_..."
+  }
+}
+```
+
+## 步驟 3：驗證連接
+
+在控制中心檢查伺服器是否顯示**已連接**狀態。
+
+## 步驟 4：測試工具
+
+要求 Jarvis 使用新工具：
+
+```text
+列出我最近的 GitHub 儲存庫
+```
+
+Jarvis 將從 MCP 伺服器發現 GitHub 工具，並使用它們來完成你的請求。
+
+## 步驟 5：檢視權限
+
+首次使用新工具時，權限守護會要求核准。檢視工具呼叫詳情，如果操作符合預期則核准。
+
+## 疑難排解
+
+- **伺服器無法啟動**：檢查指令和參數是否正確
+- **認證錯誤**：驗證環境變數已設定
+- **找不到工具**：從控制中心重新啟動 MCP 連接

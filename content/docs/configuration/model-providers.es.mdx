@@ -1,0 +1,84 @@
+---
+title: Proveedores de Modelos
+description: Configura proveedores de modelos de IA para el enrutamiento de Jarvis.
+---
+
+El Model Gateway de CoreLayer enruta solicitudes a traves de multiples proveedores de IA. Puedes configurar uno o mas proveedores y dejar que Jarvis seleccione el mejor modelo para cada tarea.
+
+## Proveedores Compatibles
+
+| Proveedor | Tipo | Modelos |
+|-----------|------|---------|
+| **Groq** | Nube (inferencia rapida) | Llama 3.3, Mixtral, Gemma |
+| **OpenRouter** | Gateway multi-proveedor | MiMo, Claude, GPT-4, Llama, Mistral |
+| **Ollama** | Local | Cualquier modelo compatible con Ollama |
+| **Compatible con OpenAI** | Cualquier | Cualquier proveedor con API compatible con OpenAI |
+
+## Configuracion
+
+### Via Centro de Control
+
+1. Abre **Ajustes → Modelos**
+2. Haz clic en **Aniadir Proveedor**
+3. Selecciona el tipo de proveedor
+4. Introduce la clave API y las preferencias de modelo
+
+### Via Archivo de Configuracion
+
+```json
+{
+  "models": {
+    "providers": [
+      {
+        "name": "groq",
+        "type": "groq",
+        "apiKey": "YOUR_GROQ_API_KEY",
+        "defaultModel": "llama-3.3-70b-versatile"
+      },
+      {
+        "name": "openrouter",
+        "type": "openrouter",
+        "apiKey": "YOUR_OPENROUTER_API_KEY",
+        "defaultModel": "mimo/mimo-v2.5"
+      },
+      {
+        "name": "ollama",
+        "type": "ollama",
+        "endpoint": "http://localhost:11434",
+        "defaultModel": "llama3.2"
+      }
+    ]
+  }
+}
+```
+
+## Enrutamiento de Modelos
+
+Cuando hay multiples proveedores configurados, el Model Gateway selecciona segun:
+
+- **Complejidad de la tarea** — el razonamiento complejo se enruta a modelos mas capaces
+- **Requisitos de latencia** — las solicitudes sensibles al tiempo prefieren Groq o modelos locales
+- **Optimizacion de costes** — las tareas rutinarias usan proveedores mas economicos
+- **Disponibilidad** — respaldo si un proveedor no esta disponible
+
+## Variables de Entorno
+
+Puedes usar variables de entorno en lugar de codificar las claves API:
+
+```bash
+GROQ_API_KEY=your_groq_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+Referencialas en la configuracion:
+
+```json
+{
+  "apiKey": "${GROQ_API_KEY}"
+}
+```
+
+## Siguientes Pasos
+
+- [Model Gateway](/docs/core-concepts/model-gateway) — entiende la logica de enrutamiento
+- [Configurar Modelos Locales](/docs/guides/configure-local-models) — configurar Ollama

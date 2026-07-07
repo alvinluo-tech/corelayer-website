@@ -1,0 +1,108 @@
+---
+title: 註冊自訂工具
+description: 在工具註冊表中註冊你自己的工具。
+---
+
+你可以透過在工具註冊表中新增自訂工具來擴展 Jarvis。
+
+## 選項 1：MCP 伺服器
+
+新增工具的推薦方式是透過 MCP 伺服器。建立一個公開你的工具的簡單 MCP 伺服器：
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
+
+const server = new McpServer({
+  name: "my-tools",
+  version: "1.0.0",
+});
+
+server.tool(
+  "my-tool",
+  "Description of what this tool does",
+  {
+    param1: { type: "string", description: "First parameter" },
+  },
+  async ({ param1 }) => {
+    // Tool implementation
+    return {
+      content: [{ type: "text", text: `Result: ${param1}` }],
+    };
+  }
+);
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+然後將它新增到 CoreLayer：
+
+```json
+{
+  "name": "my-tools",
+  "command": "node",
+  "args": ["./my-mcp-server.js"]
+}
+```
+
+## 選項 2：REST 轉接器
+
+對於已經作為 REST API 可用的工具，你可以將它們註冊為 REST 轉接器，而無需將它們包裝在 MCP 伺服器中。
+
+在你的 CoreLayer 設定中新增 REST 轉接器條目：
+
+```json
+{
+  "name": "weather-api",
+  "type": "rest",
+  "baseUrl": "https://api.weather.example.com/v1",
+  "auth": {
+    "type": "bearer",
+    "token": "${WEATHER_API_KEY}"
+  },
+  "tools": [
+    {
+      "name": "get-forecast",
+      "description": "Get the weather forecast for a location",
+      "method": "GET",
+      "path": "/forecast",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name or coordinates"
+          }
+        },
+        "required": ["location"]
+      }
+    }
+  ]
+}
+```
+
+REST 轉接器會自動將每個工具條目轉換為工具註冊表中的可呼叫工具。Jarvis 向設定的端點發送 HTTP 請求，並將回應作為工具結果傳回。
+
+> REST 轉接器最適合你不想包裝的現有 API。對於新工具，建議使用 MCP 伺服器 — 它們支援串流、更豐富的錯誤處理，且更容易在本地測試。
+
+## 工具中繼資料
+
+註冊工具時，請提供：
+
+- **名稱** — 唯一、描述性的識別碼
+- **說明** — 清楚解釋工具的功能
+- **參數** — 輸入的 JSON Schema
+- **風險等級** — 幫助權限守護分類工具
+
+## 最佳實踐
+
+- 使用描述性名稱：`filesystem:read` 而不是 `fs1`
+- 撰寫清晰的說明 — Jarvis 使用這些來決定何時呼叫工具
+- 嚴格定義參數結構 — 防止無效呼叫
+- 設定適當的風險等級 — 不要將所有東西都標記為 `read`
+
+## 下一步
+
+- [工具註冊表](/docs/core-concepts/tool-registry) — 工具如何被管理
+- [權限](/docs/configuration/permissions) — 設定工具策略

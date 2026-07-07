@@ -1,0 +1,168 @@
+---
+title: Referencia de Endpoints API
+description: Referencia del HTTP API del daemon.
+---
+
+El daemon de CoreLayer expone un HTTP API en `localhost:3001`. El frontend de Tauri usa esta API a traves del puente IPC de Tauri.
+
+## URL Base
+
+```text
+http://localhost:3001
+```
+
+## Chat
+
+### POST `/api/chat`
+
+Envia un mensaje a Jarvis y recibe una respuesta en streaming.
+
+```json
+{
+  "message": "What tasks do I have?",
+  "conversationId": "conv_123"
+}
+```
+
+Respuesta: Stream de Server-Sent Events (SSE).
+
+## Tareas
+
+### GET `/api/tasks`
+
+Lista todas las tareas.
+
+```json
+// Respuesta
+[
+  {
+    "id": "task_abc123",
+    "title": "Review PR #42",
+    "status": "pending",
+    "priority": "high",
+    "dueDate": "2026-06-30T00:00:00Z",
+    "createdAt": "2026-06-28T10:00:00Z"
+  }
+]
+```
+
+### POST `/api/tasks`
+
+Crea una nueva tarea.
+
+```json
+// Solicitud
+{
+  "title": "Review PR #42",
+  "priority": "high",
+  "dueDate": "2026-06-30"
+}
+
+// Respuesta
+{
+  "id": "task_abc123",
+  "title": "Review PR #42",
+  "status": "pending",
+  "priority": "high",
+  "dueDate": "2026-06-30T00:00:00Z"
+}
+```
+
+### PATCH `/api/tasks/:id`
+
+Actualiza una tarea. Acepta un objeto de tarea parcial.
+
+### DELETE `/api/tasks/:id`
+
+Elimina una tarea.
+
+## Articulos (Lista de Lectura)
+
+### GET `/api/articles`
+
+Lista todos los articulos.
+
+### POST `/api/articles`
+
+Aniade un articulo.
+
+### DELETE `/api/articles/:id`
+
+Elimina un articulo.
+
+## Revisiones
+
+### GET `/api/reviews`
+
+Lista las revisiones.
+
+### POST `/api/reviews/generate`
+
+Genera una nueva revision.
+
+## Modelos
+
+### GET `/api/models`
+
+Lista los proveedores de modelos configurados.
+
+### POST `/api/models`
+
+Aniade un proveedor de modelos.
+
+## MCP
+
+### GET `/api/mcp/servers`
+
+Lista los servidores MCP.
+
+### POST `/api/mcp/servers`
+
+Aniade un servidor MCP.
+
+### POST `/api/mcp/servers/:id/restart`
+
+Reinicia un servidor MCP.
+
+## Herramientas
+
+### GET `/api/tools`
+
+Lista todas las herramientas registradas.
+
+## Permisos
+
+### GET `/api/permissions/audit`
+
+Obtiene las entradas del registro de auditoria.
+
+### POST `/api/permissions/approve`
+
+Aprueba una llamada a herramienta pendiente.
+
+### POST `/api/permissions/deny`
+
+Deniega una llamada a herramienta pendiente.
+
+## Salud
+
+### GET `/api/health`
+
+Verifica la salud del daemon.
+
+```json
+{
+  "status": "healthy",
+  "uptime": 3600,
+  "version": "<current-version>"
+}
+```
+
+## Autenticacion
+
+La API del daemon solo es accesible desde localhost. No se requiere autenticacion para acceso local.
+
+## Siguientes Pasos
+
+- [Archivo de Configuracion](/docs/reference/config-file) — referencia de configuracion
+- [Comandos CLI](/docs/reference/cli-commands) — interfaz de linea de comandos

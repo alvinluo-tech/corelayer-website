@@ -1,0 +1,84 @@
+---
+title: モデルプロバイダー
+description: Jarvisルーティング用のAIモデルプロバイダーを設定します。
+---
+
+CoreLayerのモデルゲートウェイは、複数のAIプロバイダーにリクエストをルーティングします。1つ以上のプロバイダーを設定し、Jarvisが各タスクに最適なモデルを選択できるようにします。
+
+## サポートされているプロバイダー
+
+| プロバイダー | タイプ | モデル |
+|----------|------|--------|
+| **Groq** | クラウド（高速推論） | Llama 3.3、Mixtral、Gemma |
+| **OpenRouter** | マルチプロバイダーゲートウェイ | MiMo、Claude、GPT-4、Llama、Mistral |
+| **Ollama** | ローカル | 任意のOllama互換モデル |
+| **OpenAI互換** | 任意 | OpenAI互換APIを持つ任意のプロバイダー |
+
+## 設定
+
+### コントロールセンター経由
+
+1. **設定 → モデル**を開く
+2. **プロバイダー追加**をクリック
+3. プロバイダータイプを選択
+4. APIキーとモデル設定を入力
+
+### 設定ファイル経由
+
+```json
+{
+  "models": {
+    "providers": [
+      {
+        "name": "groq",
+        "type": "groq",
+        "apiKey": "YOUR_GROQ_API_KEY",
+        "defaultModel": "llama-3.3-70b-versatile"
+      },
+      {
+        "name": "openrouter",
+        "type": "openrouter",
+        "apiKey": "YOUR_OPENROUTER_API_KEY",
+        "defaultModel": "mimo/mimo-v2.5"
+      },
+      {
+        "name": "ollama",
+        "type": "ollama",
+        "endpoint": "http://localhost:11434",
+        "defaultModel": "llama3.2"
+      }
+    ]
+  }
+}
+```
+
+## モデルルーティング
+
+複数のプロバイダーが設定されている場合、モデルゲートウェイは以下に基づいて選択します:
+
+- **タスクの複雑さ** — 複雑な推論はより高性能なモデルにルーティング
+- **レイテンシー要件** — 時間に敏感なリクエストはGroqまたはローカルモデルを優先
+- **コスト最適化** — 日常タスクはより安価なプロバイダーを使用
+- **可用性** — プロバイダーがダウンした場合のフォールバック
+
+## 環境変数
+
+APIキーをハードコードする代わりに環境変数を使用できます:
+
+```bash
+GROQ_API_KEY=your_groq_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+設定で参照:
+
+```json
+{
+  "apiKey": "${GROQ_API_KEY}"
+}
+```
+
+## 次のステップ
+
+- [モデルゲートウェイ](/docs/core-concepts/model-gateway) — ルーティングロジックの理解
+- [ローカルモデル設定](/docs/guides/configure-local-models) — Ollamaのセットアップ

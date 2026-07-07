@@ -1,0 +1,91 @@
+---
+title: 設定ファイル
+description: CoreLayer設定ファイルリファレンス。
+---
+
+CoreLayerはシステム全体の設定にJSON設定ファイルを使用します。
+
+## 場所
+
+| プラットフォーム | パス |
+|----------|------|
+| Windows | `%APPDATA%/corelayer/config.json` |
+| macOS | `~/Library/Application Support/corelayer/config.json` |
+| Linux | `~/.config/corelayer/config.json` |
+
+## 完全なリファレンス
+
+```json
+{
+  "models": {
+    "providers": [
+      {
+        "name": "groq",
+        "type": "groq",
+        "apiKey": "${GROQ_API_KEY}",
+        "defaultModel": "llama-3.3-70b-versatile"
+      }
+    ]
+  },
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+        "env": {}
+      }
+    ]
+  },
+  "storage": {
+    "mode": "sqlite",
+    "path": "~/.corelayer/data.db"
+  },
+  "voice": {
+    "enabled": true,
+    "wakeWord": {
+      "enabled": true,
+      "keyword": "jarvis"
+    },
+    "asr": {
+      "provider": "web-speech",
+      "language": "en-US"
+    },
+    "tts": {
+      "provider": "mimo",
+      "streaming": true,
+      "sentenceLevel": true
+    }
+  },
+  "permissions": {
+    "defaultPolicy": "confirm",
+    "rules": [
+      {
+        "tool": "filesystem:read",
+        "policy": "allow"
+      }
+    ]
+  },
+  "daemon": {
+    "port": 3001
+  },
+  "runtime": {
+    "skills": {
+      "enabled": true
+    }
+  }
+}
+```
+
+## 環境変数
+
+設定ファイルで`${ENV_VAR_NAME}`構文を使用して環境変数を参照できます。
+
+## 検証
+
+CoreLayerは起動時に設定ファイルを検証します。無効な設定はコントロールセンターにエラーとして表示されます。
+
+## 次のステップ
+
+- [CLIコマンド](/docs/reference/cli-commands) — コマンドラインインターフェース
+- [APIエンドポイント](/docs/reference/api-endpoints) — デーモンHTTP API

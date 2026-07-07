@@ -1,0 +1,75 @@
+---
+title: Guia de Inicio Rapido
+description: Conecta tu primer modelo y servidor MCP en 5 minutos.
+---
+
+Esta guia te acompana en la configuracion minima para que CoreLayer funcione con un modelo de IA y un servidor MCP.
+
+## Paso 1: Iniciar CoreLayer
+
+Abre la aplicacion de escritorio CoreLayer. El Centro de Control aparecera con el asistente de configuracion inicial.
+
+## Paso 2: Configurar un Proveedor de Modelos
+
+Navega a **Ajustes → Modelos** y aniade un proveedor:
+
+```text
+Proveedor: Groq (recomendado para una experiencia rapida similar a la local)
+Clave API: tu-clave-api-de-groq
+Modelo: llama-3.3-70b-versatile
+```
+
+Tambien puedes usar:
+- **MiMo** — el modelo de Xiaomi via OpenRouter
+- **OpenRouter** — acceso a multiples proveedores
+- **Ollama** — modelos completamente locales
+- **Compatible con OpenAI** — cualquier proveedor con API compatible con OpenAI
+
+## Paso 3: Conectar un Servidor MCP
+
+Navega a **Ajustes → MCP** y aniade un servidor:
+
+```json
+{
+  "name": "filesystem",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/your/workspace"]
+}
+```
+
+Esto le da a Jarvis acceso para leer y escribir archivos en tu espacio de trabajo a traves del protocolo MCP.
+
+## Paso 4: Probar
+
+Abre la paleta de comandos con **Alt+Space** y escribe:
+
+```text
+Lista los archivos de mi espacio de trabajo
+```
+
+Jarvis:
+1. Interpretara tu intencion
+2. Enrutara la solicitud a traves del Model Gateway
+3. Resolvera la herramienta del sistema de archivos desde el Tool Registry
+4. Ejecutara la llamada a herramienta MCP
+5. Devolvera los resultados
+
+Si la herramienta requiere acceso de escritura, el Permission Guard se pausara y pedira aprobacion.
+
+## Que Acaba de Ocurrir?
+
+```text
+Tu solicitud
+  → Jarvis interpreta la intencion
+  → Model Gateway selecciona Groq/llama-3.3
+  → Tool Registry resuelve la herramienta MCP del sistema de archivos
+  → Permission Guard verifica el nivel de riesgo
+  → MCP Client ejecuta la llamada a herramienta
+  → Resultado devuelto a ti
+```
+
+## Siguientes Pasos
+
+- [Primer Servidor MCP](/docs/getting-started/first-mcp-server) — guia mas profunda de integracion MCP
+- [Proveedores de Modelos](/docs/configuration/model-providers) — configurar multiples proveedores
+- [Permission Guard](/docs/core-concepts/permission-guard) — entiende el modelo de seguridad

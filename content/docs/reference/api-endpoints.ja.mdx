@@ -1,0 +1,168 @@
+---
+title: APIエンドポイントリファレンス
+description: デーモンHTTP APIリファレンス。
+---
+
+CoreLayerデーモンは`localhost:3001`でHTTP APIを公開します。TauriフロントエンドはTauriのIPCブリッジを通じてこのAPIを使用します。
+
+## ベースURL
+
+```text
+http://localhost:3001
+```
+
+## チャット
+
+### POST `/api/chat`
+
+Jarvisにメッセージを送信し、ストリーミングレスポンスを受信。
+
+```json
+{
+  "message": "What tasks do I have?",
+  "conversationId": "conv_123"
+}
+```
+
+レスポンス: Server-Sent Events（SSE）ストリーム。
+
+## タスク
+
+### GET `/api/tasks`
+
+すべてのタスクを一覧表示。
+
+```json
+// レスポンス
+[
+  {
+    "id": "task_abc123",
+    "title": "Review PR #42",
+    "status": "pending",
+    "priority": "high",
+    "dueDate": "2026-06-30T00:00:00Z",
+    "createdAt": "2026-06-28T10:00:00Z"
+  }
+]
+```
+
+### POST `/api/tasks`
+
+新しいタスクを作成。
+
+```json
+// リクエスト
+{
+  "title": "Review PR #42",
+  "priority": "high",
+  "dueDate": "2026-06-30"
+}
+
+// レスポンス
+{
+  "id": "task_abc123",
+  "title": "Review PR #42",
+  "status": "pending",
+  "priority": "high",
+  "dueDate": "2026-06-30T00:00:00Z"
+}
+```
+
+### PATCH `/api/tasks/:id`
+
+タスクを更新。部分的なタスクオブジェクトを受け付けます。
+
+### DELETE `/api/tasks/:id`
+
+タスクを削除。
+
+## 記事（リーディングリスト）
+
+### GET `/api/articles`
+
+すべての記事を一覧表示。
+
+### POST `/api/articles`
+
+記事を追加。
+
+### DELETE `/api/articles/:id`
+
+記事を削除。
+
+## レビュー
+
+### GET `/api/reviews`
+
+レビューを一覧表示。
+
+### POST `/api/reviews/generate`
+
+新しいレビューを生成。
+
+## モデル
+
+### GET `/api/models`
+
+設定されたモデルプロバイダーを一覧表示。
+
+### POST `/api/models`
+
+モデルプロバイダーを追加。
+
+## MCP
+
+### GET `/api/mcp/servers`
+
+MCPサーバーを一覧表示。
+
+### POST `/api/mcp/servers`
+
+MCPサーバーを追加。
+
+### POST `/api/mcp/servers/:id/restart`
+
+MCPサーバーを再起動。
+
+## ツール
+
+### GET `/api/tools`
+
+登録されたすべてのツールを一覧表示。
+
+## 権限
+
+### GET `/api/permissions/audit`
+
+監査ログエントリを取得。
+
+### POST `/api/permissions/approve`
+
+保留中のツール呼び出しを承認。
+
+### POST `/api/permissions/deny`
+
+保留中のツール呼び出しを拒否。
+
+## ヘルス
+
+### GET `/api/health`
+
+デーモンのヘルスをチェック。
+
+```json
+{
+  "status": "healthy",
+  "uptime": 3600,
+  "version": "<current-version>"
+}
+```
+
+## 認証
+
+デーモンAPIはローカルホストからのみアクセス可能です。ローカルアクセスには認証は不要です。
+
+## 次のステップ
+
+- [設定ファイル](/docs/reference/config-file) — 設定リファレンス
+- [CLIコマンド](/docs/reference/cli-commands) — コマンドラインインターフェース

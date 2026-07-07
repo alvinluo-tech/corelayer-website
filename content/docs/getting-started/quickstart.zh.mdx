@@ -1,0 +1,75 @@
+---
+title: 快速入门指南
+description: 5 分钟内连接你的第一个模型和 MCP 服务器。
+---
+
+本指南将引导你完成最小设置，让 CoreLayer 与 AI 模型和 MCP 服务器协同工作。
+
+## 步骤 1：启动 CoreLayer
+
+打开 CoreLayer 桌面应用。控制中心将显示初始设置向导。
+
+## 步骤 2：配置模型提供商
+
+导航到**设置 → 模型**并添加提供商：
+
+```text
+提供商: Groq（推荐，提供类似本地的快速体验）
+API 密钥: your-groq-api-key
+模型: llama-3.3-70b-versatile
+```
+
+你也可以使用：
+- **MiMo** — 小米的模型，通过 OpenRouter
+- **OpenRouter** — 访问多个提供商
+- **Ollama** — 完全本地的模型
+- **OpenAI 兼容** — 任何具有 OpenAI 兼容 API 的提供商
+
+## 步骤 3：连接 MCP 服务器
+
+导航到**设置 → MCP** 并添加服务器：
+
+```json
+{
+  "name": "filesystem",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/your/workspace"]
+}
+```
+
+这将让 Jarvis 通过 MCP 协议访问你工作区中的文件读写。
+
+## 步骤 4：测试
+
+使用 **Alt+Space** 打开命令面板，输入：
+
+```text
+列出我工作区中的文件
+```
+
+Jarvis 将：
+1. 解读你的意图
+2. 通过模型网关路由请求
+3. 从工具注册解析 filesystem 工具
+4. 执行 MCP 工具调用
+5. 返回结果
+
+如果工具需要写入权限，权限守卫将暂停并请求审批。
+
+## 刚才发生了什么？
+
+```text
+你的请求
+  → Jarvis 解读意图
+  → 模型网关选择 Groq/llama-3.3
+  → 工具注册解析 filesystem MCP 工具
+  → 权限守卫检查风险级别
+  → MCP 客户端执行工具调用
+  → 结果返回给你
+```
+
+## 下一步
+
+- [第一个 MCP 服务器](/docs/getting-started/first-mcp-server) — MCP 集成的深入指南
+- [模型提供商](/docs/configuration/model-providers) — 配置多个提供商
+- [权限守卫](/docs/core-concepts/permission-guard) — 了解安全模型

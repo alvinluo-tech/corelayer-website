@@ -1,0 +1,48 @@
+---
+title: CoreLayer 文档
+description: 从这里开始安装 CoreLayer、配置模型提供商、连接你的第一个 MCP 服务器，并在让 Jarvis 使用工具之前了解权限模型。
+---
+
+欢迎阅读 CoreLayer 文档。CoreLayer 是一个本地优先的桌面 AI 控制层，通过权限保护的命令中心连接你的个人应用、工具、模型和 MCP 工作流。
+
+## 快速链接
+
+<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-6">
+  <a href="/docs/getting-started/install" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **安装 CoreLayer**
+    在你的系统上运行桌面应用。
+  </a>
+  <a href="/docs/getting-started/quickstart" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **快速入门**
+    5 分钟内连接你的第一个模型和 MCP 服务器。
+  </a>
+  <a href="/docs/core-concepts/permission-guard" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **权限守卫**
+    了解工具执行如何保持安全和可审计。
+  </a>
+  <a href="/docs/architecture/system-overview" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **架构**
+    了解 Tauri Shell、守护进程和包如何协同工作。
+  </a>
+</div>
+
+## 什么是 CoreLayer？
+
+CoreLayer 位于你和个人应用生态系统之间。它不是一个被困在浏览器标签页中的聊天机器人，而是作为桌面控制层运行：
+
+- **语音原生** — 唤醒词、流式 ASR/TTS、打断式交互
+- **MCP 优先** — 通过模型上下文协议连接外部工具服务器
+- **工具感知** — 统一注册原生模块、MCP 工具、技能和 REST 适配器
+- **权限保护** — 风险操作被分类、暂停等待审批并记录日志
+- **本地优先** — SQLite 本地存储，可选 Supabase 云同步
+
+## 文档章节
+
+| 章节 | 内容 |
+|------|------|
+| [快速入门](/docs/getting-started/what-is-corelayer) | 安装、快速开始、首次 MCP 连接 |
+| [配置](/docs/configuration/model-providers) | 模型提供商、MCP 服务器、存储、语音、权限 |
+| [核心概念](/docs/core-concepts/jarvis) | Jarvis、控制中心、模型网关、工具注册、权限守卫 |
+| [指南](/docs/guides/connect-mcp-app) | 常见工作流的分步指南 |
+| [参考](/docs/reference/config-file) | 配置文件、CLI 命令、API 端点 |
+| [架构](/docs/architecture/system-overview) | 系统设计、运行时边界、数据流 |

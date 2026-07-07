@@ -13,19 +13,27 @@ const navLinks = [
   { href: "/changelog", label: "Changelog" },
 ];
 
+function getLocaleFromPath(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const first = segments[0];
+  if (["en", "zh", "zh-TW", "es", "ja"].includes(first)) return first;
+  return "en";
+}
+
 export function SiteHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const locale = getLocaleFromPath(pathname);
 
   // Hide on docs pages — Fumadocs provides its own nav
-  if (pathname.startsWith("/docs")) {
+  if (pathname.includes("/docs")) {
     return null;
   }
 
   return (
     <header className="sticky top-0 z-50 border-b border-border-subtle bg-void/80 backdrop-blur-md">
       <div className="site-container flex h-14 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href={`/${locale}`} className="flex items-center gap-2.5">
           <Image src="/assets/icon.png" alt="CoreLayer" width={28} height={28} />
           <span className="text-sm font-semibold tracking-tight text-text-primary">
             CoreLayer
@@ -37,7 +45,7 @@ export function SiteHeader() {
           {navLinks.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
+              href={`/${locale}${link.href}`}
               className="rounded-md px-3 py-1.5 text-sm text-text-secondary transition-colors hover:text-text-primary"
             >
               {link.label}
@@ -57,7 +65,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Link
-            href="/download"
+            href={`/${locale}/download`}
             className="hidden items-center gap-1.5 rounded-md bg-cyan px-3.5 py-1.5 text-sm font-medium text-void transition-opacity hover:opacity-90 md:inline-flex"
           >
             <Download className="h-3.5 w-3.5" />
@@ -86,7 +94,7 @@ export function SiteHeader() {
             {navLinks.map((link) => (
               <Link
                 key={link.href}
-                href={link.href}
+                href={`/${locale}${link.href}`}
                 onClick={() => setMobileOpen(false)}
                 className="rounded-md px-3 py-2 text-sm text-text-secondary hover:bg-panel hover:text-text-primary"
               >
@@ -103,7 +111,7 @@ export function SiteHeader() {
               <ExternalLink className="h-3 w-3" />
             </a>
             <Link
-              href="/download"
+              href={`/${locale}/download`}
               onClick={() => setMobileOpen(false)}
               className="mt-1 flex items-center justify-center gap-1.5 rounded-md bg-cyan px-3.5 py-2 text-sm font-medium text-void"
             >

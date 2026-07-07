@@ -1,0 +1,66 @@
+---
+title: 守護程式
+description: 驅動 CoreLayer AI 編排的 Node.js 後端。
+---
+
+守護程式是一個在背景運行的 Node.js 程序，處理所有 AI 編排、工具執行和資料管理。
+
+## 架構
+
+```text
+Tauri 桌面應用程式（Rust）
+  └─ 守護程式監督器（Rust）
+     └─ Node.js 守護程式（Hono HTTP 伺服器）
+        ├─ 模型閘道
+        ├─ 工具註冊表
+        ├─ 權限守護
+        ├─ MCP 用戶端管理器
+        └─ 資料庫（SQLite / Supabase / PostgreSQL）
+```
+
+## 守護程式監督器
+
+Tauri 應用程式包含一個基於 Rust 的守護程式監督器，它會：
+
+- 在應用程式啟動時**啟動**守護程式程序
+- **監控**守護程式健康狀態
+- 如果守護程式崩潰，**重新啟動**它
+- 在應用程式關閉時**停止**守護程式
+
+## HTTP API
+
+守護程式在 `localhost:3001` 上公開 HTTP API（可透過 `config.json` 中的 `daemon.port` 欄位設定）。Tauri 前端透過 Tauri 的 IPC 橋接與此 API 通訊。
+
+## 開發模式
+
+在開發中，守護程式使用熱重載運行：
+
+```bash
+pnpm dev:daemon
+```
+
+這使用 `tsx watch` 在檔案變更時重新啟動。
+
+## 生產模式
+
+在生產版本中，守護程式作為 sidecar 二進位檔打包：
+
+```bash
+pnpm build:daemon:sidecar
+```
+
+sidecar 與 Tauri 應用程式捆綁在一起，作為獨立程序運行。
+
+## 健康監控
+
+控制中心顯示守護程式狀態：
+
+- **健康** — 守護程式正在運行且回應正常
+- **啟動中** — 守護程式正在初始化
+- **不健康** — 守護程式沒有回應
+- **已停止** — 守護程式已被有意停止
+
+## 下一步
+
+- [系統概覽](/docs/architecture/system-overview) — 完整架構
+- [從原始碼建置](/docs/guides/build-from-source) — 建置守護程式

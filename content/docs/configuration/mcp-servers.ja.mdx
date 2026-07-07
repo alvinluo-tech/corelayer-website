@@ -1,0 +1,92 @@
+---
+title: MCPサーバー設定
+description: Model Context Protocolサーバー接続を設定します。
+---
+
+CoreLayerはMCPサーバーを通じて外部ツールとデータソースに接続します。各サーバーは、パーミッションガードに従い、Jarvisが会話中に呼び出せるツールを公開します。
+
+## サーバー設定
+
+各MCPサーバーは、名前、コマンド、オプションの引数で定義されます:
+
+```json
+{
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+        "env": {}
+      },
+      {
+        "name": "github",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": {
+          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        }
+      }
+    ]
+  }
+}
+```
+
+## サーバータイプ
+
+### Stdioサーバー
+
+ほとんどのMCPサーバーはstdio（標準入出力）を使用して通信します:
+
+```json
+{
+  "name": "my-server",
+  "command": "node",
+  "args": ["./my-mcp-server.js"]
+}
+```
+
+### SSEサーバー
+
+Server-Sent Eventsを使用するリモートサーバー:
+
+```json
+{
+  "name": "remote-server",
+  "url": "https://my-server.example.com/mcp"
+}
+```
+
+## サーバー管理
+
+### コントロールセンター経由
+
+- **追加** — 設定 → MCP → サーバー追加
+- **削除** — サーバーカードの削除ボタンをクリック
+- **再起動** — 再起動ボタンをクリックして再接続
+- **ツール表示** — 接続されたサーバーが公開するすべてのツールを表示
+
+### 接続ステータス
+
+| ステータス | 意味 |
+|--------|---------|
+| Connected | サーバーが稼働中でツールが利用可能 |
+| Connecting | サーバーが起動中 |
+| Disconnected | サーバーが停止またはクラッシュ |
+| Error | サーバーの起動に失敗 — ログを確認 |
+
+## ツールディスカバリー
+
+MCPサーバーが接続すると、CoreLayerは自動的に以下を行います:
+
+1. サーバーが公開するすべてのツールを検出
+2. ツールレジストリに登録
+3. Jarvisがツール呼び出しで利用可能にする
+
+MCPサーバーからのツールはネイティブツールと同じように扱われ — 実行前にパーミッションガードを通過します。
+
+## 次のステップ
+
+- [最初のMCPサーバー](/docs/getting-started/first-mcp-server) — 基本セットアップガイド
+- [ツールレジストリ](/docs/core-concepts/tool-registry) — ツールの管理方法
+- [MCPアプリ接続](/docs/guides/connect-mcp-app) — ステップバイステップウォークスルー

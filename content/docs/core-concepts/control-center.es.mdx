@@ -1,0 +1,50 @@
+---
+title: Centro de Control
+description: La interfaz central para gestionar modelos, herramientas, permisos y la salud del sistema.
+---
+
+El Centro de Control es la interfaz principal de CoreLayer. Proporciona una superficie unificada para gestionar todos los aspectos del sistema.
+
+## Paneles
+
+| Panel | Proposito |
+|-------|-----------|
+| **Chat** | Conversacion principal con Jarvis |
+| **Modelos** | Configurar y monitorear proveedores de modelos |
+| **MCP** | Gestionar conexiones a servidores MCP |
+| **Herramientas** | Ver herramientas registradas y su estado |
+| **Permisos** | Cola de aprobacion y registros de auditoria |
+| **Voz** | Estado y configuracion de la pipeline de voz |
+| **Ajustes** | Configuracion del sistema |
+
+## Paleta de Comandos
+
+Pulsa **Alt+Space** para abrir la paleta de comandos para acciones rapidas:
+
+- Buscar conversaciones
+- Ejecutar herramientas directamente
+- Cambiar entre paneles
+- Configuracion rapida
+
+## Barra de Estado
+
+La parte inferior del Centro de Control muestra:
+
+- Estado de salud del daemon
+- Numero de servidores MCP conectados
+- Proveedor de modelo activo
+- Estado de la pipeline de voz
+- Numero de aprobaciones pendientes
+
+## Diseno
+
+El Centro de Control usa un diseno con barra lateral:
+
+- **Barra lateral izquierda** — navegacion entre paneles
+- **Area principal** — contenido del panel activo
+- **Panel derecho** — detalles contextuales (informacion de herramienta, detalles de aprobacion)
+
+## Siguientes Pasos
+
+- [Daemon](/docs/core-concepts/daemon) — el backend que alimenta el Centro de Control
+- [Permission Guard](/docs/core-concepts/permission-guard) — el sistema de aprobacion

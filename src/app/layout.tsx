@@ -1,20 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { FumadocsProvider } from "@/components/fumadocs-provider";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -42,15 +28,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/assets/icon.png" />
       </head>
@@ -61,11 +43,7 @@ export default function RootLayout({
           enableSystem={false}
           value={{ dark: "dark", light: "light" }}
         >
-          <FumadocsProvider>
-            <SiteHeader />
-            {children}
-            <SiteFooter />
-          </FumadocsProvider>
+          {children}
         </ThemeProvider>
       </body>
     </html>

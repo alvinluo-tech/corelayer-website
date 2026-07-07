@@ -1,0 +1,56 @@
+---
+title: Comandos CLI
+description: Interfaz de linea de comandos para CoreLayer.
+---
+
+CoreLayer proporciona comandos CLI para operaciones comunes.
+
+## Comandos de Desarrollo
+
+| Comando | Descripcion |
+|---------|-------------|
+| `pnpm dev` | Iniciar daemon + frontend Tauri en modo de desarrollo |
+| `pnpm dev:web` | Iniciar frontend en modo web (sin Tauri) |
+| `pnpm dev:daemon` | Iniciar solo el daemon |
+| `pnpm dev:frontend` | Iniciar solo el frontend Tauri |
+
+## Comandos de Compilacion
+
+| Comando | Descripcion |
+|---------|-------------|
+| `pnpm build` | Compilacion completa de produccion (sidecar + Tauri) |
+| `pnpm build:daemon` | Compilar solo el daemon |
+| `pnpm build:daemon:sidecar` | Compilar el daemon como binario sidecar |
+
+## Comandos de Calidad
+
+| Comando | Descripcion |
+|---------|-------------|
+| `pnpm lint` | Ejecutar ESLint en los archivos fuente |
+| `pnpm lint:fix` | Corregir automaticamente problemas de ESLint |
+| `pnpm format` | Formatear codigo con Prettier |
+| `pnpm format:check` | Verificar formato sin escribir |
+| `pnpm test` | Ejecutar todas las pruebas |
+| `pnpm typecheck` | Ejecutar verificacion de tipos TypeScript |
+
+## Comandos de Limpieza
+
+| Comando | Descripcion |
+|---------|-------------|
+| `pnpm clean` | Limpiar todas las salidas de compilacion |
+| `pnpm clean:app` | Cerrar la aplicacion CoreLayer en ejecucion |
+| `pnpm clean:daemon` | Cerrar el proceso del daemon en el puerto 3001 |
+| `pnpm clean:all` | Limpiar aplicacion + daemon |
+
+## Comandos de Publicacion
+
+| Comando | Descripcion |
+|---------|-------------|
+| `pnpm release` | Crear una nueva publicacion (parche) |
+| `pnpm release:minor` | Crear una publicacion menor |
+| `pnpm release:major` | Crear una publicacion mayor |
+
+## Siguientes Pasos
+
+- [Compilar desde Fuente](/docs/guides/build-from-source) — guia completa de compilacion
+- [Endpoints API](/docs/reference/api-endpoints) — HTTP API del daemon

@@ -1,0 +1,92 @@
+---
+title: MCP 伺服器設定
+description: 設定模型上下文協定伺服器連接。
+---
+
+CoreLayer 透過 MCP 伺服器連接外部工具和資料來源。每個伺服器公開 Jarvis 在對話中可以呼叫的工具，並受權限守護的約束。
+
+## 伺服器設定
+
+每個 MCP 伺服器由名稱、指令和可選參數定義：
+
+```json
+{
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+        "env": {}
+      },
+      {
+        "name": "github",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": {
+          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        }
+      }
+    ]
+  }
+}
+```
+
+## 伺服器類型
+
+### Stdio 伺服器
+
+大多數 MCP 伺服器使用 stdio（標準輸入/輸出）進行通訊：
+
+```json
+{
+  "name": "my-server",
+  "command": "node",
+  "args": ["./my-mcp-server.js"]
+}
+```
+
+### SSE 伺服器
+
+對於使用伺服器推送事件的遠端伺服器：
+
+```json
+{
+  "name": "remote-server",
+  "url": "https://my-server.example.com/mcp"
+}
+```
+
+## 管理伺服器
+
+### 透過控制中心
+
+- **新增** — 設定 → MCP → 新增伺服器
+- **移除** — 按一下伺服器卡片上的刪除按鈕
+- **重新啟動** — 按一下重新啟動按鈕以重新連接
+- **檢視工具** — 查看已連接伺服器公開的所有工具
+
+### 連接狀態
+
+| 狀態 | 含義 |
+|--------|---------|
+| 已連接 | 伺服器正在運行且工具可用 |
+| 連接中 | 伺服器正在啟動 |
+| 已斷線 | 伺服器已停止或崩潰 |
+| 錯誤 | 伺服器啟動失敗 — 檢查日誌 |
+
+## 工具發現
+
+當 MCP 伺服器連接時，CoreLayer 會自動：
+
+1. 發現伺服器公開的所有工具
+2. 在工具註冊表中註冊它們
+3. 讓它們可供 Jarvis 進行工具呼叫
+
+來自 MCP 伺服器的工具與原生工具受到相同對待 — 它們在執行前都經過權限守護。
+
+## 下一步
+
+- [第一個 MCP 伺服器](/docs/getting-started/first-mcp-server) — 基本設定指南
+- [工具註冊表](/docs/core-concepts/tool-registry) — 工具如何被管理
+- [連接 MCP 應用程式](/docs/guides/connect-mcp-app) — 逐步操作指南

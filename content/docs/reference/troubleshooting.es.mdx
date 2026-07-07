@@ -1,0 +1,94 @@
+---
+title: Solucion de Problemas
+description: Problemas comunes y soluciones.
+---
+
+## La Aplicacion No Inicia
+
+**Sintoma:** CoreLayer no se abre o falla inmediatamente.
+
+**Soluciones:**
+- Verifica que Node.js 22+ este instalado: `node --version`
+- Verifica que pnpm 9+ este instalado: `pnpm --version`
+- Revisa los prerrequisitos especificos de Tauri para tu plataforma
+- Intenta recompilar: `pnpm clean && pnpm build`
+
+## El Daemon No Inicia
+
+**Sintoma:** "Daemon no saludable" o errores de conexion.
+
+**Soluciones:**
+- Verifica si el puerto 3001 esta en uso: `lsof -i :3001` (macOS/Linux) o `netstat -ano | findstr 3001` (Windows)
+- Cierra los procesos en conflicto: `pnpm clean:daemon`
+- Revisa los registros del daemon en el Centro de Control
+- Verifica los permisos del archivo de base de datos
+
+## El Modelo No Responde
+
+**Sintoma:** Jarvis no responde o muestra "No model available".
+
+**Soluciones:**
+- Verifica que la clave API sea correcta en Ajustes → Modelos
+- Revisa el estado del proveedor (Groq, OpenRouter, etc.)
+- Prueba un modelo/proveedor diferente
+- Verifica la conectividad de red
+
+## El Servidor MCP No Se Conecta
+
+**Sintoma:** El servidor muestra estado "Desconectado" o "Error".
+
+**Soluciones:**
+- Verifica que el comando y los argumentos sean correctos
+- Prueba el comando manualmente en una terminal
+- Verifica que npx pueda instalar el paquete: `npx -y @modelcontextprotocol/server-filesystem`
+- Verifica que las variables de entorno esten configuradas
+- Reinicia la conexion MCP desde el Centro de Control
+
+## La Voz No Funciona
+
+**Sintoma:** La palabra de activacion no se detecta o la voz no se reconoce.
+
+**Soluciones:**
+- Verifica los permisos del microfono en los ajustes del sistema
+- Reduce el ruido de fondo
+- Intenta hacer clic en el boton del microfono en lugar de usar la palabra de activacion
+- Cambia el proveedor ASR a Groq Whisper para mayor precision
+- Verifica los ajustes de salida de audio para TTS
+
+## El Permission Guard Bloquea Todo
+
+**Sintoma:** Todas las llamadas a herramientas requieren aprobacion.
+
+**Soluciones:**
+- Revisa las politicas de permisos en Ajustes → Permisos
+- Aniade reglas `allow` para herramientas de confianza
+- Usa "Aprobar Siempre" para herramientas en las que confies
+
+## Fallos de Compilacion
+
+**Sintoma:** `pnpm build` falla.
+
+**Soluciones:**
+- Limpia y recompila: `pnpm clean && pnpm install && pnpm build`
+- Verifica la cadena de herramientas de Rust: `rustc --version`, `cargo --version`
+- Confirma los prerrequisitos de plataforma para Tauri
+- Revisa errores de TypeScript: `pnpm typecheck`
+
+## Problemas de Base de Datos
+
+**Sintoma:** Los datos no se guardan o errores de carga.
+
+**Soluciones:**
+- Verifica la configuracion de almacenamiento en Ajustes → Almacenamiento
+- Confirma que el archivo de base de datos exista y sea escribible
+- Intenta cambiar a un modo de almacenamiento diferente
+- Para Supabase: verifica la URL y la clave anon
+
+## Sigues Atascado?
+
+- Consulta los [Issues de GitHub](https://github.com/alvinluo-tech/CoreLayer/issues) para problemas conocidos
+- Abre un nuevo issue con:
+  - Tu plataforma y versiones
+  - Pasos para reproducir
+  - Mensajes de error o registros
+  - Comportamiento esperado vs actual

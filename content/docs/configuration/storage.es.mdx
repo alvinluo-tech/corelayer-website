@@ -1,0 +1,90 @@
+---
+title: Almacenamiento
+description: "Configura los modos de almacenamiento de datos: SQLite local, Supabase o PostgreSQL."
+---
+
+CoreLayer admite tres backends de almacenamiento que pueden intercambiarse en caliente durante la ejecucion.
+
+## Modos de Almacenamiento
+
+| Modo | Descripcion | Caso de Uso |
+|------|-------------|-------------|
+| **SQLite** | Base de datos de archivo local (por defecto) | Uso personal, local primero |
+| **Supabase** | PostgreSQL en la nube con sincronizacion en tiempo real | Sincronizacion multi-dispositivo |
+| **PostgreSQL** | PostgreSQL autoalojado | Uso en equipo/empresa |
+
+## SQLite (Por Defecto)
+
+SQLite es el modo de almacenamiento por defecto. Los datos se almacenan localmente en un archivo `.db`:
+
+```json
+{
+  "storage": {
+    "mode": "sqlite",
+    "path": "~/.corelayer/data.db"
+  }
+}
+```
+
+No requiere dependencias externas. Funciona completamente sin conexion.
+
+## Supabase
+
+Conecta a Supabase para sincronizacion en la nube:
+
+```json
+{
+  "storage": {
+    "mode": "supabase",
+    "url": "https://your-project.supabase.co",
+    "anonKey": "eyJ..."
+  }
+}
+```
+
+Configura Supabase:
+1. Crea un proyecto en [supabase.com](https://supabase.com)
+2. Ejecuta los scripts de migracion de CoreLayer
+3. Aniade la URL de tu proyecto y la clave anon
+
+## PostgreSQL
+
+Conecta a una instancia de PostgreSQL autoalojada:
+
+```json
+{
+  "storage": {
+    "mode": "postgres",
+    "connectionString": "postgresql://user:pass@localhost:5432/corelayer"
+  }
+}
+```
+
+## Cambio en Caliente
+
+Puedes cambiar los modos de almacenamiento en tiempo real desde el Centro de Control:
+
+1. Abre **Ajustes → Almacenamiento**
+2. Selecciona el nuevo modo
+3. Introduce los detalles de conexion
+4. Haz clic en **Cambiar**
+
+CoreLayer migrara los datos entre modos automaticamente.
+
+## Esquema de Datos
+
+CoreLayer almacena estas entidades principales:
+
+- **tasks** — elementos de gestion de tareas
+- **articles** — entradas de lista de lectura
+- **reviews** — resumenes de revision diaria/semanal
+- **conversations** — historial de chat
+- **messages** — mensajes individuales
+- **tool_call_logs** — registro de auditoria de ejecucion de herramientas
+- **model_profiles** — configuraciones de proveedores de modelos
+- **memories** — memoria a largo plazo de Jarvis
+
+## Siguientes Pasos
+
+- [Permission Guard](/docs/core-concepts/permission-guard) — como se controla el acceso a datos
+- [Modelo de Seguridad](/docs/architecture/security-model) — detalles de seguridad del almacenamiento

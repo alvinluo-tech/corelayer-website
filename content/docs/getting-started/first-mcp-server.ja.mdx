@@ -1,0 +1,88 @@
+---
+title: 最初のMCPサーバーを接続
+description: 最初のMCP（Model Context Protocol）サーバーをCoreLayerに接続します。
+---
+
+Model Context Protocol（MCP）は、CoreLayerが外部ツールとデータソースに接続する方法です。このガイドでは、最初のMCPサーバーの接続手順を説明します。
+
+## MCPとは？
+
+MCPは、AIアプリケーションが標準化されたインターフェースを通じて外部ツールとデータソースに接続できるオープンプロトコルです。MCPサーバーは、Jarvisが発見して呼び出せるツールを公開します。
+
+## MCPサーバーの追加
+
+### コントロールセンター経由
+
+1. **設定 → MCP**を開く
+2. **サーバー追加**をクリック
+3. サーバー設定を入力:
+
+```json
+{
+  "name": "my-server",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+}
+```
+
+### 設定ファイル経由
+
+CoreLayer設定に追加:
+
+```json
+{
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+      }
+    ]
+  }
+}
+```
+
+## 人気のMCPサーバー
+
+| サーバー | 用途 | コマンド |
+|--------|---------|---------|
+| `@modelcontextprotocol/server-filesystem` | ファイルシステムアクセス | `npx -y @modelcontextprotocol/server-filesystem /path` |
+| `@modelcontextprotocol/server-github` | GitHub API | `npx -y @modelcontextprotocol/server-github` |
+| `@modelcontextprotocol/server-brave-search` | Web検索 | `npx -y @modelcontextprotocol/server-brave-search` |
+| `@modelcontextprotocol/server-memory` | ナレッジグラフ | `npx -y @modelcontextprotocol/server-memory` |
+
+## 接続の確認
+
+サーバー追加後:
+
+1. **コントロールセンター → MCP**に移動して接続されたサーバーを確認
+2. サーバーステータスが**Connected**であることを確認
+3. サーバーのツールを使用するコマンドを試す
+
+```text
+ワークスペースのREADME.mdファイルを読み取って
+```
+
+MCPサーバーが接続されていれば、Jarvisはファイルシステムツールを使用してファイルを読み取ります。
+
+## MCPのトラブルシューティング
+
+**サーバーが接続されない:**
+- コマンドとargsが正しいか確認
+- サーバーパッケージがインストールされているか確認（`npx -y`は自動インストール）
+- デーモンログで接続エラーを確認
+
+**ツールが表示されない:**
+- 一部のサーバーは認証が必要 — サーバーのドキュメントを確認
+- コントロールセンターからMCP接続を再起動
+
+**権限が拒否された:**
+- パーミッションガードが特定のツール呼び出しをブロックしている可能性 — 承認キューを確認
+- 詳細は[権限](/docs/configuration/permissions)を参照
+
+## 次のステップ
+
+- [MCPサーバー設定](/docs/configuration/mcp-servers) — 高度なMCPセットアップ
+- [ツールレジストリ](/docs/core-concepts/tool-registry) — ツールの発見とルーティングの仕組み
+- [MCPアプリ接続](/docs/guides/connect-mcp-app) — ステップバイステップガイド

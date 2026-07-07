@@ -1,0 +1,84 @@
+---
+title: 模型供應商
+description: 為 Jarvis 路由設定 AI 模型供應商。
+---
+
+CoreLayer 的模型閘道跨多個 AI 供應商路由請求。你可以設定一個或多個供應商，讓 Jarvis 為每個任務選擇最佳模型。
+
+## 支援的供應商
+
+| 供應商 | 類型 | 模型 |
+|----------|------|--------|
+| **Groq** | 雲端（快速推理） | Llama 3.3、Mixtral、Gemma |
+| **OpenRouter** | 多供應商閘道 | MiMo、Claude、GPT-4、Llama、Mistral |
+| **Ollama** | 本地 | 任何 Ollama 相容模型 |
+| **OpenAI 相容** | 任何 | 任何具有 OpenAI 相容 API 的供應商 |
+
+## 設定
+
+### 透過控制中心
+
+1. 開啟 **設定 → 模型**
+2. 按一下 **新增供應商**
+3. 選擇供應商類型
+4. 輸入 API 金鑰和模型偏好設定
+
+### 透過設定檔
+
+```json
+{
+  "models": {
+    "providers": [
+      {
+        "name": "groq",
+        "type": "groq",
+        "apiKey": "YOUR_GROQ_API_KEY",
+        "defaultModel": "llama-3.3-70b-versatile"
+      },
+      {
+        "name": "openrouter",
+        "type": "openrouter",
+        "apiKey": "YOUR_OPENROUTER_API_KEY",
+        "defaultModel": "mimo/mimo-v2.5"
+      },
+      {
+        "name": "ollama",
+        "type": "ollama",
+        "endpoint": "http://localhost:11434",
+        "defaultModel": "llama3.2"
+      }
+    ]
+  }
+}
+```
+
+## 模型路由
+
+當設定多個供應商時，模型閘道根據以下條件選擇：
+
+- **任務複雜度** — 複雜推理路由到更強大的模型
+- **延遲需求** — 時間敏感的請求偏好 Groq 或本地模型
+- **成本最佳化** — 日常任務使用較便宜的供應商
+- **可用性** — 當供應商故障時的備用方案
+
+## 環境變數
+
+你可以使用環境變數而不是硬編碼 API 金鑰：
+
+```bash
+GROQ_API_KEY=your_groq_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+在設定中引用它們：
+
+```json
+{
+  "apiKey": "${GROQ_API_KEY}"
+}
+```
+
+## 下一步
+
+- [模型閘道](/docs/core-concepts/model-gateway) — 了解路由邏輯
+- [設定本地模型](/docs/guides/configure-local-models) — 設定 Ollama

@@ -1,0 +1,90 @@
+---
+title: ストレージ
+description: "データストレージモードを設定: ローカルSQLite、Supabase、またはPostgreSQL。"
+---
+
+CoreLayerは、ランタイム中にホットスワップ可能な3つのストレージバックエンドをサポートします。
+
+## ストレージモード
+
+| モード | 説明 | ユースケース |
+|------|-------------|----------|
+| **SQLite** | ローカルファイルデータベース（デフォルト） | 個人利用、オフラインファースト |
+| **Supabase** | リアルタイム同期付きクラウドPostgreSQL | マルチデバイス同期 |
+| **PostgreSQL** | セルフホストPostgreSQL | チーム/エンタープライズ向け |
+
+## SQLite（デフォルト）
+
+SQLiteはデフォルトのストレージモードです。データはローカルの`.db`ファイルに保存されます:
+
+```json
+{
+  "storage": {
+    "mode": "sqlite",
+    "path": "~/.corelayer/data.db"
+  }
+}
+```
+
+外部依存は不要です。完全にオフラインで動作します。
+
+## Supabase
+
+クラウド同期のためにSupabaseに接続:
+
+```json
+{
+  "storage": {
+    "mode": "supabase",
+    "url": "https://your-project.supabase.co",
+    "anonKey": "eyJ..."
+  }
+}
+```
+
+Supabaseのセットアップ:
+1. [supabase.com](https://supabase.com)でプロジェクトを作成
+2. CoreLayerマイグレーションスクリプトを実行
+3. プロジェクトURLとanonキーを追加
+
+## PostgreSQL
+
+セルフホストのPostgreSQLインスタンスに接続:
+
+```json
+{
+  "storage": {
+    "mode": "postgres",
+    "connectionString": "postgresql://user:pass@localhost:5432/corelayer"
+  }
+}
+```
+
+## ホットスイッチング
+
+コントロールセンターからランタイム中にストレージモードを切り替えられます:
+
+1. **設定 → ストレージ**を開く
+2. 新しいモードを選択
+3. 接続詳細を入力
+4. **切り替え**をクリック
+
+CoreLayerがモード間のデータ移行を自動的に行います。
+
+## データスキーマ
+
+CoreLayerは以下の主要エンティティを保存します:
+
+- **tasks** — タスク管理アイテム
+- **articles** — リーディングリストエントリ
+- **reviews** — 日次/週次レビュー要約
+- **conversations** — チャット履歴
+- **messages** — 個々のメッセージ
+- **tool_call_logs** — ツール実行の監査証跡
+- **model_profiles** — モデルプロバイダー設定
+- **memories** — Jarvisの長期メモリ
+
+## 次のステップ
+
+- [パーミッションガード](/docs/core-concepts/permission-guard) — データアクセスの制御方法
+- [セキュリティモデル](/docs/architecture/security-model) — ストレージセキュリティの詳細

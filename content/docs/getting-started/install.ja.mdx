@@ -1,0 +1,63 @@
+---
+title: インストール
+description: Windows、macOS、またはLinuxにCoreLayerをダウンロードしてインストールします。
+---
+
+## ダウンロード
+
+[ダウンロードページ](/download)にアクセスして、お使いのプラットフォーム向けの最新リリースを取得してください。
+
+| プラットフォーム | ステータス |
+|----------|--------|
+| Windows | 利用可能 |
+| macOS | 利用可能 |
+| Linux | 予定 |
+
+## ソースからインストール
+
+ソースからビルドしたい場合、またはお使いのプラットフォーム向けのバイナリが利用できない場合:
+
+### 前提条件
+
+- **Node.js** >= 22
+- **pnpm** >= 9
+- **Rust**（Tauriビルド用）
+- プラットフォーム固有のTauri要件（[Tauriの前提条件](https://tauri.app/start/prerequisites/)）
+
+### ビルド手順
+
+```bash
+git clone https://github.com/alvinluo-tech/CoreLayer.git
+cd CoreLayer
+pnpm install
+pnpm build
+```
+
+ビルド出力は`frontend/src-tauri/target/release/`に生成されます。
+
+### 開発モード
+
+ホットリロード付きの開発モードで実行:
+
+```bash
+pnpm dev
+```
+
+これにより、デーモンとTauriフロントエンドが同時に起動します。
+
+## インストール後
+
+1. **コントロールセンターを開く** — CoreLayerデスクトップアプリを起動
+2. **モデルプロバイダーを設定** — MiMo、Groq、OpenRouter、またはローカルモデルのAPIキーを追加
+3. **MCPサーバーを追加** — 最初の外部ツールを接続
+4. **権限を確認** — ツール実行を有効にする前にパーミッションガードを理解
+5. **最初のコマンドを試す** — コマンドパレット（Alt+Space）または音声を使用
+
+## トラブルシューティング
+
+アプリが起動しない場合:
+
+- Node.js 22以上とpnpm 9以上がインストールされているか確認
+- プラットフォーム固有のTauri前提条件が満たされているか確認
+- コントロールセンターでデーモンログを確認
+- 一般的な問題は[トラブルシューティング](/docs/reference/troubleshooting)を参照

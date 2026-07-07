@@ -1,0 +1,108 @@
+---
+title: Registrar una Herramienta Personalizada
+description: Registra tus propias herramientas en el Tool Registry.
+---
+
+Puedes extender Jarvis aniadiendo herramientas personalizadas al Tool Registry.
+
+## Opcion 1: Servidor MCP
+
+La forma recomendada de aniadir herramientas es a traves de un servidor MCP. Crea un servidor MCP simple que exponga tus herramientas:
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
+
+const server = new McpServer({
+  name: "my-tools",
+  version: "1.0.0",
+});
+
+server.tool(
+  "my-tool",
+  "Description of what this tool does",
+  {
+    param1: { type: "string", description: "First parameter" },
+  },
+  async ({ param1 }) => {
+    // Tool implementation
+    return {
+      content: [{ type: "text", text: `Result: ${param1}` }],
+    };
+  }
+);
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+Luego aniadelo a CoreLayer:
+
+```json
+{
+  "name": "my-tools",
+  "command": "node",
+  "args": ["./my-mcp-server.js"]
+}
+```
+
+## Opcion 2: Adaptador REST
+
+Para herramientas que ya estan disponibles como APIs REST, puedes registrarlas como adaptadores REST en lugar de envolverlas en un servidor MCP.
+
+Aniade una entrada de adaptador REST a tu configuracion de CoreLayer:
+
+```json
+{
+  "name": "weather-api",
+  "type": "rest",
+  "baseUrl": "https://api.weather.example.com/v1",
+  "auth": {
+    "type": "bearer",
+    "token": "${WEATHER_API_KEY}"
+  },
+  "tools": [
+    {
+      "name": "get-forecast",
+      "description": "Get the weather forecast for a location",
+      "method": "GET",
+      "path": "/forecast",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name or coordinates"
+          }
+        },
+        "required": ["location"]
+      }
+    }
+  ]
+}
+```
+
+El adaptador REST convierte automaticamente cada entrada de herramienta en una herramienta invocable en el Tool Registry. Jarvis envia solicitudes HTTP al endpoint configurado y devuelve la respuesta como resultado de la herramienta.
+
+> Los adaptadores REST son ideales para APIs existentes que no deseas envolver. Para nuevas herramientas, prefiere servidores MCP — soportan streaming, manejo de errores mas rico y son mas faciles de probar localmente.
+
+## Metadatos de Herramienta
+
+Al registrar una herramienta, proporciona:
+
+- **Nombre** — identificador unico y descriptivo
+- **Descripcion** — explicacion clara de lo que hace la herramienta
+- **Parametros** — JSON Schema para las entradas
+- **Nivel de riesgo** — ayuda al Permission Guard a clasificar la herramienta
+
+## Mejores Practicas
+
+- Usa nombres descriptivos: `filesystem:read` no `fs1`
+- Escribe descripciones claras — Jarvis las usa para decidir cuando llamar a la herramienta
+- Define esquemas de parametros estrictamente — previene llamadas invalidas
+- Establece niveles de riesgo apropiados — no marques todo como `read`
+
+## Siguientes Pasos
+
+- [Tool Registry](/docs/core-concepts/tool-registry) — como se gestionan las herramientas
+- [Permisos](/docs/configuration/permissions) — configurar politicas de herramientas

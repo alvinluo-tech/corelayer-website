@@ -1,0 +1,122 @@
+---
+title: 從原始碼建置
+description: 從原始碼儲存庫建置 CoreLayer。
+---
+
+本指南涵蓋從原始碼建置 CoreLayer，適用於開發或預建二進位檔不可用的情況。
+
+## 前置條件
+
+| 需求 | 版本 |
+|-------------|---------|
+| Node.js | >= 22 |
+| pnpm | >= 9 |
+| Rust | 最新穩定版 |
+| 平台工具 | 參閱 [Tauri 前置條件](https://tauri.app/start/prerequisites/) |
+
+### 平台特定需求
+
+**Windows：**
+- Microsoft Visual Studio C++ 建置工具
+- Windows SDK
+
+**macOS：**
+- Xcode 命令列工具
+
+**Linux：**
+- 各種系統函式庫（參閱 Tauri 文件）
+
+## 複製並安裝
+
+```bash
+git clone https://github.com/alvinluo-tech/CoreLayer.git
+cd CoreLayer
+pnpm install
+```
+
+## 開發模式
+
+使用熱重載在開發模式下運行完整應用程式：
+
+```bash
+pnpm dev
+```
+
+這會啟動：
+- 守護程式在連接埠 3001
+- 前端的 Vite 開發伺服器
+- 具有熱重載的 Tauri 應用程式
+
+## 生產建置
+
+```bash
+pnpm build
+```
+
+這將：
+1. 建置守護程式 sidecar
+2. 以生產最佳化建置 Tauri 應用程式
+3. 輸出平台特定的安裝程式
+
+## 建置個別元件
+
+### 僅守護程式
+
+```bash
+pnpm build:daemon
+```
+
+### 守護程式 sidecar（用於打包）
+
+```bash
+pnpm build:daemon:sidecar
+```
+
+### 僅前端（網頁模式）
+
+```bash
+pnpm dev:web
+```
+
+## 專案結構
+
+```text
+CoreLayer/
+├── frontend/              # Tauri + React 前端
+│   ├── src/               # React 原始碼
+│   └── src-tauri/         # Rust 原生程式碼
+├── daemon/                # Node.js 後端
+├── packages/              # 共享套件
+│   ├── types/             # TypeScript 型別
+│   ├── model-gateway/     # AI 模型路由
+│   ├── mcp-client/        # MCP 連接
+│   ├── tool-registry/     # 工具管理
+│   ├── permission-guard/  # 安全系統
+│   ├── runtime-core/      # 執行階段管理
+│   ├── runtime-protocol/  # 協定定義
+│   └── execution-environment/ # 執行抽象層
+├── skills/                # 內建技能定義
+├── scripts/               # 建置腳本
+└── supabase/              # 資料庫遷移
+```
+
+## 疑難排解
+
+**pnpm install 失敗：**
+- 確認已安裝 Node.js 22+ 和 pnpm 9+
+- 嘗試 `pnpm install --frozen-lockfile`
+
+**Tauri 建置失敗：**
+- 驗證 Rust 工具鏈已安裝：`rustc --version`
+- 檢查平台特定的前置條件
+- 參閱 [Tauri 疑難排解](https://tauri.app/start/troubleshooting/)
+
+**守護程式無法啟動：**
+- 檢查連接埠 3001 是否被佔用
+- 驗證資料庫權限
+- 檢查守護程式日誌中的錯誤
+
+## 下一步
+
+- [系統概覽](/docs/architecture/system-overview) — 了解架構
+- [守護程式](/docs/core-concepts/daemon) — 守護程式詳情

@@ -1,0 +1,122 @@
+---
+title: ソースからビルド
+description: ソースリポジトリからCoreLayerをビルドします。
+---
+
+このガイドでは、開発用またはプリビルトバイナリが利用できない場合のソースからのCoreLayerビルドについて説明します。
+
+## 前提条件
+
+| 要件 | バージョン |
+|-------------|---------|
+| Node.js | >= 22 |
+| pnpm | >= 9 |
+| Rust | 最新の安定版 |
+| プラットフォームツール | [Tauriの前提条件](https://tauri.app/start/prerequisites/)を参照 |
+
+### プラットフォーム固有の要件
+
+**Windows:**
+- Microsoft Visual Studio C++ Build Tools
+- Windows SDK
+
+**macOS:**
+- Xcode Command Line Tools
+
+**Linux:**
+- さまざまなシステムライブラリ（Tauriドキュメントを参照）
+
+## クローンとインストール
+
+```bash
+git clone https://github.com/alvinluo-tech/CoreLayer.git
+cd CoreLayer
+pnpm install
+```
+
+## 開発モード
+
+ホットリロード付きでフルアプリを実行:
+
+```bash
+pnpm dev
+```
+
+以下が起動します:
+- ポート3001のデーモン
+- フロントエンド用Vite開発サーバー
+- ホットリロード付きTauriアプリ
+
+## プロダクションビルド
+
+```bash
+pnpm build
+```
+
+以下が実行されます:
+1. デーモンサイドカーをビルド
+2. プロダクション最適化付きTauriアプリをビルド
+3. プラットフォーム固有のインストーラーを出力
+
+## 個別コンポーネントのビルド
+
+### デーモンのみ
+
+```bash
+pnpm build:daemon
+```
+
+### デーモンサイドカー（パッケージング用）
+
+```bash
+pnpm build:daemon:sidecar
+```
+
+### フロントエンドのみ（Webモード）
+
+```bash
+pnpm dev:web
+```
+
+## プロジェクト構造
+
+```text
+CoreLayer/
+├── frontend/              # Tauri + Reactフロントエンド
+│   ├── src/               # Reactソース
+│   └── src-tauri/         # Rustネイティブコード
+├── daemon/                # Node.jsバックエンド
+├── packages/              # 共有パッケージ
+│   ├── types/             # TypeScript型
+│   ├── model-gateway/     # AIモデルルーティング
+│   ├── mcp-client/        # MCP接続
+│   ├── tool-registry/     # ツール管理
+│   ├── permission-guard/  # 安全システム
+│   ├── runtime-core/      # ランタイム管理
+│   ├── runtime-protocol/  # プロトコル定義
+│   └── execution-environment/ # 実行抽象化
+├── skills/                # 組み込みスキル定義
+├── scripts/               # ビルドスクリプト
+└── supabase/              # データベースマイグレーション
+```
+
+## トラブルシューティング
+
+**pnpm installが失敗する:**
+- Node.js 22以上とpnpm 9以上がインストールされているか確認
+- `pnpm install --frozen-lockfile`を試す
+
+**Tauriビルドが失敗する:**
+- Rustツールチェーンがインストールされているか確認: `rustc --version`
+- プラットフォーム固有の前提条件を確認
+- [Tauriトラブルシューティング](https://tauri.app/start/troubleshooting/)を参照
+
+**デーモンが起動しない:**
+- ポート3001が使用されていないか確認
+- データベースの権限を確認
+- デーモンログでエラーを確認
+
+## 次のステップ
+
+- [システム概要](/docs/architecture/system-overview) — アーキテクチャの理解
+- [デーモン](/docs/core-concepts/daemon) — デーモンの詳細

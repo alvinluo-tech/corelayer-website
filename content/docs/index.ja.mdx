@@ -1,0 +1,48 @@
+---
+title: CoreLayer ドキュメント
+description: CoreLayerのインストール、モデルプロバイダーの設定、最初のMCPサーバー接続、ツールへのJarvisアクセス時の権限モデルの理解について説明します。
+---
+
+CoreLayerドキュメントへようこそ。CoreLayerは、権限保護されたコマンドセンターを通じて、個人のアプリ、ツール、モデル、MCPワークフローを接続するローカルファーストのデスクトップAI制御レイヤーです。
+
+## クイックリンク
+
+<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-6">
+  <a href="/docs/getting-started/install" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **CoreLayerをインストール**
+    デスクトップアプリをシステムにセットアップします。
+  </a>
+  <a href="/docs/getting-started/quickstart" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **クイックスタート**
+    5分で最初のモデルとMCPサーバーを接続します。
+  </a>
+  <a href="/docs/core-concepts/permission-guard" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **パーミッションガード**
+    ツール実行が安全かつ監査可能である仕組みを理解します。
+  </a>
+  <a href="/docs/architecture/system-overview" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **アーキテクチャ**
+    Tauriシェル、デーモン、パッケージの連携方法を学びます。
+  </a>
+</div>
+
+## CoreLayerとは？
+
+CoreLayerは、あなたとパーソナルアプリエコシステムの間に位置します。ブラウザタブに閉じ込められたチャットボットではなく、デスクトップ制御レイヤーとして動作します:
+
+- **Voice-native** — ウェイクワード、ストリーミングASR/TTS、バージイン割り込み
+- **MCP-first** — Model Context Protocolを通じて外部ツールサーバーを接続
+- **Tool-aware** — ネイティブモジュール、MCPツール、スキル、RESTアダプターの統一レジストリ
+- **Permission-guarded** — リスクのあるアクションは分類され、承認待ちになり、ログに記録されます
+- **Local-first** — ローカルのSQLite、オプションのSupabaseクラウド同期
+
+## ドキュメントセクション
+
+| セクション | 内容 |
+|---------|-----------------|
+| [はじめに](/docs/getting-started/what-is-corelayer) | インストール、クイックスタート、最初のMCP接続 |
+| [設定](/docs/configuration/model-providers) | モデルプロバイダー、MCPサーバー、ストレージ、音声、権限 |
+| [コアコンセプト](/docs/core-concepts/jarvis) | Jarvis、コントロールセンター、モデルゲートウェイ、ツールレジストリ、パーミッションガード |
+| [ガイド](/docs/guides/connect-mcp-app) | 一般的なワークフローのステップバイステップガイド |
+| [リファレンス](/docs/reference/config-file) | 設定ファイル、CLIコマンド、APIエンドポイント |
+| [アーキテクチャ](/docs/architecture/system-overview) | システム設計、ランタイム境界、データフロー |

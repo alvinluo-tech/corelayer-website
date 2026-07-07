@@ -1,0 +1,89 @@
+---
+title: Pipeline de Voz
+description: "Configura la pipeline de voz: palabra de activacion, ASR, TTS e interrupcion."
+---
+
+CoreLayer incluye una pipeline de voz que te permite interactuar con Jarvis mediante el habla.
+
+## Resumen de la Pipeline de Voz
+
+```text
+Deteccion de Palabra de Activacion
+  → Reconocimiento de Voz (ASR)
+  → Procesamiento de Intencion (LLM)
+  → Texto a Voz (TTS)
+  → Salida de Audio
+
+  ↕ Interrupcion por voz en cualquier punto
+```
+
+## Configuracion
+
+```json
+{
+  "voice": {
+    "enabled": true,
+    "wakeWord": {
+      "enabled": true,
+      "keyword": "jarvis"
+    },
+    "asr": {
+      "provider": "web-speech",
+      "language": "en-US"
+    },
+    "tts": {
+      "provider": "mimo",
+      "streaming": true,
+      "sentenceLevel": true
+    }
+  }
+}
+```
+
+## Palabra de Activacion
+
+Usa Picovoice Porcupine para la deteccion de la palabra de activacion:
+
+- Se ejecuta localmente en el navegador/webview
+- Bajo uso de CPU en reposo
+- Palabra clave configurable (por defecto: "jarvis")
+
+## Reconocimiento de Voz (ASR)
+
+Dos proveedores disponibles:
+
+| Proveedor | Tipo | Calidad |
+|-----------|------|---------|
+| **Web Speech API** | Nativo del navegador | Buena, no necesita clave API |
+| **Groq Whisper** | Nube | Alta precision, requiere clave API |
+
+## Texto a Voz (TTS)
+
+| Proveedor | Tipo | Caracteristicas |
+|-----------|------|-----------------|
+| **MiMo TTS** (`mimo`) | Nube | Streaming a nivel de frase, voz natural |
+
+MiMo TTS es un servicio de texto a voz basado en la nube que soporta streaming a nivel de frase — comienza a hablar cada frase tan pronto como se genera, en lugar de esperar a la respuesta completa. Esto reduce la latencia percibida significativamente.
+
+El TTS en streaming habla las respuestas a medida que se generan, reduciendo la latencia percibida.
+
+## Interrupcion por Voz
+
+Cuando esta habilitada, puedes interrumpir a Jarvis a mitad de respuesta hablando. La pipeline:
+
+1. Detendra la reproduccion TTS actual
+2. Procesara tu nueva entrada
+3. Respondera a la interrupcion
+
+## Superposicion de Voz
+
+Cuando la voz esta activa, aparece una superposicion flotante que muestra:
+
+- Estado actual (escuchando, procesando, hablando)
+- Visualizacion de forma de onda
+- Texto de transcripcion
+
+## Siguientes Pasos
+
+- [Habilitar Flujo de Voz](/docs/guides/enable-voice) — configuracion paso a paso
+- [Conceptos Clave: Jarvis](/docs/core-concepts/jarvis) — como la voz se integra con el asistente

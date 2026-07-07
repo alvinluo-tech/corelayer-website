@@ -1,0 +1,66 @@
+---
+title: 守护进程
+description: 驱动 CoreLayer AI 编排的 Node.js 后端。
+---
+
+守护进程是一个在后台运行的 Node.js 进程，负责处理所有 AI 编排、工具执行和数据管理。
+
+## 架构
+
+```text
+Tauri 桌面应用（Rust）
+  └─ 守护进程管理器（Rust）
+     └─ Node.js 守护进程（Hono HTTP 服务器）
+        ├─ 模型网关
+        ├─ 工具注册
+        ├─ 权限守卫
+        ├─ MCP 客户端管理器
+        └─ 数据库（SQLite / Supabase / PostgreSQL）
+```
+
+## 守护进程管理器
+
+Tauri 应用包含一个基于 Rust 的守护进程管理器，它负责：
+
+- **启动** 应用启动时启动守护进程
+- **监控** 守护进程健康状况
+- **重启** 守护进程崩溃时重启
+- **停止** 应用关闭时停止守护进程
+
+## HTTP API
+
+守护进程在 `localhost:3001` 上暴露 HTTP API（可通过 `config.json` 中的 `daemon.port` 字段配置）。Tauri 前端通过 Tauri 的 IPC 桥接与此 API 通信。
+
+## 开发模式
+
+在开发环境中，守护进程使用热重载运行：
+
+```bash
+pnpm dev:daemon
+```
+
+这使用 `tsx watch` 在文件更改时重启。
+
+## 生产模式
+
+在生产构建中，守护进程作为旁路二进制文件打包：
+
+```bash
+pnpm build:daemon:sidecar
+```
+
+旁路二进制文件与 Tauri 应用一起打包，作为独立进程运行。
+
+## 健康监控
+
+控制中心显示守护进程状态：
+
+- **健康** — 守护进程正在运行且响应正常
+- **启动中** — 守护进程正在初始化
+- **不健康** — 守护进程无响应
+- **已停止** — 守护进程被有意停止
+
+## 下一步
+
+- [系统概览](/docs/architecture/system-overview) — 完整架构
+- [从源码构建](/docs/guides/build-from-source) — 构建守护进程

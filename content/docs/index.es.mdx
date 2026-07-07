@@ -1,0 +1,48 @@
+---
+title: Documentacion de CoreLayer
+description: Comienza aqui para instalar CoreLayer, configurar un proveedor de modelos, conectar tu primer servidor MCP y entender el modelo de permisos antes de darle acceso a Jarvis a las herramientas.
+---
+
+Bienvenido a la documentacion de CoreLayer. CoreLayer es una capa de control de IA local para escritorio que conecta tus aplicaciones personales, herramientas, modelos y flujos de trabajo MCP a traves de un centro de comandos protegido por permisos.
+
+## Enlaces Rapidos
+
+<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-6">
+  <a href="/docs/getting-started/install" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **Instalar CoreLayer**
+    Ejecuta la aplicacion de escritorio en tu sistema.
+  </a>
+  <a href="/docs/getting-started/quickstart" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **Inicio Rapido**
+    Conecta tu primer modelo y servidor MCP en 5 minutos.
+  </a>
+  <a href="/docs/core-concepts/permission-guard" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **Permission Guard**
+    Entiende como la ejecucion de herramientas se mantiene segura y auditable.
+  </a>
+  <a href="/docs/architecture/system-overview" className="block rounded-lg border border-border-subtle bg-panel p-4 transition-colors hover:border-border-cyan">
+    **Arquitectura**
+    Aprende como la shell de Tauri, el daemon y los paquetes trabajan juntos.
+  </a>
+</div>
+
+## Que es CoreLayer?
+
+CoreLayer se interpone entre tu ecosistema de aplicaciones personales. En lugar de un chatbot atrapado en una pestana del navegador, opera como una capa de control de escritorio:
+
+- **Voz nativa** — palabra de activacion, ASR/TTS en streaming, interrupcion por voz
+- **MCP primero** — conecta servidores de herramientas externos a traves del Model Context Protocol
+- **Conciencia de herramientas** — registro unificado para modulos nativos, herramientas MCP, habilidades y adaptadores REST
+- **Protegido por permisos** — las acciones riesgosas se clasifican, pausan para aprobacion y se registran
+- **Local primero** — SQLite en tu maquina, sincronizacion opcional en la nube con Supabase
+
+## Secciones de Documentacion
+
+| Seccion | Lo que encontraras |
+|---------|-----------------|
+| [Primeros Pasos](/docs/getting-started/what-is-corelayer) | Instalacion, inicio rapido, primera conexion MCP |
+| [Configuracion](/docs/configuration/model-providers) | Proveedores de modelos, servidores MCP, almacenamiento, voz, permisos |
+| [Conceptos Clave](/docs/core-concepts/jarvis) | Jarvis, Centro de Control, Model Gateway, Tool Registry, Permission Guard |
+| [Guias](/docs/guides/connect-mcp-app) | Guias paso a paso para flujos de trabajo comunes |
+| [Referencia](/docs/reference/config-file) | Archivo de configuracion, comandos CLI, endpoints API |
+| [Arquitectura](/docs/architecture/system-overview) | Diseno del sistema, limites de runtime, flujo de datos |

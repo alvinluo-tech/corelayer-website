@@ -1,0 +1,50 @@
+---
+title: Tool Registry
+description: Registro unificado de herramientas, descubrimiento y enrutamiento.
+---
+
+El Tool Registry es un catalogo central de todas las herramientas disponibles para Jarvis. Agrega herramientas de multiples fuentes y las presenta a traves de una interfaz unificada.
+
+## Fuentes de Herramientas
+
+| Fuente | Descripcion |
+|--------|-------------|
+| **Modulos nativos** | Herramientas integradas de CoreLayer (gestion de tareas, lista de lectura, revisiones) |
+| **Servidores MCP** | Herramientas de servidores MCP conectados |
+| **Habilidades** | Flujos de trabajo scriptados personalizados |
+| **Adaptadores REST** | Herramientas de endpoints de API REST |
+
+## Como Funciona
+
+```text
+Las fuentes de herramientas registran sus herramientas
+  → Tool Registry cataloga todas las herramientas
+  → Jarvis consulta las herramientas disponibles para una solicitud
+  → Tool Registry devuelve las herramientas coincidentes
+  → Jarvis selecciona y llama a la herramienta apropiada
+  → Permission Guard verifica antes de la ejecucion
+```
+
+## Metadatos de Herramienta
+
+Cada herramienta en el registro incluye:
+
+- **Nombre** — identificador unico
+- **Descripcion** — que hace la herramienta
+- **Parametros** — esquema de entrada (JSON Schema)
+- **Fuente** — que proveedor posee esta herramienta
+- **Nivel de riesgo** — lectura, escritura, externo, destructivo
+
+## Consultar Herramientas
+
+Jarvis puede consultar el registro para encontrar herramientas por:
+
+- **Capacidad** — "encuentra herramientas que puedan leer archivos"
+- **Fuente** — "muestra todas las herramientas MCP"
+- **Nombre** — "usa la herramienta filesystem:read"
+
+## Siguientes Pasos
+
+- [Servidores MCP](/docs/configuration/mcp-servers) — conectar herramientas externas
+- [Aniadir una Herramienta Personalizada](/docs/guides/add-custom-tool) — registrar tus propias herramientas
+- [Permission Guard](/docs/core-concepts/permission-guard) — verificaciones de seguridad

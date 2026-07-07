@@ -1,0 +1,71 @@
+---
+title: 配置本地模型
+description: 使用 Ollama 设置完全本地的 AI 模型推理。
+---
+
+使用 Ollama 在你的机器上完全本地运行 AI 模型。
+
+## 安装 Ollama
+
+从 [ollama.com](https://ollama.com) 下载并安装。
+
+## 拉取模型
+
+```bash
+ollama pull llama3.2
+```
+
+适用于 CoreLayer 的常用模型：
+
+| 模型 | 大小 | 用例 |
+|------|------|------|
+| `llama3.2` | 2-3GB | 通用，快速 |
+| `llama3.3:70b` | 40GB | 复杂推理 |
+| `qwen2.5:14b` | 9GB | 速度和能力的良好平衡 |
+| `codellama:13b` | 7GB | 代码生成 |
+
+## 配置 CoreLayer
+
+添加 Ollama 作为提供商：
+
+```json
+{
+  "models": {
+    "providers": [
+      {
+        "name": "ollama",
+        "type": "ollama",
+        "endpoint": "http://localhost:11434",
+        "defaultModel": "llama3.2"
+      }
+    ]
+  }
+}
+```
+
+或通过控制中心：
+
+1. 打开**设置 → 模型**
+2. 点击**添加提供商**
+3. 选择 **Ollama**
+4. 设置端点为 `http://localhost:11434`
+5. 选择你的模型
+
+## 验证
+
+向 Jarvis 提问并检查它是否使用本地模型响应：
+
+```text
+你运行的是什么模型？
+```
+
+## 性能提示
+
+- **GPU 加速**：Ollama 会自动使用可用的 GPU
+- **模型大小**：较小的模型响应更快但能力较弱
+- **量化**：在有限硬件上使用量化模型（Q4、Q5）以获得更好的性能
+
+## 下一步
+
+- [模型提供商](/docs/configuration/model-providers) — 配置多个提供商
+- [模型网关](/docs/core-concepts/model-gateway) — 了解路由

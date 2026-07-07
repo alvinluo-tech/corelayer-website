@@ -1,6 +1,20 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const supportedLocales = ["en", "zh", "zh-TW", "es", "ja"];
+
+function getLocaleFromPath(pathname: string): string {
+  const segment = pathname.split("/").filter(Boolean)[0];
+  if (segment && supportedLocales.includes(segment)) return segment;
+  return "en";
+}
 
 export default function NotFound() {
+  const pathname = usePathname();
+  const locale = getLocaleFromPath(pathname);
+
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
       <p className="text-6xl font-bold tracking-tight text-cyan">404</p>
@@ -12,13 +26,13 @@ export default function NotFound() {
       </p>
       <div className="mt-8 flex gap-4">
         <Link
-          href="/"
+          href={`/${locale}`}
           className="rounded-lg bg-cyan px-4 py-2 text-sm font-medium text-void transition-opacity hover:opacity-90"
         >
           Go home
         </Link>
         <Link
-          href="/docs"
+          href={`/${locale}/docs`}
           className="rounded-lg border border-border-subtle px-4 py-2 text-sm text-text-secondary transition-colors hover:text-text-primary"
         >
           Browse docs

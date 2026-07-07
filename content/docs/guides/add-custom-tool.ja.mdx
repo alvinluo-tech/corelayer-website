@@ -1,0 +1,108 @@
+---
+title: カスタムツールを登録
+description: ツールレジストリに独自のツールを登録します。
+---
+
+カスタムツールをツールレジストリに追加してJarvisを拡張できます。
+
+## オプション1: MCPサーバー
+
+ツールを追加する推奨方法はMCPサーバーを使用することです。ツールを公開するシンプルなMCPサーバーを作成:
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
+
+const server = new McpServer({
+  name: "my-tools",
+  version: "1.0.0",
+});
+
+server.tool(
+  "my-tool",
+  "Description of what this tool does",
+  {
+    param1: { type: "string", description: "First parameter" },
+  },
+  async ({ param1 }) => {
+    // ツール実装
+    return {
+      content: [{ type: "text", text: `Result: ${param1}` }],
+    };
+  }
+);
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+CoreLayerに追加:
+
+```json
+{
+  "name": "my-tools",
+  "command": "node",
+  "args": ["./my-mcp-server.js"]
+}
+```
+
+## オプション2: RESTアダプター
+
+すでにREST APIとして利用可能なツールについては、MCPサーバーでラップする代わりにRESTアダプターとして登録できます。
+
+CoreLayer設定にRESTアダプターエントリを追加:
+
+```json
+{
+  "name": "weather-api",
+  "type": "rest",
+  "baseUrl": "https://api.weather.example.com/v1",
+  "auth": {
+    "type": "bearer",
+    "token": "${WEATHER_API_KEY}"
+  },
+  "tools": [
+    {
+      "name": "get-forecast",
+      "description": "Get the weather forecast for a location",
+      "method": "GET",
+      "path": "/forecast",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name or coordinates"
+          }
+        },
+        "required": ["location"]
+      }
+    }
+  ]
+}
+```
+
+RESTアダプターは各ツールエントリを自動的にツールレジストリ内の呼び出し可能なツールに変換します。Jarvisは設定されたエンドポイントにHTTPリクエストを送信し、レスポンスをツール結果として返します。
+
+> RESTアダプターは、ラップしたくない既存のAPIに最適です。新しいツールにはMCPサーバーを推奨 — ストリーミング、より豊富なエラーハンドリングをサポートし、ローカルでテストしやすいです。
+
+## ツールメタデータ
+
+ツール登録時に以下を提供:
+
+- **名前** — 一意で説明的な識別子
+- **説明** — ツールの機能の明確な説明
+- **パラメータ** — 入力用のJSON Schema
+- **リスクレベル** — パーミッションガードがツールを分類するのに役立つ
+
+## ベストプラクティス
+
+- 説明的な名前を使用: `filesystem:read`而非`fs1`
+- 明確な説明を記述 — Jarvisはこれらを使用してツール呼び出しのタイミングを判断
+- パラメータスキーマを厳密に定義 — 無効な呼び出しを防止
+- 適切なリスクレベルを設定 — すべてを`read`にしない
+
+## 次のステップ
+
+- [ツールレジストリ](/docs/core-concepts/tool-registry) — ツールの管理方法
+- [権限](/docs/configuration/permissions) — ツールポリシーの設定

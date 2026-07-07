@@ -1,0 +1,56 @@
+---
+title: CLI 指令
+description: CoreLayer 的命令列介面。
+---
+
+CoreLayer 提供常用操作的 CLI 指令。
+
+## 開發指令
+
+| 指令 | 說明 |
+|---------|-------------|
+| `pnpm dev` | 以開發模式啟動守護程式 + Tauri 前端 |
+| `pnpm dev:web` | 僅以網頁模式啟動前端（無 Tauri） |
+| `pnpm dev:daemon` | 僅啟動守護程式 |
+| `pnpm dev:frontend` | 僅啟動 Tauri 前端 |
+
+## 建置指令
+
+| 指令 | 說明 |
+|---------|-------------|
+| `pnpm build` | 完整生產建置（sidecar + Tauri） |
+| `pnpm build:daemon` | 僅建置守護程式 |
+| `pnpm build:daemon:sidecar` | 將守護程式建置為 sidecar 二進位檔 |
+
+## 品質指令
+
+| 指令 | 說明 |
+|---------|-------------|
+| `pnpm lint` | 對原始碼執行 ESLint |
+| `pnpm lint:fix` | 自動修復 ESLint 問題 |
+| `pnpm format` | 使用 Prettier 格式化程式碼 |
+| `pnpm format:check` | 檢查格式但不寫入 |
+| `pnpm test` | 執行所有測試 |
+| `pnpm typecheck` | 執行 TypeScript 型別檢查 |
+
+## 清理指令
+
+| 指令 | 說明 |
+|---------|-------------|
+| `pnpm clean` | 清理所有建置輸出 |
+| `pnpm clean:app` | 終止運行中的 CoreLayer 應用程式 |
+| `pnpm clean:daemon` | 終止連接埠 3001 上的守護程式程序 |
+| `pnpm clean:all` | 清理應用程式 + 守護程式 |
+
+## 發布指令
+
+| 指令 | 說明 |
+|---------|-------------|
+| `pnpm release` | 建立新發布（補丁） |
+| `pnpm release:minor` | 建立次要發布 |
+| `pnpm release:major` | 建立主要發布 |
+
+## 下一步
+
+- [從原始碼建置](/docs/guides/build-from-source) — 完整建置指南
+- [API 端點](/docs/reference/api-endpoints) — 守護程式 HTTP API

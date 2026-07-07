@@ -1,0 +1,52 @@
+---
+title: Model Gateway
+description: Enrutamiento y seleccion de modelos multi-proveedor.
+---
+
+El Model Gateway gestiona las conexiones a proveedores de modelos de IA y enruta las solicitudes al mejor modelo disponible.
+
+## Arquitectura
+
+```text
+Solicitud de Jarvis
+  → Model Gateway
+  → Logica de seleccion de proveedor
+  → Vercel AI SDK
+  → API del Proveedor (Groq / OpenRouter / Ollama / OpenAI-compatible)
+  → Streaming de respuesta de vuelta a Jarvis
+```
+
+## Construido sobre Vercel AI SDK
+
+El Model Gateway usa [Vercel AI SDK v6+](https://sdk.vercel.ai) para:
+
+- Interfaz unificada entre proveedores
+- Respuestas en streaming
+- Soporte de llamadas a herramientas
+- Salida estructurada
+
+## Logica de Enrutamiento
+
+El gateway selecciona modelos basandose en:
+
+1. **Tipo de tarea** — razonamiento, generacion de codigo, resumen, clasificacion
+2. **Requisitos de latencia** — la voz en tiempo real necesita modelos rapidos
+3. **Coste** — las tareas rutinarias usan modelos mas economicos
+4. **Respaldo** — si el proveedor principal no esta disponible
+
+## Configuracion de Proveedores
+
+Consulta [Proveedores de Modelos](/docs/configuration/model-providers) para detalles de configuracion.
+
+## Streaming
+
+Todas las respuestas de modelo se transmiten en streaming por defecto. Esto significa:
+
+- El texto aparece a medida que se genera
+- TTS puede hablar frases a medida que se completan (streaming a nivel de frase)
+- Las llamadas a herramientas se ejecutan tan pronto como se identifican
+
+## Siguientes Pasos
+
+- [Proveedores de Modelos](/docs/configuration/model-providers) — configurar proveedores
+- [Configurar Modelos Locales](/docs/guides/configure-local-models) — configurar Ollama

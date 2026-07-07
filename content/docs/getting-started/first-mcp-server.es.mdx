@@ -1,0 +1,88 @@
+---
+title: Conecta Tu Primer Servidor MCP
+description: Conecta tu primer servidor MCP (Model Context Protocol) a CoreLayer.
+---
+
+El Model Context Protocol (MCP) es la forma en que CoreLayer se conecta a herramientas y fuentes de datos externas. Esta guia te acompana en la conexion de tu primer servidor MCP.
+
+## Que es MCP?
+
+MCP es un protocolo abierto que permite a las aplicaciones de IA conectarse a herramientas y fuentes de datos externas a traves de una interfaz estandarizada. Un servidor MCP expone herramientas que Jarvis puede descubrir y llamar.
+
+## Aniadir un Servidor MCP
+
+### Via Centro de Control
+
+1. Abre **Ajustes → MCP**
+2. Haz clic en **Aniadir Servidor**
+3. Introduce la configuracion del servidor:
+
+```json
+{
+  "name": "my-server",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+}
+```
+
+### Via Archivo de Configuracion
+
+Aniade a tu configuracion de CoreLayer:
+
+```json
+{
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+      }
+    ]
+  }
+}
+```
+
+## Servidores MCP Populares
+
+| Servidor | Proposito | Comando |
+|----------|-----------|---------|
+| `@modelcontextprotocol/server-filesystem` | Acceso al sistema de archivos | `npx -y @modelcontextprotocol/server-filesystem /path` |
+| `@modelcontextprotocol/server-github` | API de GitHub | `npx -y @modelcontextprotocol/server-github` |
+| `@modelcontextprotocol/server-brave-search` | Busqueda web | `npx -y @modelcontextprotocol/server-brave-search` |
+| `@modelcontextprotocol/server-memory` | Grafo de conocimiento | `npx -y @modelcontextprotocol/server-memory` |
+
+## Verificar la Conexion
+
+Despues de aniadir un servidor:
+
+1. Ve a **Centro de Control → MCP** para ver los servidores conectados
+2. Verifica que el estado del servidor muestre **Conectado**
+3. Prueba un comando que use las herramientas del servidor
+
+```text
+Lee el archivo README.md de mi espacio de trabajo
+```
+
+Si el servidor MCP esta conectado, Jarvis usara la herramienta del sistema de archivos para leer el archivo.
+
+## Solucion de Problemas MCP
+
+**El servidor no se conecta:**
+- Verifica que el comando y los argumentos sean correctos
+- Asegurate de que el paquete del servidor este instalado (`npx -y` lo instala automaticamente)
+- Revisa los registros del daemon para errores de conexion
+
+**Las herramientas no aparecen:**
+- Algunos servidores requieren autenticacion — consulta la documentacion del servidor
+- Reinicia la conexion MCP desde el Centro de Control
+
+**Permiso denegado:**
+- El Permission Guard puede bloquear ciertas llamadas a herramientas — revisa la cola de aprobacion
+- Consulta [Permisos](/docs/configuration/permissions) para mas detalles
+
+## Siguientes Pasos
+
+- [Configuracion de Servidores MCP](/docs/configuration/mcp-servers) — configuracion avanzada de MCP
+- [Tool Registry](/docs/core-concepts/tool-registry) — como se descubren y enrutan las herramientas
+- [Conectar una Aplicacion MCP](/docs/guides/connect-mcp-app) — guia paso a paso

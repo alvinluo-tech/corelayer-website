@@ -1,0 +1,74 @@
+---
+title: Habilitar Interaccion por Voz
+description: Configura la interaccion por voz con Jarvis.
+---
+
+Esta guia te acompana en la habilitacion de la pipeline de voz en CoreLayer.
+
+## Requisitos Previos
+
+- CoreLayer instalado
+- Acceso al microfono concedido a la aplicacion
+
+## Paso 1: Habilitar Voz
+
+Abre **Ajustes → Voz** y activa **Habilitar Pipeline de Voz**.
+
+## Paso 2: Configurar Palabra de Activacion
+
+Habilita la deteccion de la palabra de activacion para activar a Jarvis por voz:
+
+```json
+{
+  "voice": {
+    "wakeWord": {
+      "enabled": true,
+      "keyword": "jarvis"
+    }
+  }
+}
+```
+
+La palabra de activacion se ejecuta localmente usando Picovoice Porcupine — sin procesamiento en la nube.
+
+## Paso 3: Elegir Proveedor ASR
+
+| Proveedor | Configuracion |
+|-----------|---------------|
+| **Web Speech API** | No requiere configuracion — funciona directamente |
+| **Groq Whisper** | Requiere clave API de Groq en Ajustes → Modelos |
+
+Web Speech API es recomendado para empezar. Groq Whisper proporciona mayor precision.
+
+## Paso 4: Probar la Voz
+
+Di la palabra de activacion ("Jarvis") o haz clic en el boton del microfono en el Centro de Control. Luego habla tu solicitud:
+
+```text
+Que tareas tengo para hoy?
+```
+
+Jarvis procesara tu voz, generara una respuesta y la hablara usando TTS.
+
+## Superposicion de Voz
+
+Cuando la voz esta activa, una superposicion flotante muestra:
+
+- **Escuchando** — animacion de forma de onda, acento cyan
+- **Procesando** — indicador giratorio, acento violeta
+- **Hablando** — progreso de reproduccion, acento esmeralda
+
+## Interrupcion por Voz
+
+Puedes interrumpir a Jarvis a mitad de respuesta hablando de nuevo. La pipeline detendra la respuesta actual y procesara tu nueva entrada.
+
+## Solucion de Problemas
+
+- **Palabra de activacion no detectada**: Verifica los permisos del microfono y reduce el ruido de fondo
+- **Voz no reconocida**: Intenta hablar mas claramente o cambia a Groq Whisper
+- **Sin salida de audio**: Verifica el audio del sistema y la configuracion de TTS
+
+## Siguientes Pasos
+
+- [Configuracion de Voz](/docs/configuration/voice) — ajustes avanzados de voz
+- [Jarvis](/docs/core-concepts/jarvis) — como la voz se integra con el asistente

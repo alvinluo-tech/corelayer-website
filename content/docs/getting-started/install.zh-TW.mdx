@@ -1,0 +1,63 @@
+---
+title: 安裝
+description: 在 Windows、macOS 或 Linux 上下載並安裝 CoreLayer。
+---
+
+## 下載
+
+造訪[下載頁面](/download)取得適用於你平台的最新版本。
+
+| 平台 | 狀態 |
+|----------|--------|
+| Windows | 可用 |
+| macOS | 可用 |
+| Linux | 規劃中 |
+
+## 從原始碼安裝
+
+如果你偏好從原始碼建置，或你的平台沒有可用的二進位檔：
+
+### 前置條件
+
+- **Node.js** >= 22
+- **pnpm** >= 9
+- **Rust**（用於 Tauri 建置）
+- 平台特定的 Tauri 需求（[Tauri 前置條件](https://tauri.app/start/prerequisites/)）
+
+### 建置步驟
+
+```bash
+git clone https://github.com/alvinluo-tech/CoreLayer.git
+cd CoreLayer
+pnpm install
+pnpm build
+```
+
+建置輸出將在 `frontend/src-tauri/target/release/` 中。
+
+### 開發模式
+
+使用熱重載在開發模式下運行：
+
+```bash
+pnpm dev
+```
+
+這會同時啟動守護程式和 Tauri 前端。
+
+## 安裝後
+
+1. **開啟控制中心** — 啟動 CoreLayer 桌面應用程式
+2. **設定模型供應商** — 為 MiMo、Groq、OpenRouter 或本地模型新增你的 API 金鑰
+3. **新增 MCP 伺服器** — 連接你的第一個外部工具
+4. **檢視權限** — 在啟用工具執行之前了解權限守護
+5. **嘗試你的第一個指令** — 使用指令面板（Alt+Space）或語音
+
+## 疑難排解
+
+如果應用程式無法啟動：
+
+- 確認已安裝 Node.js 22+ 和 pnpm 9+
+- 驗證平台特定的 Tauri 前置條件已滿足
+- 檢查控制中心中的守護程式日誌
+- 參閱[疑難排解](/docs/reference/troubleshooting)了解常見問題

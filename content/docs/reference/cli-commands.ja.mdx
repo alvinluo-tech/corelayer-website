@@ -1,0 +1,56 @@
+---
+title: CLIコマンド
+description: CoreLayerのコマンドラインインターフェース。
+---
+
+CoreLayerは一般的な操作用のCLIコマンドを提供します。
+
+## 開発コマンド
+
+| コマンド | 説明 |
+|---------|-------------|
+| `pnpm dev` | 開発モードでデーモン＋Tauriフロントエンドを起動 |
+| `pnpm dev:web` | Web専用モードでフロントエンドを起動（Tauriなし） |
+| `pnpm dev:daemon` | デーモンのみ起動 |
+| `pnpm dev:frontend` | Tauriフロントエンドのみ起動 |
+
+## ビルドコマンド
+
+| コマンド | 説明 |
+|---------|-------------|
+| `pnpm build` | フルプロダクションビルド（サイドカー＋Tauri） |
+| `pnpm build:daemon` | デーモンのみビルド |
+| `pnpm build:daemon:sidecar` | デーモンをサイドカーバイナリとしてビルド |
+
+## 品質コマンド
+
+| コマンド | 説明 |
+|---------|-------------|
+| `pnpm lint` | ソースファイルにESLintを実行 |
+| `pnpm lint:fix` | ESLintの問題を自動修正 |
+| `pnpm format` | Prettierでコードをフォーマット |
+| `pnpm format:check` | 書き込みなしでフォーマットをチェック |
+| `pnpm test` | すべてのテストを実行 |
+| `pnpm typecheck` | TypeScriptの型チェックを実行 |
+
+## クリーンアップコマンド
+
+| コマンド | 説明 |
+|---------|-------------|
+| `pnpm clean` | すべてのビルド出力をクリーン |
+| `pnpm clean:app` | 実行中のCoreLayerアプリを終了 |
+| `pnpm clean:daemon` | ポート3001のデーモンプロセスを終了 |
+| `pnpm clean:all` | アプリ＋デーモンをクリーン |
+
+## リリースコマンド
+
+| コマンド | 説明 |
+|---------|-------------|
+| `pnpm release` | 新しいリリースを作成（パッチ） |
+| `pnpm release:minor` | マイナーリリースを作成 |
+| `pnpm release:major` | メジャーリリースを作成 |
+
+## 次のステップ
+
+- [ソースからビルド](/docs/guides/build-from-source) — 完全なビルドガイド
+- [APIエンドポイント](/docs/reference/api-endpoints) — デーモンHTTP API

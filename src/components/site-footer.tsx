@@ -39,11 +39,19 @@ const footerSections = [
   },
 ];
 
+function getLocaleFromPath(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const first = segments[0];
+  if (["en", "zh", "zh-TW", "es", "ja"].includes(first)) return first;
+  return "en";
+}
+
 export function SiteFooter() {
   const pathname = usePathname();
+  const locale = getLocaleFromPath(pathname);
 
   // Hide on docs pages — Fumadocs provides its own layout
-  if (pathname.startsWith("/docs")) {
+  if (pathname.includes("/docs")) {
     return null;
   }
 
@@ -52,7 +60,7 @@ export function SiteFooter() {
       <div className="site-container py-10">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           <div className="col-span-2 sm:col-span-1">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href={`/${locale}`} className="flex items-center gap-2">
               <Image src="/assets/icon.png" alt="CoreLayer" width={24} height={24} />
               <span className="text-sm font-semibold text-text-primary">
                 CoreLayer
@@ -84,7 +92,7 @@ export function SiteFooter() {
                       </a>
                     ) : (
                       <Link
-                        href={link.href}
+                        href={`/${locale}${link.href}`}
                         className="text-sm text-text-secondary transition-colors hover:text-text-primary"
                       >
                         {link.label}
@@ -112,7 +120,7 @@ export function SiteFooter() {
               License
             </a>
             <Link
-              href="/docs/architecture/security-model"
+              href={`/${locale}/docs/architecture/security-model`}
               className="text-xs text-text-tertiary transition-colors hover:text-text-secondary"
             >
               Security

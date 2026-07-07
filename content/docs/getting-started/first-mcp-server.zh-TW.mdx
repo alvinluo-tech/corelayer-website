@@ -1,0 +1,88 @@
+---
+title: 連接你的第一個 MCP 伺服器
+description: 將你的第一個 MCP（模型上下文協定）伺服器連接到 CoreLayer。
+---
+
+模型上下文協定（MCP）是 CoreLayer 連接外部工具和資料來源的方式。本指南將引導你連接第一個 MCP 伺服器。
+
+## 什麼是 MCP？
+
+MCP 是一個開放協定，讓 AI 應用程式可以透過標準化介面連接外部工具和資料來源。MCP 伺服器公開 Jarvis 可以發現和呼叫的工具。
+
+## 新增 MCP 伺服器
+
+### 透過控制中心
+
+1. 開啟 **設定 → MCP**
+2. 按一下 **新增伺服器**
+3. 輸入伺服器設定：
+
+```json
+{
+  "name": "my-server",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+}
+```
+
+### 透過設定檔
+
+新增到你的 CoreLayer 設定：
+
+```json
+{
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+      }
+    ]
+  }
+}
+```
+
+## 熱門 MCP 伺服器
+
+| 伺服器 | 用途 | 指令 |
+|--------|---------|---------|
+| `@modelcontextprotocol/server-filesystem` | 檔案系統存取 | `npx -y @modelcontextprotocol/server-filesystem /path` |
+| `@modelcontextprotocol/server-github` | GitHub API | `npx -y @modelcontextprotocol/server-github` |
+| `@modelcontextprotocol/server-brave-search` | 網路搜尋 | `npx -y @modelcontextprotocol/server-brave-search` |
+| `@modelcontextprotocol/server-memory` | 知識圖譜 | `npx -y @modelcontextprotocol/server-memory` |
+
+## 驗證連接
+
+新增伺服器後：
+
+1. 前往 **控制中心 → MCP** 查看已連接的伺服器
+2. 檢查伺服器狀態是否顯示**已連接**
+3. 嘗試使用該伺服器工具的指令
+
+```text
+讀取我工作區中的 README.md 檔案
+```
+
+如果 MCP 伺服器已連接，Jarvis 將使用檔案系統工具來讀取檔案。
+
+## MCP 疑難排解
+
+**伺服器無法連接：**
+- 檢查指令和參數是否正確
+- 驗證伺服器套件已安裝（`npx -y` 會自動安裝）
+- 檢查守護程式日誌中的連接錯誤
+
+**工具未出現：**
+- 某些伺服器需要認證 — 查看伺服器的文件
+- 從控制中心重新啟動 MCP 連接
+
+**權限被拒：**
+- 權限守護可能封鎖某些工具呼叫 — 檢查核准佇列
+- 參閱[權限](/docs/configuration/permissions)了解詳情
+
+## 下一步
+
+- [MCP 伺服器設定](/docs/configuration/mcp-servers) — 進階 MCP 設定
+- [工具註冊表](/docs/core-concepts/tool-registry) — 工具如何被發現和路由
+- [連接 MCP 應用程式](/docs/guides/connect-mcp-app) — 逐步指南

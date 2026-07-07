@@ -1,0 +1,81 @@
+---
+title: 權限
+description: 設定工具執行的權限守護。
+---
+
+權限守護控制哪些工具呼叫需要核准、哪些自動允許、哪些被封鎖。
+
+## 權限等級
+
+| 等級 | 行為 |
+|-------|----------|
+| **讀取** | 自動允許（讀取檔案、列出資料） |
+| **寫入** | 需要核准（寫入檔案、修改資料） |
+| **外部** | 需要核准（API 呼叫、網路請求） |
+| **破壞性** | 需要核准並附帶警告（刪除資料） |
+| **憑證敏感** | 除非明確允許，否則一律封鎖 |
+
+## 設定
+
+```json
+{
+  "permissions": {
+    "defaultPolicy": "confirm",
+    "rules": [
+      {
+        "tool": "filesystem:read",
+        "policy": "allow"
+      },
+      {
+        "tool": "filesystem:write",
+        "policy": "confirm"
+      },
+      {
+        "tool": "github:*",
+        "policy": "confirm"
+      },
+      {
+        "tool": "shell:execute",
+        "policy": "deny"
+      }
+    ]
+  }
+}
+```
+
+## 策略
+
+| 策略 | 效果 |
+|--------|--------|
+| `allow` | 不詢問直接執行 |
+| `confirm` | 暫停並要求使用者核准 |
+| `deny` | 完全封鎖執行 |
+
+## 核准流程
+
+當工具呼叫需要確認時：
+
+1. Jarvis 解釋它想要做什麼
+2. 核准面板顯示工具名稱、參數和風險等級
+3. 你可以 **核准**、**拒絕** 或 **一律核准**（針對此工具）
+4. 所有決定都會記錄在稽核軌跡中
+
+## 稽核日誌
+
+每次工具執行都會被記錄：
+
+```text
+[2026-06-15 14:32:01] filesystem:write /workspace/README.md
+  風險：寫入
+  策略：確認
+  決定：已核准
+  使用者：手動核准
+```
+
+在 **控制中心 → 權限 → 稽核日誌** 中查看稽核日誌。
+
+## 下一步
+
+- [權限守護](/docs/core-concepts/permission-guard) — 深入了解安全模型
+- [檢視稽核日誌](/docs/guides/review-audit-logs) — 使用稽核軌跡
+- [安全模型](/docs/architecture/security-model) — 架構細節

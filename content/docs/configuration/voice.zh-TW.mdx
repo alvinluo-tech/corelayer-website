@@ -1,0 +1,89 @@
+---
+title: 語音管線
+description: "設定語音管線：喚醒詞、ASR、TTS 和打斷功能。"
+---
+
+CoreLayer 包含一個語音管線，讓你可以透過語音與 Jarvis 互動。
+
+## 語音管線概覽
+
+```text
+喚醒詞偵測
+  → 語音辨識（ASR）
+  → 意圖處理（LLM）
+  → 文字轉語音（TTS）
+  → 音訊輸出
+
+  ↕ 任何時候都可以打斷插話
+```
+
+## 設定
+
+```json
+{
+  "voice": {
+    "enabled": true,
+    "wakeWord": {
+      "enabled": true,
+      "keyword": "jarvis"
+    },
+    "asr": {
+      "provider": "web-speech",
+      "language": "en-US"
+    },
+    "tts": {
+      "provider": "mimo",
+      "streaming": true,
+      "sentenceLevel": true
+    }
+  }
+}
+```
+
+## 喚醒詞
+
+使用 Picovoice Porcupine 進行喚醒詞偵測：
+
+- 在瀏覽器/webview 中本地運行
+- 閒置時 CPU 使用率低
+- 可設定的關鍵字（預設："jarvis"）
+
+## 語音辨識（ASR）
+
+提供兩種供應商：
+
+| 供應商 | 類型 | 品質 |
+|----------|------|---------|
+| **Web Speech API** | 瀏覽器原生 | 良好，無需 API 金鑰 |
+| **Groq Whisper** | 雲端 | 高準確度，需要 API 金鑰 |
+
+## 文字轉語音（TTS）
+
+| 供應商 | 類型 | 功能 |
+|----------|------|----------|
+| **MiMo TTS**（`mimo`） | 雲端 | 句級串流、自然語音 |
+
+MiMo TTS 是一個雲端文字轉語音服務，支援句級串流 — 它在每個句子生成後就開始播放，而不是等待完整回應。這顯著減少了感知延遲。
+
+串流 TTS 在回應生成時就播放，減少感知延遲。
+
+## 打斷插話
+
+啟用後，你可以在 Jarvis 回應期間透過說話來打斷。管線將：
+
+1. 停止當前的 TTS 播放
+2. 處理你的新輸入
+3. 回應你的打斷
+
+## 語音覆蓋層
+
+當語音啟動時，會出現一個浮動覆蓋層，顯示：
+
+- 目前狀態（聆聽、處理、播放中）
+- 波形視覺化
+- 轉錄文字
+
+## 下一步
+
+- [啟用語音工作流程](/docs/guides/enable-voice) — 逐步設定
+- [核心概念：Jarvis](/docs/core-concepts/jarvis) — 語音如何與助理整合

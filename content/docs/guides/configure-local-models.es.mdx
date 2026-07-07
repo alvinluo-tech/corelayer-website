@@ -1,0 +1,71 @@
+---
+title: Configurar Modelos Locales
+description: Configura Ollama para inferencia de modelos de IA completamente local.
+---
+
+Ejecuta modelos de IA completamente en tu maquina usando Ollama.
+
+## Instalar Ollama
+
+Descarga e instala desde [ollama.com](https://ollama.com).
+
+## Descargar un Modelo
+
+```bash
+ollama pull llama3.2
+```
+
+Modelos populares para CoreLayer:
+
+| Modelo | Tamano | Caso de Uso |
+|--------|--------|-------------|
+| `llama3.2` | 2-3GB | Uso general, rapido |
+| `llama3.3:70b` | 40GB | Razonamiento complejo |
+| `qwen2.5:14b` | 9GB | Buen equilibrio entre velocidad y capacidad |
+| `codellama:13b` | 7GB | Generacion de codigo |
+
+## Configurar CoreLayer
+
+Aniade Ollama como proveedor:
+
+```json
+{
+  "models": {
+    "providers": [
+      {
+        "name": "ollama",
+        "type": "ollama",
+        "endpoint": "http://localhost:11434",
+        "defaultModel": "llama3.2"
+      }
+    ]
+  }
+}
+```
+
+O via el Centro de Control:
+
+1. Abre **Ajustes → Modelos**
+2. Haz clic en **Aniadir Proveedor**
+3. Selecciona **Ollama**
+4. Establece el endpoint en `http://localhost:11434`
+5. Selecciona tu modelo
+
+## Verificar
+
+Hazle una pregunta a Jarvis y verifica que responda usando el modelo local:
+
+```text
+Que modelo estas ejecutando?
+```
+
+## Consejos de Rendimiento
+
+- **Aceleracion GPU**: Ollama usa automaticamente la GPU si esta disponible
+- **Tamano del modelo**: Los modelos mas pequenos responden mas rapido pero son menos capaces
+- **Cuantificacion**: Usa modelos cuantizados (Q4, Q5) para mejor rendimiento en hardware limitado
+
+## Siguientes Pasos
+
+- [Proveedores de Modelos](/docs/configuration/model-providers) — configurar multiples proveedores
+- [Model Gateway](/docs/core-concepts/model-gateway) — entiende el enrutamiento

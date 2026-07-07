@@ -1,0 +1,84 @@
+---
+title: 技能
+description: 擴展 Jarvis 功能的自訂腳本工作流程。
+---
+
+技能是擴展 Jarvis 功能的可重用工作流程。它們將多個步驟 — 工具呼叫、條件邏輯和結構化輸出 — 結合為 Jarvis 可以自動或應請求調用的命名操作。
+
+## 什麼是技能？
+
+技能是一個 `SKILL.md` 檔案，定義了一個多步驟工作流程。與單一工具呼叫不同，技能可以：
+
+- 將多個工具串聯在一起
+- 包含條件邏輯
+- 在步驟之間維護狀態
+- 以結構化格式呈現結果
+
+## 使用技能
+
+Jarvis 會自動發現可用的技能，並在適當時候調用它們。你也可以明確請求一個技能：
+
+```text
+對目前的變更執行 code-review 技能
+```
+
+## 技能定義格式
+
+每個技能是一個 Markdown 檔案（`SKILL.md`），具有結構化區塊。這是一個最小範例：
+
+```markdown
+# My Skill
+
+Short description of what this skill does.
+
+## What This Skill Does
+
+Longer explanation for the AI agent executing this skill.
+
+## Steps
+
+### Step 1: Gather context
+Read the current project state and identify relevant files.
+
+### Step 2: Execute action
+Call the appropriate tools with the gathered context.
+
+### Step 3: Report results
+Summarize what was done and any follow-up actions.
+```
+
+技能位於 `skills/` 目錄中。每個技能有自己的資料夾：
+
+```text
+skills/
+└── corelayer-mcp-adapter/
+    └── SKILL.md
+```
+
+## 技能來源
+
+技能可以來自：
+
+- **內建** — 隨 CoreLayer 附帶（例如 `corelayer-mcp-adapter`）
+- **社群** — 其他使用者分享
+- **自訂** — 你自己編寫
+
+### 內建技能
+
+| 技能 | 用途 |
+|-------|---------|
+| `corelayer-mcp-adapter` | 指導將任何專案改造成 CoreLayer 相容的 MCP 伺服器 |
+
+## 編寫自訂技能
+
+1. 在 `skills/` 下建立資料夾：`skills/my-skill/`
+2. 新增一個 `SKILL.md` 檔案，包含你的工作流程定義
+3. 重新啟動 CoreLayer — Jarvis 會自動發現新技能
+
+`corelayer-mcp-adapter` 技能是一個很好的參考，展示了如何用清晰的指示、檢查清單和範例來結構化多步驟工作流程。
+
+## 下一步
+
+- [工具註冊表](/docs/core-concepts/tool-registry) — 技能如何被註冊
+- [新增自訂工具](/docs/guides/add-custom-tool) — 建立你自己的擴展
+- [連接 MCP 應用程式](/docs/guides/connect-mcp-app) — MCP 轉接器技能的實際應用

@@ -1,0 +1,91 @@
+---
+title: 設定檔
+description: CoreLayer 設定檔參考。
+---
+
+CoreLayer 使用 JSON 設定檔進行系統層級設定。
+
+## 位置
+
+| 平台 | 路徑 |
+|----------|------|
+| Windows | `%APPDATA%/corelayer/config.json` |
+| macOS | `~/Library/Application Support/corelayer/config.json` |
+| Linux | `~/.config/corelayer/config.json` |
+
+## 完整參考
+
+```json
+{
+  "models": {
+    "providers": [
+      {
+        "name": "groq",
+        "type": "groq",
+        "apiKey": "${GROQ_API_KEY}",
+        "defaultModel": "llama-3.3-70b-versatile"
+      }
+    ]
+  },
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+        "env": {}
+      }
+    ]
+  },
+  "storage": {
+    "mode": "sqlite",
+    "path": "~/.corelayer/data.db"
+  },
+  "voice": {
+    "enabled": true,
+    "wakeWord": {
+      "enabled": true,
+      "keyword": "jarvis"
+    },
+    "asr": {
+      "provider": "web-speech",
+      "language": "en-US"
+    },
+    "tts": {
+      "provider": "mimo",
+      "streaming": true,
+      "sentenceLevel": true
+    }
+  },
+  "permissions": {
+    "defaultPolicy": "confirm",
+    "rules": [
+      {
+        "tool": "filesystem:read",
+        "policy": "allow"
+      }
+    ]
+  },
+  "daemon": {
+    "port": 3001
+  },
+  "runtime": {
+    "skills": {
+      "enabled": true
+    }
+  }
+}
+```
+
+## 環境變數
+
+使用 `${ENV_VAR_NAME}` 語法在設定檔中引用環境變數。
+
+## 驗證
+
+CoreLayer 在啟動時驗證設定檔。無效的設定會在控制中心顯示錯誤。
+
+## 下一步
+
+- [CLI 指令](/docs/reference/cli-commands) — 命令列介面
+- [API 端點](/docs/reference/api-endpoints) — 守護程式 HTTP API

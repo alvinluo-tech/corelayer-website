@@ -1,0 +1,81 @@
+---
+title: 権限
+description: ツール実行用のパーミッションガードを設定します。
+---
+
+パーミッションガードは、どのツール呼び出しに承認が必要か、哪些が自動許可され、哪些がブロックされるかを制御します。
+
+## 権限レベル
+
+| レベル | 動作 |
+|-------|----------|
+| **Read** | 自動許可（ファイル読み取り、データ一覧表示） |
+| **Write** | 承認が必要（ファイル書き込み、データ変更） |
+| **External** | 承認が必要（API呼び出し、ネットワークリクエスト） |
+| **Destructive** | 警告付きで承認が必要（データ削除） |
+| **Credential-sensitive** | 明示的に許可されない限り常にブロック |
+
+## 設定
+
+```json
+{
+  "permissions": {
+    "defaultPolicy": "confirm",
+    "rules": [
+      {
+        "tool": "filesystem:read",
+        "policy": "allow"
+      },
+      {
+        "tool": "filesystem:write",
+        "policy": "confirm"
+      },
+      {
+        "tool": "github:*",
+        "policy": "confirm"
+      },
+      {
+        "tool": "shell:execute",
+        "policy": "deny"
+      }
+    ]
+  }
+}
+```
+
+## ポリシー
+
+| ポリシー | 効果 |
+|--------|--------|
+| `allow` | 確認なしで実行 |
+| `confirm` | 一時停止してユーザー承認を求める |
+| `deny` | 実行を完全にブロック |
+
+## 承認フロー
+
+ツール呼び出しに確認が必要な場合:
+
+1. Jarvisが実行内容を説明
+2. 承認パネルにツール名、パラメータ、リスクレベルが表示
+3. **承認**、**拒否**、または**常に承認**（このツール）を選択可能
+4. すべての決定が監査証跡にログ記録
+
+## 監査ログ
+
+すべてのツール実行がログに記録されます:
+
+```text
+[2026-06-15 14:32:01] filesystem:write /workspace/README.md
+  Risk: write
+  Policy: confirm
+  Decision: approved
+  User: manual approval
+```
+
+**コントロールセンター → 権限 → 監査ログ**で監査ログを表示できます。
+
+## 次のステップ
+
+- [パーミッションガード](/docs/core-concepts/permission-guard) — 安全モデルの詳細
+- [監査ログの確認](/docs/guides/review-audit-logs) — 監査証跡の操作
+- [セキュリティモデル](/docs/architecture/security-model) — アーキテクチャの詳細
