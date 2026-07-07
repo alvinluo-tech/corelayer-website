@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ExternalLink } from "lucide-react";
+import { getLocaleFromPath } from "@/lib/i18n";
 
 const footerSections = [
   {
@@ -38,13 +39,6 @@ const footerSections = [
     ],
   },
 ];
-
-function getLocaleFromPath(pathname: string): string {
-  const segments = pathname.split("/").filter(Boolean);
-  const first = segments[0];
-  if (["en", "zh", "zh-TW", "es", "ja"].includes(first)) return first;
-  return "en";
-}
 
 export function SiteFooter() {
   const pathname = usePathname();

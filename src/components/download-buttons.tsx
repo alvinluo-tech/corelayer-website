@@ -10,8 +10,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-const GITHUB_API =
-  "https://api.github.com/repos/alvinluo-tech/CoreLayer/releases/latest";
+const LATEST_RELEASE_API = "/api/releases/latest";
 const RELEASES_URL =
   "https://github.com/alvinluo-tech/CoreLayer/releases";
 
@@ -28,7 +27,7 @@ const platforms: {
   name: string;
   desc: string;
   formats: string;
-  matchers: { pattern: string; label: string }[];
+  matchers: string[];
 }[] = [
   {
     id: "windows",
@@ -36,7 +35,7 @@ const platforms: {
     name: "Windows",
     desc: "Windows 10/11 x64",
     formats: ".exe / .msi",
-    matchers: [{ pattern: "_x64-setup.exe", label: "EXE Installer" }],
+    matchers: ["x64-setup.exe", "setup.exe", ".msi"],
   },
   {
     id: "macos",
@@ -44,7 +43,7 @@ const platforms: {
     name: "macOS",
     desc: "macOS 13+ Universal",
     formats: ".dmg",
-    matchers: [{ pattern: "_aarch64.dmg", label: "Apple Silicon" }],
+    matchers: ["universal.dmg", "aarch64.dmg", "x64.dmg", ".dmg"],
   },
   {
     id: "linux",
@@ -52,15 +51,13 @@ const platforms: {
     name: "Linux",
     desc: "x86_64 / amd64",
     formats: ".AppImage / .deb / .rpm",
-    matchers: [
-      { pattern: "_amd64.AppImage", label: "AppImage" },
-      { pattern: "_amd64.deb", label: "DEB" },
-    ],
+    matchers: [".AppImage", "_amd64.deb", "_x86_64.rpm", ".deb", ".rpm"],
   },
 ];
 
 function findAsset(assets: Asset[], pattern: string): Asset | undefined {
-  return assets.find((a) => a.name.includes(pattern));
+  const normalizedPattern = pattern.toLowerCase();
+  return assets.find((a) => a.name.toLowerCase().includes(normalizedPattern));
 }
 
 function triggerDownload(url: string) {
@@ -82,13 +79,13 @@ export function DownloadButtons() {
       setError(null);
 
       try {
-        const res = await fetch(GITHUB_API);
+        const res = await fetch(LATEST_RELEASE_API);
         if (!res.ok) throw new Error("Failed to fetch release info");
         const data = await res.json();
         const assets: Asset[] = data.assets ?? [];
 
         for (const matcher of platform.matchers) {
-          const asset = findAsset(assets, matcher.pattern);
+          const asset = findAsset(assets, matcher);
           if (asset) {
             triggerDownload(asset.browser_download_url);
             setLoading(null);

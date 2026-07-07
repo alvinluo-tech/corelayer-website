@@ -6,19 +6,13 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Download, Menu, X, ExternalLink } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
+import { getLocaleFromPath } from "@/lib/i18n";
 
 const navLinks = [
   { href: "/download", label: "Download" },
   { href: "/docs", label: "Docs" },
   { href: "/changelog", label: "Changelog" },
 ];
-
-function getLocaleFromPath(pathname: string): string {
-  const segments = pathname.split("/").filter(Boolean);
-  const first = segments[0];
-  if (["en", "zh", "zh-TW", "es", "ja"].includes(first)) return first;
-  return "en";
-}
 
 export function SiteHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);

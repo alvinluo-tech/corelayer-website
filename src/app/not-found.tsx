@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const supportedLocales = ["en", "zh", "zh-TW", "es", "ja"];
-
-function getLocaleFromPath(pathname: string): string {
-  const segment = pathname.split("/").filter(Boolean)[0];
-  if (segment && supportedLocales.includes(segment)) return segment;
-  return "en";
-}
+import { getLocaleFromPath } from "@/lib/i18n";
 
 export default function NotFound() {
   const pathname = usePathname();
