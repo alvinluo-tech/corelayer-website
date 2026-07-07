@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import { ExternalLink } from "lucide-react";
-
-export const metadata: Metadata = {
-  title: "Changelog",
-  description: "CoreLayer release notes and changelog.",
-};
+import { getMessages } from "@/lib/messages";
 
 const releases = [
   {
@@ -53,21 +49,28 @@ const releases = [
   },
 ];
 
-export default function ChangelogPage() {
+export default async function ChangelogPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const t = getMessages(lang).changelog;
+
   return (
     <div className="py-16">
       <div className="site-container">
         <div className="mx-auto max-w-2xl">
-          <h1 className="text-3xl font-bold tracking-tight">Changelog</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
           <p className="mt-3 text-sm text-text-secondary">
-            Release notes for CoreLayer. See also the{" "}
+            {t.intro}{" "}
             <a
               href="https://github.com/alvinluo-tech/CoreLayer/releases"
               target="_blank"
               rel="noopener noreferrer"
               className="text-cyan hover:underline"
             >
-              GitHub Releases
+              {t.githubReleases}
               <ExternalLink className="ml-1 inline h-3 w-3" />
             </a>
             .
@@ -90,7 +93,7 @@ export default function ChangelogPage() {
 
                 <div className="mt-4">
                   <h3 className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-                    Highlights
+                    {t.highlights}
                   </h3>
                   <ul className="mt-3 flex flex-col gap-2">
                     {release.highlights.map((item) => (
@@ -107,7 +110,7 @@ export default function ChangelogPage() {
 
                 <div className="mt-6">
                   <h3 className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-                    Bug Fixes
+                    {t.fixes}
                   </h3>
                   <ul className="mt-3 flex flex-col gap-2">
                     {release.fixes.map((item) => (
@@ -127,7 +130,7 @@ export default function ChangelogPage() {
 
           <div className="mt-12 border-t border-border-subtle pt-8 text-center">
             <p className="text-sm text-text-tertiary">
-              For the full changelog, see{" "}
+              {t.fullBefore}{" "}
               <a
                 href="https://github.com/alvinluo-tech/CoreLayer/blob/main/CHANGELOG.md"
                 target="_blank"
@@ -137,11 +140,25 @@ export default function ChangelogPage() {
                 CHANGELOG.md
                 <ExternalLink className="ml-1 inline h-3 w-3" />
               </a>{" "}
-              on GitHub.
+              {t.fullAfter}
             </p>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  const t = getMessages(lang).changelog;
+
+  return {
+    title: t.metadataTitle,
+    description: t.metadataDescription,
+  };
 }

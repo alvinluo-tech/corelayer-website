@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import {
   Download,
   Monitor,
@@ -9,6 +10,8 @@ import {
   Loader2,
   ExternalLink,
 } from "lucide-react";
+import { getLocaleFromPath } from "@/lib/i18n";
+import { getMessages } from "@/lib/messages";
 
 const LATEST_RELEASE_API = "/api/releases/latest";
 const RELEASES_URL =
@@ -24,32 +27,28 @@ type PlatformId = "windows" | "macos" | "linux";
 const platforms: {
   id: PlatformId;
   icon: typeof Monitor;
-  name: string;
-  desc: string;
+  label: PlatformId;
   formats: string;
   matchers: string[];
 }[] = [
   {
     id: "windows",
     icon: Monitor,
-    name: "Windows",
-    desc: "Windows 10/11 x64",
+    label: "windows",
     formats: ".exe / .msi",
     matchers: ["x64-setup.exe", "setup.exe", ".msi"],
   },
   {
     id: "macos",
     icon: Laptop,
-    name: "macOS",
-    desc: "macOS 13+ Universal",
+    label: "macos",
     formats: ".dmg",
     matchers: ["universal.dmg", "aarch64.dmg", "x64.dmg", ".dmg"],
   },
   {
     id: "linux",
     icon: Terminal,
-    name: "Linux",
-    desc: "x86_64 / amd64",
+    label: "linux",
     formats: ".AppImage / .deb / .rpm",
     matchers: [".AppImage", "_amd64.deb", "_x86_64.rpm", ".deb", ".rpm"],
   },
@@ -70,6 +69,9 @@ function triggerDownload(url: string) {
 }
 
 export function DownloadButtons() {
+  const pathname = usePathname();
+  const locale = getLocaleFromPath(pathname);
+  const t = getMessages(locale);
   const [loading, setLoading] = useState<PlatformId | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +82,7 @@ export function DownloadButtons() {
 
       try {
         const res = await fetch(LATEST_RELEASE_API);
-        if (!res.ok) throw new Error("Failed to fetch release info");
+        if (!res.ok) throw new Error(t.downloadButtons.fetchError);
         const data = await res.json();
         const assets: Asset[] = data.assets ?? [];
 
@@ -93,15 +95,20 @@ export function DownloadButtons() {
           }
         }
 
-        throw new Error(`No matching asset found for ${platform.name}`);
+        throw new Error(
+          t.downloadButtons.noAsset.replace(
+            "{platform}",
+            t.downloadButtons.platforms[platform.label].name
+          )
+        );
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Download failed, try again"
+          err instanceof Error ? err.message : t.downloadButtons.fallbackError
         );
         setLoading(null);
       }
     },
-    []
+    [t]
   );
 
   return (
@@ -111,25 +118,31 @@ export function DownloadButtons() {
           const isLoading = loading === p.id;
           return (
             <button
-              key={p.name}
+              key={p.id}
               onClick={() => handleDownload(p)}
               disabled={isLoading}
               className="group rounded-lg border border-border-subtle bg-panel p-5 text-left transition-colors hover:border-border-cyan disabled:opacity-70"
             >
               <p.icon className="h-5 w-5 text-cyan" />
               <h3 className="mt-3 text-sm font-medium text-text-primary">
-                {p.name}
+                {t.downloadButtons.platforms[p.label].name}
               </h3>
-              <p className="mt-1 text-xs text-text-secondary">{p.desc}</p>
+              <p className="mt-1 text-xs text-text-secondary">
+                {t.downloadButtons.platforms[p.label].desc}
+              </p>
               <div className="mt-3 flex items-center gap-1.5 text-xs">
                 {isLoading ? (
                   <>
                     <Loader2 className="h-3 w-3 animate-spin text-cyan" />
-                    <span className="text-cyan">Downloading...</span>
+                    <span className="text-cyan">
+                      {t.downloadButtons.downloading}
+                    </span>
                   </>
                 ) : (
                   <>
-                    <span className="text-emerald">Download</span>
+                    <span className="text-emerald">
+                      {t.downloadButtons.download}
+                    </span>
                     <Download className="h-3 w-3 text-emerald transition-transform group-hover:-translate-y-0.5" />
                   </>
                 )}
@@ -155,7 +168,7 @@ export function DownloadButtons() {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary"
         >
-          View all releases on GitHub
+          {t.downloadButtons.releases}
           <ExternalLink className="h-3 w-3" />
         </a>
       </div>

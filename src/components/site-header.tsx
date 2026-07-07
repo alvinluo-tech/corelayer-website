@@ -4,20 +4,59 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Download, Menu, X, ExternalLink } from "lucide-react";
+import { Download, Menu, X, ExternalLink, Languages } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
-import { getLocaleFromPath } from "@/lib/i18n";
+import {
+  getLocaleFromPath,
+  localeShortLabels,
+  locales,
+  type Locale,
+  withLocale,
+} from "@/lib/i18n";
+import { getMessages } from "@/lib/messages";
 
 const navLinks = [
-  { href: "/download", label: "Download" },
-  { href: "/docs", label: "Docs" },
-  { href: "/changelog", label: "Changelog" },
-];
+  { href: "/download", label: "download" },
+  { href: "/docs", label: "docs" },
+  { href: "/changelog", label: "changelog" },
+] as const;
+
+function LanguageSelect({
+  locale,
+  pathname,
+}: {
+  locale: Locale;
+  pathname: string;
+}) {
+  return (
+    <label className="flex h-8 items-center gap-1 rounded-md border border-border-subtle bg-panel px-2 text-xs text-text-secondary transition-colors hover:text-text-primary">
+      <Languages className="h-3.5 w-3.5" />
+      <select
+        aria-label="Language"
+        value={locale}
+        onChange={(event) => {
+          window.location.href = withLocale(
+            pathname,
+            event.target.value as Locale
+          );
+        }}
+        className="w-12 bg-transparent text-xs font-medium text-text-secondary outline-none"
+      >
+        {locales.map((item) => (
+          <option key={item} value={item} className="bg-void text-text-primary">
+            {localeShortLabels[item]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 export function SiteHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const locale = getLocaleFromPath(pathname);
+  const t = getMessages(locale);
 
   // Hide on docs pages — Fumadocs provides its own nav
   if (pathname.includes("/docs")) {
@@ -42,7 +81,7 @@ export function SiteHeader() {
               href={`/${locale}${link.href}`}
               className="rounded-md px-3 py-1.5 text-sm text-text-secondary transition-colors hover:text-text-primary"
             >
-              {link.label}
+              {t.nav[link.label]}
             </Link>
           ))}
           <a
@@ -51,19 +90,20 @@ export function SiteHeader() {
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-text-secondary transition-colors hover:text-text-primary"
           >
-            GitHub
+            {t.nav.github}
             <ExternalLink className="h-3 w-3" />
           </a>
         </nav>
 
         <div className="flex items-center gap-2">
+          <LanguageSelect locale={locale} pathname={pathname} />
           <ThemeToggle />
           <Link
             href={`/${locale}/download`}
             className="hidden items-center gap-1.5 rounded-md bg-cyan px-3.5 py-1.5 text-sm font-medium text-void transition-opacity hover:opacity-90 md:inline-flex"
           >
             <Download className="h-3.5 w-3.5" />
-            Download
+            {t.nav.download}
           </Link>
 
           {/* Mobile menu toggle */}
@@ -92,7 +132,7 @@ export function SiteHeader() {
                 onClick={() => setMobileOpen(false)}
                 className="rounded-md px-3 py-2 text-sm text-text-secondary hover:bg-panel hover:text-text-primary"
               >
-                {link.label}
+                {t.nav[link.label]}
               </Link>
             ))}
             <a
@@ -101,7 +141,7 @@ export function SiteHeader() {
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-text-secondary hover:bg-panel hover:text-text-primary"
             >
-              GitHub
+              {t.nav.github}
               <ExternalLink className="h-3 w-3" />
             </a>
             <Link
@@ -110,7 +150,7 @@ export function SiteHeader() {
               className="mt-1 flex items-center justify-center gap-1.5 rounded-md bg-cyan px-3.5 py-2 text-sm font-medium text-void"
             >
               <Download className="h-3.5 w-3.5" />
-              Download
+              {t.nav.download}
             </Link>
           </div>
         </nav>
