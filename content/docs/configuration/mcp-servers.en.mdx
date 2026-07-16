@@ -5,30 +5,56 @@ description: Configure Model Context Protocol server connections.
 
 CoreLayer connects to external tools and data sources through MCP servers. Each server exposes tools that Jarvis can call during conversations, subject to the Permission Guard.
 
-## Server Configuration
-
-Each MCP server is defined by a name, command, and optional arguments:
+The configuration file is located at `~/.jarvis/config/mcp-servers.json`. The configuration format is as follows:
 
 ```json
 {
-  "mcp": {
-    "servers": [
-      {
-        "name": "filesystem",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-        "env": {}
+  "version": 1,
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": false,
+        "bulkWrite": false
       },
-      {
-        "name": "github",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-github"],
-        "env": {
-          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-        }
+      "riskPolicy": {
+        "low": "auto",
+        "medium": "notify",
+        "high": "confirm",
+        "critical": "deny"
       }
-    ]
-  }
+    },
+    {
+      "id": "github",
+      "name": "github",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": false,
+        "bulkWrite": false
+      },
+      "riskPolicy": {
+        "low": "auto",
+        "medium": "notify",
+        "high": "confirm",
+        "critical": "deny"
+      }
+    }
+  ]
 }
 ```
 

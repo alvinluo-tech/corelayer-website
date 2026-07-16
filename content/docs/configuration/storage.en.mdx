@@ -73,16 +73,24 @@ CoreLayer will migrate data between modes automatically.
 
 ## Data Schema
 
-CoreLayer stores these main entities:
+CoreLayer uses a highly structured local-first database schema, storing the following main entities:
 
-- **tasks** — task management items
-- **articles** — reading list entries
-- **reviews** — daily/weekly review summaries
-- **conversations** — chat history
-- **messages** — individual messages
-- **tool_call_logs** — audit trail for tool execution
-- **model_profiles** — model provider configurations
-- **memories** — Jarvis long-term memory
+*   **workspaces** — top-level workspaces managing goals, task breakdowns, and runtime state
+*   **projects** — specific project folders inside workspaces, including specs, tech stacks, and root paths
+*   **tasks** — task nodes forming the dependency graph for execution
+*   **artifacts** — target deliverables separating valuable files/reports from execution log noise
+*   **agent_runs** — single Agent execution sessions, tracking state, latency, routing, and logs
+*   **approval_requests** — pending high-risk actions awaiting user manual approval decisions
+*   **permission_memories** — temporary decision caching to prevent repetitive permission popups
+*   **conversations** / **messages** — chat conversation histories and individual message records
+*   **tool_call_logs** — audit logs capturing duration, args, risk levels, and results
+*   **app_connections** — configured local or remote MCP servers and application connections
+*   **model_profiles** — model gateway configurations and provider endpoints
+*   **memories** — Jarvis long-term memories (facts, preferences, context, pinned)
+*   **scheduled_tasks** — cron jobs triggering automated tasks and skills
+*   **environment_sessions** / **environment_events** — sandbox containers and event streams
+*   **articles** — reading list entries
+*   **reviews** — daily/weekly review summaries
 
 ## Next Steps
 

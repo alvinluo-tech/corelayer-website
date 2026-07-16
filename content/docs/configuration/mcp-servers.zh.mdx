@@ -5,30 +5,56 @@ description: 配置模型上下文协议服务器连接。
 
 CoreLayer 通过 MCP 服务器连接外部工具和数据源。每个服务器暴露的工具都可以在对话中被 Jarvis 调用，并受权限守卫管控。
 
-## 服务器配置
-
-每个 MCP 服务器由名称、命令和可选参数定义：
+配置文件位于 `~/.jarvis/config/mcp-servers.json`。配置格式如下：
 
 ```json
 {
-  "mcp": {
-    "servers": [
-      {
-        "name": "filesystem",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-        "env": {}
+  "version": 1,
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": false,
+        "bulkWrite": false
       },
-      {
-        "name": "github",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-github"],
-        "env": {
-          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-        }
+      "riskPolicy": {
+        "low": "auto",
+        "medium": "notify",
+        "high": "confirm",
+        "critical": "deny"
       }
-    ]
-  }
+    },
+    {
+      "id": "github",
+      "name": "github",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": false,
+        "bulkWrite": false
+      },
+      "riskPolicy": {
+        "low": "auto",
+        "medium": "notify",
+        "high": "confirm",
+        "critical": "deny"
+      }
+    }
+  ]
 }
 ```
 
