@@ -17,7 +17,6 @@ import {
 import { getMessages } from "@/lib/messages";
 import { PermissionSimulator } from "@/components/permission-simulator";
 import { ScrollSnapActivator } from "@/components/scroll-snap-activator";
-import { MagneticButton } from "@/components/magnetic-button";
 
 const trustIcons = [Database, Server, Shield, Mic, Cpu, LayoutDashboard];
 const workflowIcons = [Mic, Zap, Cpu, Workflow, Shield];
@@ -92,26 +91,28 @@ export default async function Home({
               {t.description}
             </p>
             <div className="flex flex-wrap items-center gap-3 hero-animate-in hero-delay-3">
-              <MagneticButton
+              <Link
                 href={`/${lang}/download`}
-                className="inline-flex items-center gap-2 rounded-lg bg-cyan px-5 py-2.5 text-sm font-medium text-void"
+                className="inline-flex items-center gap-2 rounded-lg bg-cyan px-5 py-2.5 text-sm font-medium text-void transition-all duration-200 hover:-translate-y-[1px] hover:scale-[1.02] active:scale-[0.97]"
               >
                 <Download className="h-4 w-4" />
                 {t.download}
-              </MagneticButton>
-              <MagneticButton
+              </Link>
+              <Link
                 href={`/${lang}/docs`}
-                className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-panel px-5 py-2.5 text-sm font-medium text-text-secondary hover:border-border-cyan hover:text-text-primary"
+                className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-panel px-5 py-2.5 text-sm font-medium text-text-secondary transition-all duration-200 hover:border-border-cyan hover:text-text-primary hover:-translate-y-[1px] hover:scale-[1.02] active:scale-[0.97]"
               >
                 {t.readDocs}
-              </MagneticButton>
-              <MagneticButton
+              </Link>
+              <a
                 href="https://github.com/alvinluo-tech/CoreLayer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-transparent px-4 py-2.5 text-sm text-text-tertiary hover:text-text-secondary"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-transparent px-4 py-2.5 text-sm text-text-tertiary transition-all duration-200 hover:text-text-secondary hover:-translate-y-[1px] hover:scale-[1.02] active:scale-[0.97]"
               >
                 {t.viewGithub}
                 <ExternalLink className="h-3.5 w-3.5" />
-              </MagneticButton>
+              </a>
             </div>
           </div>
 
@@ -395,20 +396,22 @@ export default async function Home({
             {t.ctaBody}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <MagneticButton
+            <Link
               href={`/${lang}/download`}
-              className="inline-flex items-center gap-2 rounded-lg bg-cyan px-6 py-3 text-sm font-medium text-void"
+              className="inline-flex items-center gap-2 rounded-lg bg-cyan px-6 py-3 text-sm font-medium text-void transition-all duration-200 hover:-translate-y-[1px] hover:scale-[1.02] active:scale-[0.97]"
             >
               <Download className="h-4 w-4" />
               {t.ctaDownload}
-            </MagneticButton>
-            <MagneticButton
+            </Link>
+            <a
               href="https://github.com/alvinluo-tech/CoreLayer"
-              className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-panel px-6 py-3 text-sm font-medium text-text-secondary hover:border-border-cyan hover:text-text-primary"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-panel px-6 py-3 text-sm font-medium text-text-secondary transition-all duration-200 hover:border-border-cyan hover:text-text-primary hover:-translate-y-[1px] hover:scale-[1.02] active:scale-[0.97]"
             >
               {t.sourceInstall}
               <ExternalLink className="h-3.5 w-3.5" />
-            </MagneticButton>
+            </a>
           </div>
         </div>
         {/* Ambient Aurora Glow */}
