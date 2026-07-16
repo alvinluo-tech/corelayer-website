@@ -282,9 +282,7 @@ body {
   scroll-snap-stop: always;
 }
 
-.snap-container footer {
-  scroll-snap-align: end;
-}
+
 
 /* Page Load Animation for Hero Section */
 @keyframes hero-fade-in {
