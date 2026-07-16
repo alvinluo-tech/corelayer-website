@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { getMessages } from "@/lib/messages";
+import { PermissionSimulator } from "@/components/permission-simulator";
 
 const trustIcons = [Database, Server, Shield, Mic, Cpu, LayoutDashboard];
 const workflowIcons = [Mic, Zap, Cpu, Workflow, Shield];
@@ -56,6 +57,9 @@ export default async function Home({
             </div>
             <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
               CoreLayer
+              <span className="mt-2 block text-2xl font-medium text-text-secondary sm:inline sm:ml-4 sm:text-3xl md:text-4xl">
+                powered by Jarvis
+              </span>
             </h1>
             <p className="max-w-lg text-lg leading-relaxed text-text-secondary">
               {t.subtitle}
@@ -235,7 +239,7 @@ export default async function Home({
               return (
                 <div
                   key={title}
-                  className="rounded-lg border border-border-subtle bg-panel p-6 transition-colors hover:border-border-cyan"
+                  className="rounded-lg border border-border-subtle bg-panel p-6 transition-all duration-300 hover:-translate-y-1 hover:border-border-cyan hover:shadow-[0_8px_30px_rgba(0,212,255,0.04)]"
                 >
                   <Icon className={`h-5 w-5 ${meta.color}`} />
                   <h3 className="mt-3 text-sm font-medium text-text-primary">
@@ -262,47 +266,7 @@ export default async function Home({
             </p>
           </div>
 
-          <div className="mx-auto mt-10 max-w-3xl">
-            <div className="rounded-lg border border-border-cyan bg-panel-strong p-5">
-              <div className="flex items-center gap-3 text-xs text-text-tertiary">
-                <Shield className="h-4 w-4 text-emerald" />
-                {t.permissionGuard}
-                <span className="ml-auto text-emerald">
-                  {t.approvalRequired}
-                </span>
-              </div>
-              <div className="mt-4 rounded-md border border-border-subtle bg-deep p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">
-                      {t.mcpToolCall}
-                    </p>
-                    <p className="mt-1 font-mono text-xs text-text-secondary">
-                      filesystem.write(&quot;/documents/report.md&quot;)
-                    </p>
-                  </div>
-                  <span className="rounded border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-medium text-amber">
-                    WRITE
-                  </span>
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {t.risks.map((risk, i) => (
-                  <div
-                    key={risk}
-                    className={`rounded border px-2 py-1 text-center text-[11px] font-medium ${
-                      riskColors[i] ?? riskColors[0]
-                    }`}
-                  >
-                    {risk}
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 text-xs leading-relaxed text-text-tertiary">
-                {t.safetyNote}
-              </p>
-            </div>
-          </div>
+          <PermissionSimulator lang={lang} t={t} />
         </div>
       </section>
 
@@ -324,20 +288,27 @@ export default async function Home({
               ))}
             </div>
           </div>
-          <div className="product-frame">
+          <div className="product-frame group/voice relative overflow-hidden">
             <div className="frame-bar">
-              <span className="h-2.5 w-2.5 rounded-full bg-cyan" />
+              <span className="h-2.5 w-2.5 rounded-full bg-cyan animate-pulse" />
               <span className="text-[11px] text-text-tertiary">
                 {t.voiceLabel}
               </span>
             </div>
-            <Image
-              src="/assets/coreling.png"
-              alt={t.voiceLabel}
-              width={400}
-              height={300}
-              className="w-full"
-            />
+            <div className="relative overflow-hidden">
+              <Image
+                src="/assets/coreling.png"
+                alt={t.voiceLabel}
+                width={400}
+                height={300}
+                className="w-full transition-transform duration-700 group-hover/voice:scale-105"
+              />
+              {/* Voice ripple overlay */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover/voice:opacity-100 transition-opacity duration-500 bg-void/10">
+                <span className="absolute h-36 w-36 rounded-full border border-cyan/30 animate-ping" />
+                <span className="absolute h-24 w-24 rounded-full border border-cyan/15 animate-pulse" />
+              </div>
+            </div>
           </div>
         </div>
       </section>
