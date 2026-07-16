@@ -3,46 +3,55 @@ title: 什么是 CoreLayer？
 description: 面向桌面应用、工具、模型和 MCP 工作流的本地优先 AI 控制层。
 ---
 
-CoreLayer 是一个由 Jarvis 驱动的桌面 AI 命令层。它不是通用聊天机器人，不是 IDE 副驾驶，也不是云自动化工具。它本地运行在你的个人应用、工具、模型和 MCP 服务器之间，让 Jarvis 通过明确的权限协调工作。
+CoreLayer 是一个本地优先的桌面端 **Agent OS（AI 操作系统运行层）**，旨在管理 Agent、本地工具、执行状态以及个人工作空间。
 
-## 核心能力
+内建的 AI 助手人格被称为 **Jarvis**。它不是又一个套框聊天窗口，也不是单纯的 IDE 插件。它通过明确的权限规则、本地沙箱会话和可验证的执行轨迹，在你的个人应用、操作系统、大模型和 MCP 服务器之间建立起安全的控制平面。
 
-- **多模型路由** — 跨 MiMo、Groq、OpenRouter、Ollama 和 OpenAI 兼容提供商
-- **MCP 优先集成** — 与外部工具和服务器集成
-- **统一工具调用** — 来自原生模块、MCP、技能和 REST 适配器
-- **权限守卫** — 基于风险的执行和审计日志
-- **语音管线** — 唤醒词、ASR、流式 TTS 和打断式交互
-- **三种存储模式**（本地 SQLite、Supabase、PostgreSQL）运行时热切换
-- **命令面板**（Alt+Space）快速操作
-- **任务管理** — AI 驱动的自然语言查询
-- **阅读列表跟踪** — AI 推荐
-- **每日/每周回顾摘要** — 模式识别
+---
 
-## 架构一览
+## 核心愿景 (Product Vision)
+
+### 1. 从“聊天历史”过渡到“执行系统”
+目前的 AI 产品仍将大部分工作堆积在单一的聊天线程中，随着上下文的增长，任务状态难以追踪。CoreLayer 把任务当成一个可管理的执行系统：
+- 你向 **Jarvis** 提出一个高层目标（Goal）。
+- 系统将其转化为包含任务图（Task Graph）、Agent Run（单次执行实例）、审批节点、审计日志和最终产物（Artifacts）的**个人工作空间 (Workspace)**。
 
 ```text
-Tauri 2 桌面应用
-  └─ React 19 + Vite + Tailwind 4 前端
-     └─ Tauri IPC 桥接
-        └─ Node.js 守护进程（Hono）
-           ├─ 模型网关（Vercel AI SDK）
-           ├─ 工具注册
-           ├─ 权限守卫
-           ├─ MCP 客户端管理器
-           └─ SQLite / Supabase / PostgreSQL
+目标 (Goal)
+  ↓
+工作空间 (Workspace)
+  ├─ 任务依赖图 (Task Graph)
+  ├─ 运行实例 (Agent Runs)
+  ├─ 作用域审批 (Scoped Approvals)
+  └─ 环境沙箱 (Environment Sessions)
+  ↓
+可验证交付产物 (Artifacts) 与执行轨迹 (Trajectories)
 ```
 
-CoreLayer 使用三层代理模型：React 前端通过 Tauri IPC 与 Node.js 守护进程通信，守护进程管理所有 AI 编排、工具执行和数据存储。
+### 2. 编码执行器治理 (Executor Governance)
+像 Claude Code、Codex、OpenCode 等前沿编码 Agent 非常强大，但在本地“裸跑” shell 存在巨大的安全隐患，且其执行过程缺少生命周期监管。CoreLayer 提供适配器，将它们收拢为**受管执行器**：
+- **边界防线**：在副作用发生前，强行将改动隔离在 git-worktree 或隔离沙箱会话中。
+- **细粒度审批**：分类高风险操作（如删除、写入文件、外发请求），由权限守护进程（Permission Guard）进行异步挂起并请求用户手动批准。
+- **产物与日志分离**：最终的可交付代码/报告（Artifact）被清洗提取，与执行过程中的编译噪音、状态日志彻底分离。
 
-## CoreLayer 适合谁？
+### 3. “Jarvis 管理工作，专用工具执行工作”
+这是 CoreLayer 的核心设计哲学。我们不重复制造轮子，而是提供协调层。Jarvis 负责规划任务与管理安全，而专门的适配器、工具或 MCP 服务则负责具体执行，使得整个系统不被绑定到任何单一的大模型厂商或 IDE 之中。
 
-- **技术用户** — 希望本地控制 AI 工作流
-- **独立开发者** — 使用 MCP 和本地 AI 工具构建
-- **高级用户** — 尝试多模型路由和语音界面
-- **未来贡献者** — 对开源桌面 AI 领域感兴趣
+---
+
+## 核心架构要素 (Core Pillars)
+
+- **MCP 优先集成** — 原生支持 stdio、HTTP 与 SSE 协议，直接连接个人的本地应用和外部服务，并将工具标准化为 `mcp:{serverId}:{toolName}` 格式。
+- **权限优先运行时** — 按低、中、高、极高四大风险级别分类所有工具调用，提供决策记忆（Permission Memories）以防频繁弹窗，并保留完整的审计日志。
+- **统一工具注册中心 (Tool Registry)** — 将原生 Rust 模块、MCP 工具、本地技能（Skills）和 REST 适配器统一收拢。
+- **模型网关与智能路由** — 跨 MiMo、Groq、DeepSeek、OpenAI、Gemini、Qwen 以及本地 Ollama 路由请求，为低延迟、工具调用或长推理匹配最合适的端点。
+- **语音原生管线** — 集成唤醒词检测、ASR 语音转文字、流式 TTS 句级播报，并支持中途打断续听（Barge-in）。
+- **本地优先三模存储** — 默认采用零配置的本地 SQLite 数据库，同时在控制中心支持云端 Supabase 实时同步以及自托管 PostgreSQL 之间的热切换。
+
+---
 
 ## 下一步
 
-- [安装 CoreLayer](/docs/getting-started/install) — 运行桌面应用
-- [快速入门](/docs/getting-started/quickstart) — 连接你的第一个模型和 MCP 服务器
-- [架构](/docs/architecture/system-overview) — 了解系统设计
+- [安装 CoreLayer](/docs/getting-started/install) — 下载并运行桌面客户端。
+- [快速入门指南](/docs/getting-started/quickstart) — 连接你的第一个模型与 MCP 服务器。
+- [系统架构概览](/docs/architecture/system-overview) — 了解 Tauri Shell 与 Node.js 守护进程的协作机制。

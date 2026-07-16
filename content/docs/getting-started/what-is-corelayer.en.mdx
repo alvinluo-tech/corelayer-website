@@ -3,46 +3,55 @@ title: What is CoreLayer?
 description: A local-first AI control layer for your desktop apps, tools, models, and MCP workflows.
 ---
 
-CoreLayer is a desktop AI command layer powered by Jarvis. It is not a generic chatbot, not an IDE copilot, and not a cloud automation tool. It sits locally between your personal apps, tools, models, and MCP servers so Jarvis can coordinate work through explicit permissions.
+CoreLayer is a local-first desktop **Agent OS (AI Agent Operating System)** designed to manage Agents, local tools, execution states, and personal workspaces.
 
-## Key Capabilities
+The built-in AI persona is named **Jarvis**. It is not another chatbot skin, nor is it a simple IDE plugin. It establishes a secure control plane between your personal applications, local operating system, LLMs, and MCP servers using strict permission rules, isolated sandbox sessions, and verifiable execution logs.
 
-- **Multi-model routing** across MiMo, Groq, OpenRouter, Ollama, and OpenAI-compatible providers
-- **MCP-first integration** with external tools and servers
-- **Unified tool calling** from native modules, MCP, skills, and REST adapters
-- **Permission guard** with risk-based execution and audit logs
-- **Voice pipeline** with wake word, ASR, streaming TTS, and barge-in interruption
-- **Three storage modes** (local SQLite, Supabase, PostgreSQL) hot-swappable at runtime
-- **Command palette** (Alt+Space) for quick actions
-- **Task management** with AI-powered natural language queries
-- **Reading list tracking** with AI recommendations
-- **Daily/weekly review summaries** with pattern recognition
+---
 
-## Architecture at a Glance
+## Product Vision
+
+### 1. From "Chat History" to "Execution System"
+Most existing AI tools bury tasks inside a single chat thread. As context grows, managing state becomes impossible. CoreLayer structures tasks into a manageable execution system:
+- You prompt **Jarvis** with a high-level goal.
+- CoreLayer resolves this goal into a **Workspace**, which manages a Task Graph (task dependencies), Agent Runs (execution sessions), scoped approvals, audit trails, and final deliverables (Artifacts).
 
 ```text
-Tauri 2 Desktop App
-  └─ React 19 + Vite + Tailwind 4 Frontend
-     └─ Tauri IPC Bridge
-        └─ Node.js Daemon (Hono)
-           ├─ Model Gateway (Vercel AI SDK)
-           ├─ Tool Registry
-           ├─ Permission Guard
-           ├─ MCP Client Manager
-           └─ SQLite / Supabase / PostgreSQL
+Goal
+  ↓
+Workspace
+  ├─ Task Graph
+  ├─ Agent Runs
+  ├─ Scoped Approvals
+  └─ Sandbox Sessions (Environment)
+  ↓
+Verifiable Deliverables (Artifacts) & Execution Trajectories
 ```
 
-CoreLayer uses a three-layer proxy model: the React frontend communicates with the Node.js daemon through Tauri IPC, and the daemon manages all AI orchestration, tool execution, and data storage.
+### 2. Executor Governance (Claude Code / Codex / OpenCode)
+While AI coding agents like Claude Code, Codex, and OpenCode are highly capable, executing arbitrary shell commands directly on your host machine poses severe security risks, and their lifecycle remains untracked. CoreLayer provides adapters to run them as **Managed Executors**:
+- **Sandboxed Sessions**: Changes are isolated inside a git-worktree or containerized sandbox prior to committing.
+- **Granular Approvals**: High-risk operations (such as file deletes, writes, or outbound network calls) are intercepted and suspended by the Permission Guard, prompting manual user verification.
+- **Deliverables Separation**: Final deliverables (Artifacts like code diffs, specs, or reports) are clean-filtered and separated from compile noise, test logs, and terminal streams.
 
-## Who is CoreLayer For?
+### 3. "Jarvis Manages the Work; Specialized Tools Execute it"
+This is the core design philosophy of CoreLayer. We do not reinvent the wheel—we provide the orchestrator. Jarvis coordinates tasks and enforces security rules, while specialized tools or MCP services execute the operations. This ensures that the system is not locked to any single model provider or development environment.
 
-- **Technical users** who want local control over AI workflows
-- **Indie developers** building with MCP and local AI tools
-- **Power users** experimenting with multi-model routing and voice interfaces
-- **Future contributors** interested in the open-source desktop AI space
+---
+
+## Core Pillars
+
+- **MCP-First Integration** — Natively supports stdio, HTTP, and SSE transport protocols, registering external tools under the unified `mcp:{serverId}:{toolName}` namespace.
+- **Permission Guard** — Classifies tool invocations into Low, Medium, High, and Critical risk levels, using decision caches (Permission Memories) to prevent alert fatigue, and records a complete audit log.
+- **Unified Tool Registry** — Collects and manages native Rust modules, MCP tools, local JS/TS skills, and external REST endpoints.
+- **Model Gateway & Routing** — Dynamically routes LLM queries across MiMo, Groq, DeepSeek, OpenAI, Gemini, Qwen, and Ollama, matching endpoints to latency, tool-calling, or reasoning requirements.
+- **Voice-Native Pipeline** — Features wake-word detection, ASR transcription, streaming sentence-level TTS speech generation, and barge-in audio interruption.
+- **Local-First Tri-Mode Storage** — Uses a zero-configuration SQLite database locally by default, with settings supporting cloud sync using Supabase or self-hosted PostgreSQL.
+
+---
 
 ## Next Steps
 
-- [Install CoreLayer](/docs/getting-started/install) — get the desktop app running
-- [Quickstart](/docs/getting-started/quickstart) — connect your first model and MCP server
-- [Architecture](/docs/architecture/system-overview) — understand the system design
+- [Install CoreLayer](/docs/getting-started/install) — Download and run the desktop client.
+- [Quickstart Guide](/docs/getting-started/quickstart) — Connect your first model and MCP server.
+- [System Architecture](/docs/architecture/system-overview) — Understand how the Tauri Shell and Node.js daemon cooperate.
