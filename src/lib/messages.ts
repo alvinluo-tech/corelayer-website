@@ -444,11 +444,11 @@ const es = mergeMessages(en, {
   nav: { download: "Descargar", docs: "Docs", changelog: "Cambios" },
   footer: {
     tagline:
-      "Una capa local de control de IA para tus apps de escritorio, herramientas, modelos y flujos MCP.",
+      "CoreLayer. El objetivo final de la IA es servirnos y ayudarnos a entendernos a nosotros mismos, no reemplazarnos.",
     product: "Producto",
     developers: "Desarrolladores",
     community: "Comunidad",
-    architecture: "Arquitectura",
+    architecture: "Architecture",
     mcpIntegration: "Integracion MCP",
     permissions: "Permisos",
     issues: "Incidencias",
@@ -474,26 +474,26 @@ const es = mergeMessages(en, {
     metadataTitle: "CoreLayer - Capa local de control de IA para tu escritorio",
     metadataDescription:
       "CoreLayer es una capa de comandos de IA de escritorio impulsada por Jarvis. Conecta servidores MCP, enruta trabajo entre modelos, aprueba llamadas de herramientas y controla apps personales localmente.",
-    chips: ["Local-first", "Con permisos", "MCP conectado"],
+    chips: ["Local-first", "Voz Hey Jarvis", "TaskGraph DAGs", "MCP Hub"],
     subtitle:
-      "Una capa local de control de IA para tus apps de escritorio, herramientas, modelos y flujos MCP.",
+      "Conoce a tu mayordomo de IA: Un plano de control de agentes local-first y orquestador inteligente de espacios de trabajo.",
     description:
-      "Jarvis coordina tus apps personales mediante un centro de comandos de escritorio con control de permisos. Conecta servidores MCP, enruta trabajo entre modelos, aprueba acciones riesgosas y usa voz sin perder control local.",
+      "Nacido de una obsesión con Jarvis. Jarvis transforma agentes de IA puros en un compañero personal receptivo. A través de la activación por voz nativa y protocolos MCP, se conecta sin problemas a tus aplicaciones personales (fitness, dieta, calendario) creadas por Vibe Coding. Controla tu vida digital con conversaciones naturales, organiza flujos de trabajo con TaskGraph y deja que la IA te ayude a conocerte mejor, no a reemplazarte.",
     download: "Descargar",
     readDocs: "Leer docs",
     viewGithub: "Ver en GitHub",
     trust: [
-      "SQLite local-first",
-      "Integraciones MCP-first",
-      "Herramientas con permisos",
-      "Flujos nativos de voz",
-      "Enrutamiento de modelos",
-      "App de escritorio Tauri",
+      "Resolución DAG de TaskGraph",
+      "Activación por Voz de Hey Jarvis",
+      "Conexión a Apps de Vibe-Coding",
+      "Runtime de Permission Guard",
+      "App de Escritorio Tauri Local-First",
+      "Enrutamiento Inteligente de Modelos",
     ],
     problemTitle:
-      "Tus apps estan separadas. Tu asistente deberia entender todo el sistema.",
+      "La mayoría de los agentes son solo herramientas de CLI. Necesitas un mayordomo de escritorio ambiental.",
     problemBody:
-      "La mayoria de asistentes viven atrapados en chats, copilotos de una sola app o plataformas cloud. CoreLayer conecta localmente tus apps, herramientas, modelos y servidores MCP para que Jarvis coordine trabajo con permisos explicitos.",
+      "La mayoría de los asistentes viven atrapados en chats o copilotos. CoreLayer conecta localmente tus apps, herramientas y servidores MCP para que Jarvis coordine el trabajo. Al descomponer objetivos en TaskGraphs y conectar tus proyectos personales a través de MCP, Jarvis aporta una capa interactiva futurista y nativa de voz a tu escritorio.",
     workflowTitle: "De solicitud a accion, con aprobacion en el flujo.",
     workflowBody:
       "Cada llamada de herramienta pasa por interpretacion, enrutamiento y verificacion de permisos antes de ejecutarse.",
@@ -505,9 +505,9 @@ const es = mergeMessages(en, {
       "CoreLayer trata la ejecucion de herramientas como un sistema con permisos. Las operaciones riesgosas pueden clasificarse, pausarse, aprobarse, denegarse y registrarse.",
     approvalRequired: "Aprobacion requerida",
     risks: ["Leer", "Escribir", "Externo", "Destructivo"],
-    voiceTitle: "Voz para el escritorio, no solo para el navegador.",
+    voiceTitle: "\"Hey Jarvis\" — Voz Ambiental de Escritorio",
     voiceBody:
-      "Jarvis soporta wake word, transcripcion en streaming, TTS con interrupcion y una capa flotante para flujos de escritorio.",
+      "Activa a tu mayordomo personal en cualquier momento con tu palabra de activación. La superposición flotante responde inmediatamente: 'Estoy aquí, señor.' Pregúntale: 'Analiza mis estadísticas de dieta y gimnasio de esta semana.' Jarvis solicitará datos automáticamente a través de MCP y te responderá con voz.",
     architectureTitle: "Construido como capa de control de escritorio.",
     architectureBody:
       "Una arquitectura modular donde cada componente tiene responsabilidad y limite claros.",
@@ -547,7 +547,7 @@ const ja = mergeMessages(en, {
   nav: { download: "ダウンロード", docs: "ドキュメント", changelog: "変更履歴" },
   footer: {
     tagline:
-      "デスクトップアプリ、ツール、モデル、MCP ワークフローのためのローカルファースト AI 制御レイヤー。",
+      "CoreLayer。AIの究極の目的は、私たちに取って代わることではなく、私たちが自分自身をよりよく理解し、調整できるように支援することです。",
     product: "プロダクト",
     developers: "開発者",
     community: "コミュニティ",
@@ -577,17 +577,25 @@ const ja = mergeMessages(en, {
     metadataTitle: "CoreLayer - デスクトップ向けローカルファースト AI 制御レイヤー",
     metadataDescription:
       "CoreLayer は Jarvis が動かすデスクトップ AI コマンドレイヤーです。MCP サーバー接続、モデル間ルーティング、ツール呼び出し承認、個人アプリのローカル制御を提供します。",
-    chips: ["ローカルファースト", "権限で保護", "MCP 接続"],
+    chips: ["ローカルファースト", "Hey Jarvis 音声", "TaskGraph 依存関係", "MCP 統合"],
     subtitle:
-      "デスクトップアプリ、ツール、モデル、MCP ワークフローのためのローカルファースト AI 制御レイヤー。",
+      "AI執事の誕生：ローカルファーストの Agent 制御プレーンおよびインテリジェントなワークスペースオーケストレーター。",
     description:
-      "Jarvis は権限で保護されたデスクトップ command center から個人アプリを連携します。MCP サーバーを接続し、モデル間で作業をルーティングし、危険な操作を承認し、ローカル制御を保ったまま音声を使えます。",
+      "Jarvisへの執着から生まれました。Jarvisは、未加工のAIエージェントを応答性の高いパーソナルコンパニオンに変えます。音声ネイティブの起動とMCPプロトコルを介して、Vibe Codingで開発した個人用アプリ（フィットネス、食事、カレンダー）にシームレスに接続します。自然な会話でデジタルライフをコントロールし、TaskGraphでタスクを管理して、AIが自分自身の理解と調整を支援します。決してあなたに取って代わるものではありません。",
     download: "ダウンロード",
     readDocs: "ドキュメントを読む",
     viewGithub: "GitHub を見る",
-    problemTitle: "アプリは分断されています。アシスタントはシステム全体を理解すべきです。",
+    trust: [
+      "TaskGraph DAG依存関係解析",
+      "Hey Jarvis 音声起動",
+      "Vibe Coding 個人アプリ連携",
+      "権限で保護されたランタイム",
+      "ローカルファースト Tauri アプリ",
+      "スマートモデルルーティング",
+    ],
+    problemTitle: "ほとんどのエージェントは単なるコマンドラインツールです。あなたに必要なのは常駐型のデスクトップ執事です。",
     problemBody:
-      "多くのアシスタントはチャット画面、単一アプリの copilot、クラウド自動化に閉じ込められています。CoreLayer は個人アプリ、ツール、モデル、MCP サーバーをローカルでつなぎ、Jarvis が明示的な権限のもとで作業を調整できるようにします。",
+      "ほとんどのアシスタントはチャット画面に閉じ込められています。CoreLayerは、個人アプリ、ツール、モデル、MCPサーバーをローカルで接続し、Jarvisが明示的な権限のもとで作業を調整できるようにします。目標をTaskGraphに分解し、MCPを介してVibe Codingプロジェクトと接続することで、Jarvisはデスクトップに近未来的な音声インタラクションを提供します。",
     workflowTitle: "依頼から実行まで、承認を組み込んだ流れ。",
     workflowBody:
       "すべてのツール呼び出しは、理解、ルーティング、権限確認を経てから実行されます。",
@@ -598,9 +606,9 @@ const ja = mergeMessages(en, {
     safetyBody:
       "CoreLayer はツール実行を権限システムとして扱います。危険な操作は分類、一時停止、承認、拒否、記録できます。",
     approvalRequired: "承認が必要",
-    voiceTitle: "ブラウザだけでなく、デスクトップに属する音声。",
+    voiceTitle: "「Hey Jarvis」 — デスクトップ常駐型音声インタラクション",
     voiceBody:
-      "Jarvis はウェイクワード検出、ストリーミング文字起こし、中断可能な TTS、デスクトップワークフロー向けのフローティング overlay を備えています。",
+      "ウェイクワードでいつでもパーソナル執事を起動できます。フローティングオーバーレイが即座に「主よ、私はここにいます」と応答します。「今週の食事とフィットネスの統計を分析して」と話しかけると、JarvisはMCPを介して自動的にアプリからデータを取得し、音声でレポートします。",
     architectureTitle: "デスクトップ制御レイヤーとして設計。",
     architectureBody:
       "各コンポーネントに明確な責務と境界を持たせたモジュラーアーキテクチャです。",
