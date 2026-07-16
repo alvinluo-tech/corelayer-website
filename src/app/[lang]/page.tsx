@@ -17,6 +17,7 @@ import {
 import { getMessages } from "@/lib/messages";
 import { PermissionSimulator } from "@/components/permission-simulator";
 import { ScrollSnapActivator } from "@/components/scroll-snap-activator";
+import { MagneticButton } from "@/components/magnetic-button";
 
 const trustIcons = [Database, Server, Shield, Mic, Cpu, LayoutDashboard];
 const workflowIcons = [Mic, Zap, Cpu, Workflow, Shield];
@@ -43,10 +44,31 @@ export default async function Home({
   const { lang } = await params;
   const t = getMessages(lang).home;
 
+  const bentoSpans = [
+    "md:col-span-2",
+    "md:col-span-1",
+    "md:col-span-1",
+    "md:col-span-2",
+    "md:col-span-1",
+    "md:col-span-2"
+  ];
+  const bentoGradients = [
+    "bg-gradient-to-br from-panel to-cyan/[0.02]",
+    "bg-panel",
+    "bg-panel",
+    "bg-gradient-to-br from-panel to-violet/[0.02]",
+    "bg-panel",
+    "bg-gradient-to-br from-panel to-emerald/[0.02]"
+  ];
+
   return (
     <>
       <ScrollSnapActivator />
       <section className="snap-section relative overflow-hidden border-b border-border-subtle min-h-[100dvh] flex flex-col justify-between pt-14">
+        {/* Ambient Aurora Glow */}
+        <div className="pointer-events-none absolute -top-1/4 -left-1/4 h-[80%] w-[80%] rounded-full bg-cyan/5 blur-[120px]" />
+        <div className="pointer-events-none absolute top-[10%] -right-1/4 h-[60%] w-[60%] rounded-full bg-violet/5 blur-[100px]" />
+
         <div className="site-container relative z-10 grid items-center gap-8 py-12 md:grid-cols-2 my-auto">
           <div className="flex flex-col gap-6">
             <div className="flex flex-wrap gap-2 hero-animate-in hero-delay-1">
@@ -70,28 +92,26 @@ export default async function Home({
               {t.description}
             </p>
             <div className="flex flex-wrap items-center gap-3 hero-animate-in hero-delay-3">
-              <Link
+              <MagneticButton
                 href={`/${lang}/download`}
-                className="inline-flex items-center gap-2 rounded-lg bg-cyan px-5 py-2.5 text-sm font-medium text-void transition-opacity hover:opacity-90"
+                className="inline-flex items-center gap-2 rounded-lg bg-cyan px-5 py-2.5 text-sm font-medium text-void"
               >
                 <Download className="h-4 w-4" />
                 {t.download}
-              </Link>
-              <Link
+              </MagneticButton>
+              <MagneticButton
                 href={`/${lang}/docs`}
-                className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-panel px-5 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:border-border-cyan hover:text-text-primary"
+                className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-panel px-5 py-2.5 text-sm font-medium text-text-secondary hover:border-border-cyan hover:text-text-primary"
               >
                 {t.readDocs}
-              </Link>
-              <a
+              </MagneticButton>
+              <MagneticButton
                 href="https://github.com/alvinluo-tech/CoreLayer"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm text-text-tertiary transition-colors hover:text-text-secondary"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-transparent px-4 py-2.5 text-sm text-text-tertiary hover:text-text-secondary"
               >
                 {t.viewGithub}
                 <ExternalLink className="h-3.5 w-3.5" />
-              </a>
+              </MagneticButton>
             </div>
           </div>
 
@@ -242,10 +262,12 @@ export default async function Home({
             {t.capabilities.map(([title, desc], i) => {
               const meta = capabilityMeta[i] ?? capabilityMeta[0];
               const Icon = meta.icon;
+              const span = bentoSpans[i] || "";
+              const bg = bentoGradients[i] || "bg-panel";
               return (
                 <div
                   key={title}
-                  className="rounded-lg border border-border-subtle bg-panel p-6 transition-all duration-300 hover:-translate-y-1 hover:border-border-cyan hover:shadow-[0_8px_30px_rgba(0,212,255,0.04)]"
+                  className={`rounded-lg border border-border-subtle p-6 transition-all duration-300 hover:-translate-y-1 hover:border-border-cyan hover:shadow-[0_8px_30px_rgba(0,212,255,0.04)] ${span} ${bg}`}
                 >
                   <Icon className={`h-5 w-5 ${meta.color}`} />
                   <h3 className="mt-3 text-sm font-medium text-text-primary">
@@ -364,8 +386,8 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="snap-section border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
-        <div className="site-container text-center reveal-content">
+      <section className="snap-section relative overflow-hidden border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
+        <div className="site-container relative z-10 text-center reveal-content">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             {t.ctaTitle}
           </h2>
@@ -373,24 +395,24 @@ export default async function Home({
             {t.ctaBody}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
+            <MagneticButton
               href={`/${lang}/download`}
-              className="inline-flex items-center gap-2 rounded-lg bg-cyan px-6 py-3 text-sm font-medium text-void transition-opacity hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-lg bg-cyan px-6 py-3 text-sm font-medium text-void"
             >
               <Download className="h-4 w-4" />
               {t.ctaDownload}
-            </Link>
-            <a
+            </MagneticButton>
+            <MagneticButton
               href="https://github.com/alvinluo-tech/CoreLayer"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-panel px-6 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-cyan hover:text-text-primary"
+              className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-panel px-6 py-3 text-sm font-medium text-text-secondary hover:border-border-cyan hover:text-text-primary"
             >
               {t.sourceInstall}
               <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+            </MagneticButton>
           </div>
         </div>
+        {/* Ambient Aurora Glow */}
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[80%] w-[80%] rounded-full bg-gradient-to-r from-cyan/5 to-violet/5 blur-[120px]" />
       </section>
     </>
   );

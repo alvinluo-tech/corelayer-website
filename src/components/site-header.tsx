@@ -14,6 +14,7 @@ import {
   withLocale,
 } from "@/lib/i18n";
 import { getMessages } from "@/lib/messages";
+import { MagneticButton } from "./magnetic-button";
 
 const navLinks = [
   { href: "/download", label: "download" },
@@ -64,7 +65,7 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border-subtle bg-void/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-border-subtle bg-void/75 backdrop-blur-lg shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
       <div className="site-container flex h-14 items-center justify-between">
         <Link href={`/${locale}`} className="flex items-center gap-2.5">
           <Image src="/assets/icon.png" alt="CoreLayer" width={28} height={28} />
@@ -98,13 +99,13 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           <LanguageSelect locale={locale} pathname={pathname} />
           <ThemeToggle />
-          <Link
+          <MagneticButton
             href={`/${locale}/download`}
-            className="hidden items-center gap-1.5 rounded-md bg-cyan px-3.5 py-1.5 text-sm font-medium text-void transition-opacity hover:opacity-90 md:inline-flex"
+            className="hidden items-center gap-1.5 rounded-md bg-cyan px-3.5 py-1.5 text-sm font-medium text-void md:inline-flex"
           >
             <Download className="h-3.5 w-3.5" />
             {t.nav.download}
-          </Link>
+          </MagneticButton>
 
           {/* Mobile menu toggle */}
           <button
