@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getMessages } from "@/lib/messages";
 import { PermissionSimulator } from "@/components/permission-simulator";
+import { ScrollSnapActivator } from "@/components/scroll-snap-activator";
 
 const trustIcons = [Database, Server, Shield, Mic, Cpu, LayoutDashboard];
 const workflowIcons = [Mic, Zap, Cpu, Workflow, Shield];
@@ -44,8 +45,9 @@ export default async function Home({
 
   return (
     <>
-      <section className="relative overflow-hidden border-b border-border-subtle">
-        <div className="site-container relative z-10 grid items-center gap-8 py-16 md:grid-cols-2 md:py-24">
+      <ScrollSnapActivator />
+      <section className="snap-section relative overflow-hidden border-b border-border-subtle min-h-[100dvh] flex flex-col justify-between pt-14">
+        <div className="site-container relative z-10 grid items-center gap-8 py-12 md:grid-cols-2 my-auto">
           <div className="flex flex-col gap-6">
             <div className="flex flex-wrap gap-2">
               {t.chips.map((chip) => (
@@ -114,27 +116,27 @@ export default async function Home({
             </div>
           </div>
         </div>
+
+        <div className="relative z-10 border-t border-border-subtle bg-deep">
+          <div className="site-container flex flex-wrap items-center justify-center gap-x-8 gap-y-3 py-4">
+            {t.trust.map((label, i) => {
+              const Icon = trustIcons[i] ?? Database;
+              return (
+                <div
+                  key={label}
+                  className="flex items-center gap-2 text-xs text-text-tertiary"
+                >
+                  <Icon className="h-3.5 w-3.5 text-cyan/60" />
+                  {label}
+                </div>
+              );
+            })}
+          </div>
+        </div>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-cyan/5 via-transparent to-transparent" />
       </section>
 
-      <section className="border-b border-border-subtle bg-deep">
-        <div className="site-container flex flex-wrap items-center justify-center gap-x-8 gap-y-3 py-4">
-          {t.trust.map((label, i) => {
-            const Icon = trustIcons[i] ?? Database;
-            return (
-              <div
-                key={label}
-                className="flex items-center gap-2 text-xs text-text-tertiary"
-              >
-                <Icon className="h-3.5 w-3.5 text-cyan/60" />
-                {label}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="py-20">
+      <section className="snap-section py-20 min-h-[100dvh] flex flex-col justify-center border-b border-border-subtle">
         <div className="site-container">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -183,7 +185,7 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="border-t border-border-subtle py-20">
+      <section className="snap-section border-t border-border-subtle py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container">
           <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
             {t.workflowTitle}
@@ -223,7 +225,7 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="border-t border-border-subtle bg-deep py-20">
+      <section className="snap-section border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container">
           <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
             {t.capabilitiesTitle}
@@ -255,7 +257,7 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="border-t border-border-subtle py-20">
+      <section className="snap-section border-t border-border-subtle py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -270,7 +272,7 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="border-t border-border-subtle bg-deep py-20">
+      <section className="snap-section border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container grid items-center gap-10 md:grid-cols-2">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -313,7 +315,7 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="border-t border-border-subtle py-20">
+      <section className="snap-section border-t border-border-subtle py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container">
           <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
             {t.architectureTitle}
@@ -354,7 +356,7 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="border-t border-border-subtle bg-deep py-20">
+      <section className="snap-section border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container text-center">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             {t.ctaTitle}
