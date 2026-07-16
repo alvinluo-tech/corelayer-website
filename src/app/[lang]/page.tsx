@@ -344,48 +344,6 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="snap-section border-t border-border-subtle py-20 min-h-[100dvh] flex flex-col justify-center">
-        <div className="site-container">
-          <div className="reveal-content">
-            <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
-              {t.architectureTitle}
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-center text-sm text-text-secondary">
-              {t.architectureBody}
-            </p>
-          </div>
-
-          <div className="mx-auto mt-10 max-w-2xl reveal-item">
-            <div className="product-frame">
-              <div className="frame-bar">
-                <span className="h-2.5 w-2.5 rounded-full bg-rose/60" />
-                <span className="h-2.5 w-2.5 rounded-full bg-amber/60" />
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald/60" />
-                <span className="ml-2 text-[11px] text-text-tertiary">
-                  {t.architectureLabel}
-                </span>
-              </div>
-              <Image
-                src="/assets/architecture.png"
-                alt={t.architectureLabel}
-                width={800}
-                height={450}
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          <div className="mt-6 text-center reveal-item">
-            <Link
-              href={`/${lang}/docs/architecture/system-overview`}
-              className="inline-flex items-center gap-1.5 text-sm text-cyan transition-colors hover:text-cyan/80"
-            >
-              {t.architectureLink}
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
 
       <section className="snap-section relative overflow-hidden border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container relative z-10 text-center reveal-content">
