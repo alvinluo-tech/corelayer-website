@@ -49,7 +49,7 @@ export default async function Home({
       <section className="snap-section relative overflow-hidden border-b border-border-subtle min-h-[100dvh] flex flex-col justify-between pt-14">
         <div className="site-container relative z-10 grid items-center gap-8 py-12 md:grid-cols-2 my-auto">
           <div className="flex flex-col gap-6">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 hero-animate-in hero-delay-1">
               {t.chips.map((chip) => (
                 <span key={chip} className="status-chip">
                   <span className="dot" />
@@ -57,19 +57,19 @@ export default async function Home({
                 </span>
               ))}
             </div>
-            <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+            <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl hero-animate-in hero-delay-2">
               CoreLayer
               <span className="mt-2 block text-2xl font-medium text-text-secondary sm:inline sm:ml-4 sm:text-3xl md:text-4xl">
                 powered by Jarvis
               </span>
             </h1>
-            <p className="max-w-lg text-lg leading-relaxed text-text-secondary">
+            <p className="max-w-lg text-lg leading-relaxed text-text-secondary hero-animate-in hero-delay-2">
               {t.subtitle}
             </p>
-            <p className="max-w-lg text-sm leading-relaxed text-text-tertiary">
+            <p className="max-w-lg text-sm leading-relaxed text-text-tertiary hero-animate-in hero-delay-2">
               {t.description}
             </p>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 hero-animate-in hero-delay-3">
               <Link
                 href={`/${lang}/download`}
                 className="inline-flex items-center gap-2 rounded-lg bg-cyan px-5 py-2.5 text-sm font-medium text-void transition-opacity hover:opacity-90"
@@ -95,7 +95,7 @@ export default async function Home({
             </div>
           </div>
 
-          <div className="relative mt-10 md:mt-0">
+          <div className="relative mt-10 md:mt-0 hero-animate-in hero-delay-3">
             <div className="product-frame">
               <div className="frame-bar">
                 <span className="h-2.5 w-2.5 rounded-full bg-rose/60" />
@@ -138,7 +138,7 @@ export default async function Home({
 
       <section className="snap-section py-20 min-h-[100dvh] flex flex-col justify-center border-b border-border-subtle">
         <div className="site-container">
-          <div className="mx-auto max-w-2xl text-center">
+          <div className="mx-auto max-w-2xl text-center reveal-content">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               {t.problemTitle}
             </h2>
@@ -147,7 +147,7 @@ export default async function Home({
             </p>
           </div>
 
-          <div className="mt-12 grid items-center gap-6 md:grid-cols-2">
+          <div className="mt-12 grid items-center gap-6 md:grid-cols-2 reveal-item">
             <div className="rounded-lg border border-border-subtle bg-panel p-6">
               <h3 className="mb-4 text-xs font-medium uppercase tracking-wider text-text-tertiary">
                 {t.withoutTitle}
@@ -187,14 +187,16 @@ export default async function Home({
 
       <section className="snap-section border-t border-border-subtle py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container">
-          <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
-            {t.workflowTitle}
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-sm text-text-secondary">
-            {t.workflowBody}
-          </p>
+          <div className="reveal-content">
+            <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+              {t.workflowTitle}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-center text-sm text-text-secondary">
+              {t.workflowBody}
+            </p>
+          </div>
 
-          <div className="relative mt-12">
+          <div className="relative mt-12 reveal-item">
             <div className="absolute left-[19px] top-0 bottom-0 w-px bg-border-subtle md:left-1/2 md:translate-x-px" />
 
             <div className="flex flex-col gap-8">
@@ -227,14 +229,16 @@ export default async function Home({
 
       <section className="snap-section border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container">
-          <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
-            {t.capabilitiesTitle}
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-sm text-text-secondary">
-            {t.capabilitiesBody}
-          </p>
+          <div className="reveal-content">
+            <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+              {t.capabilitiesTitle}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-center text-sm text-text-secondary">
+              {t.capabilitiesBody}
+            </p>
+          </div>
 
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 reveal-item">
             {t.capabilities.map(([title, desc], i) => {
               const meta = capabilityMeta[i] ?? capabilityMeta[0];
               const Icon = meta.icon;
@@ -259,7 +263,7 @@ export default async function Home({
 
       <section className="snap-section border-t border-border-subtle py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container">
-          <div className="mx-auto max-w-2xl text-center">
+          <div className="mx-auto max-w-2xl text-center reveal-content">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               {t.safetyTitle}
             </h2>
@@ -268,13 +272,15 @@ export default async function Home({
             </p>
           </div>
 
-          <PermissionSimulator lang={lang} t={t} />
+          <div className="reveal-item">
+            <PermissionSimulator lang={lang} t={t} />
+          </div>
         </div>
       </section>
 
       <section className="snap-section border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container grid items-center gap-10 md:grid-cols-2">
-          <div>
+          <div className="reveal-content">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               {t.voiceTitle}
             </h2>
@@ -290,7 +296,7 @@ export default async function Home({
               ))}
             </div>
           </div>
-          <div className="product-frame group/voice relative overflow-hidden">
+          <div className="product-frame group/voice relative overflow-hidden reveal-item">
             <div className="frame-bar">
               <span className="h-2.5 w-2.5 rounded-full bg-cyan animate-pulse" />
               <span className="text-[11px] text-text-tertiary">
@@ -317,14 +323,16 @@ export default async function Home({
 
       <section className="snap-section border-t border-border-subtle py-20 min-h-[100dvh] flex flex-col justify-center">
         <div className="site-container">
-          <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
-            {t.architectureTitle}
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-sm text-text-secondary">
-            {t.architectureBody}
-          </p>
+          <div className="reveal-content">
+            <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+              {t.architectureTitle}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-center text-sm text-text-secondary">
+              {t.architectureBody}
+            </p>
+          </div>
 
-          <div className="mx-auto mt-10 max-w-2xl">
+          <div className="mx-auto mt-10 max-w-2xl reveal-item">
             <div className="product-frame">
               <div className="frame-bar">
                 <span className="h-2.5 w-2.5 rounded-full bg-rose/60" />
@@ -344,7 +352,7 @@ export default async function Home({
             </div>
           </div>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center reveal-item">
             <Link
               href={`/${lang}/docs/architecture/system-overview`}
               className="inline-flex items-center gap-1.5 text-sm text-cyan transition-colors hover:text-cyan/80"
@@ -357,7 +365,7 @@ export default async function Home({
       </section>
 
       <section className="snap-section border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
-        <div className="site-container text-center">
+        <div className="site-container text-center reveal-content">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             {t.ctaTitle}
           </h2>
