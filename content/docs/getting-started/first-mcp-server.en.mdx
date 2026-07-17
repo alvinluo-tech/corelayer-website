@@ -19,27 +19,32 @@ MCP is an open protocol that lets AI applications connect to external tools and 
 
 ```json
 {
+  "id": "my-server",
   "name": "my-server",
+  "transport": "stdio",
   "command": "npx",
-  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"],
+  "enabled": true
 }
 ```
 
 ### Via the Config File
 
-Add to your CoreLayer config:
+Add the server configuration to your `~/.jarvis/config/mcp-servers.json` file:
 
 ```json
 {
-  "mcp": {
-    "servers": [
-      {
-        "name": "filesystem",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
-      }
-    ]
-  }
+  "version": 1,
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"],
+      "enabled": true
+    }
+  ]
 }
 ```
 

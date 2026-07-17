@@ -19,27 +19,32 @@ MCPは、AIアプリケーションが標準化されたインターフェース
 
 ```json
 {
+  "id": "my-server",
   "name": "my-server",
+  "transport": "stdio",
   "command": "npx",
-  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"],
+  "enabled": true
 }
 ```
 
 ### 設定ファイル経由
 
-CoreLayer設定に追加:
+サーバー設定を `~/.jarvis/config/mcp-servers.json` ファイルに追加します:
 
 ```json
 {
-  "mcp": {
-    "servers": [
-      {
-        "name": "filesystem",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
-      }
-    ]
-  }
+  "version": 1,
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"],
+      "enabled": true
+    }
+  ]
 }
 ```
 

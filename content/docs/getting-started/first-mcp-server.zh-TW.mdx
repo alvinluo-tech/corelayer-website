@@ -19,27 +19,32 @@ MCP 是一個開放協定，讓 AI 應用程式可以透過標準化介面連接
 
 ```json
 {
+  "id": "my-server",
   "name": "my-server",
+  "transport": "stdio",
   "command": "npx",
-  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"],
+  "enabled": true
 }
 ```
 
 ### 透過設定檔
 
-新增到你的 CoreLayer 設定：
+新增伺服器設定到你的 `~/.jarvis/config/mcp-servers.json` 檔案中：
 
 ```json
 {
-  "mcp": {
-    "servers": [
-      {
-        "name": "filesystem",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"]
-      }
-    ]
-  }
+  "version": 1,
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/workspace"],
+      "enabled": true
+    }
+  ]
 }
 ```
 
