@@ -34,6 +34,14 @@ const riskColors = [
   "bg-violet/10 text-violet border-violet/20",
   "bg-rose/10 text-rose border-rose/20",
 ];
+const bentoAccents = [
+  "border-t-cyan/30 shadow-[0_8px_30px_rgba(0,212,255,0.04)]",
+  "border-t-violet/30 shadow-[0_8px_30px_rgba(167,139,250,0.04)]",
+  "border-t-emerald/30 shadow-[0_8px_30px_rgba(0,230,138,0.04)]",
+  "border-t-amber/30 shadow-[0_8px_30px_rgba(255,184,0,0.04)]",
+  "border-t-cyan/30 shadow-[0_8px_30px_rgba(0,212,255,0.04)]",
+  "border-t-violet/30 shadow-[0_8px_30px_rgba(167,139,250,0.04)]",
+];
 
 export default async function Home({
   params,
@@ -64,9 +72,11 @@ export default async function Home({
     <>
       <ScrollSnapActivator />
       <section className="snap-section relative overflow-hidden border-b border-border-subtle min-h-[100dvh] flex flex-col justify-between pt-14">
+        {/* Grid overlay */}
+        <div className="hero-grid-overlay pointer-events-none absolute inset-0 opacity-40" />
         {/* Ambient Aurora Glow */}
-        <div className="pointer-events-none absolute -top-1/4 -left-1/4 h-[80%] w-[80%] rounded-full bg-cyan/5 blur-[120px]" />
-        <div className="pointer-events-none absolute top-[10%] -right-1/4 h-[60%] w-[60%] rounded-full bg-violet/5 blur-[100px]" />
+        <div className="pointer-events-none absolute -top-1/4 -left-1/4 h-[80%] w-[80%] rounded-full bg-cyan/5 blur-[120px] hero-glow-pulse" />
+        <div className="pointer-events-none absolute top-[10%] -right-1/4 h-[60%] w-[60%] rounded-full bg-violet/5 blur-[100px] hero-glow-pulse-delayed" />
 
         <div className="site-container relative z-10 grid items-center gap-8 py-12 md:grid-cols-2 my-auto">
           <div className="flex flex-col gap-6">
@@ -157,7 +167,8 @@ export default async function Home({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-cyan/5 via-transparent to-transparent" />
       </section>
 
-      <section className="snap-section py-20 min-h-[100dvh] flex flex-col justify-center border-b border-border-subtle">
+      <section className="snap-section relative overflow-hidden py-20 min-h-[100dvh] flex flex-col justify-center border-b border-border-subtle">
+        <div className="pointer-events-none absolute -top-1/2 -right-1/4 h-[60%] w-[40%] rounded-full bg-amber/3 blur-[100px]" />
         <div className="site-container">
           <div className="mx-auto max-w-2xl text-center reveal-content">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -248,7 +259,8 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="snap-section border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
+      <section className="snap-section relative overflow-hidden border-t border-border-subtle bg-deep py-20 min-h-[100dvh] flex flex-col justify-center">
+        <div className="pointer-events-none absolute -bottom-1/3 -left-1/4 h-[60%] w-[50%] rounded-full bg-violet/3 blur-[120px]" />
         <div className="site-container">
           <div className="reveal-content">
             <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -265,10 +277,11 @@ export default async function Home({
               const Icon = meta.icon;
               const span = bentoSpans[i] || "";
               const bg = bentoGradients[i] || "bg-panel";
+              const accent = bentoAccents[i] || "";
               return (
                 <div
                   key={title}
-                  className={`rounded-lg border border-border-subtle p-6 transition-all duration-300 hover:-translate-y-1 hover:border-border-cyan hover:shadow-[0_8px_30px_rgba(0,212,255,0.04)] ${span} ${bg}`}
+                  className={`rounded-lg border border-border-subtle p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${span} ${bg} ${accent}`}
                 >
                   <Icon className={`h-5 w-5 ${meta.color}`} />
                   <h3 className="mt-3 text-sm font-medium text-text-primary">
@@ -284,7 +297,8 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="snap-section border-t border-border-subtle py-20 min-h-[100dvh] flex flex-col justify-center">
+      <section className="snap-section relative overflow-hidden border-t border-border-subtle py-20 min-h-[100dvh] flex flex-col justify-center">
+        <div className="pointer-events-none absolute -top-1/4 -right-1/4 h-[50%] w-[50%] rounded-full bg-emerald/3 blur-[100px]" />
         <div className="site-container">
           <div className="mx-auto max-w-2xl text-center reveal-content">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">

@@ -274,7 +274,7 @@ body {
 
 /* Scroll Snapping */
 .snap-container {
-  scroll-snap-type: y mandatory;
+  scroll-snap-type: y proximity;
 }
 
 .snap-container section.snap-section {
@@ -283,6 +283,28 @@ body {
 }
 
 
+
+/* Hero Ambient Glow Pulse */
+@keyframes hero-glow-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.08); }
+}
+
+.hero-glow-pulse {
+  animation: hero-glow-pulse 6s ease-in-out infinite;
+}
+
+.hero-glow-pulse-delayed {
+  animation: hero-glow-pulse 8s ease-in-out 2s infinite;
+}
+
+/* Subtle grid overlay for hero area */
+.hero-grid-overlay {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
 
 /* Page Load Animation for Hero Section */
 @keyframes hero-fade-in {
