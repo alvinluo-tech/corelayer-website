@@ -7,48 +7,75 @@ CoreLayerのモデルゲートウェイは、複数のAIプロバイダーにリ
 
 ## サポートされているプロバイダー
 
-| プロバイダー | タイプ | モデル |
-|----------|------|--------|
-| **Groq** | クラウド（高速推論） | Llama 3.3、Mixtral、Gemma |
-| **OpenRouter** | マルチプロバイダーゲートウェイ | MiMo、Claude、GPT-4、Llama、Mistral |
-| **Ollama** | ローカル | 任意のOllama互換モデル |
-| **OpenAI互換** | 任意 | OpenAI互換APIを持つ任意のプロバイダー |
+モデルゲートウェイは、組み込みのプリセットを介して以下のプロバイダーをネイティブにサポートしています:
 
-## 設定
+| プロバイダー | ID | タイプ | 代表的なモデル |
+|------------|----|------|----------------|
+| **MiMo (小米)** | `mimo` | `openai_compatible` | `mimo-v2.5-pro`, `mimo-2.5` |
+| **Groq** | `groq` | `openai_compatible` | `llama-3.3-70b-versatile`, `mixtral-8x7b-32768` |
+| **DeepSeek** | `deepseek` | `openai_compatible` | `deepseek-chat`, `deepseek-reasoner` |
+| **Anthropic** | `anthropic` | `openai_compatible` | `claude-sonnet-4`, `claude-haiku-4-5` |
+| **Google Gemini** | `google` | `openai_compatible` | `gemini-2.5-pro`, `gemini-2.5-flash` |
+| **OpenAI** | `openai` | `openai_compatible` | `gpt-4o`, `gpt-4o-mini`, `o3-mini` |
+| **通義千問 (Qwen)** | `qwen` | `openai_compatible` | `qwen-max`, `qwen-plus` |
+| **OpenRouter** | `openrouter` | `openai_compatible` | `anthropic/claude-sonnet-4`, `google/gemini-2.5-pro` |
+| **Ollama** | `ollama` | `ollama` | `llama3.2`, `qwen2.5`, `deepseek-r1` |
 
-### コントロールセンター経由
+## 設定ファイル
 
-1. **設定 → モデル**を開く
-2. **プロバイダー追加**をクリック
-3. プロバイダータイプを選択
-4. APIキーとモデル設定を入力
+CoreLayerは設定と認証情報を分離するセキュリティ設計を採用しています。設定ファイルは `~/.jarvis/config/` ディレクトリに保存されます。
 
-### 設定ファイル経由
+### 1. メイン設定 (`config.json`)
+
+有効なプロバイダー、モデルのルーティングルール、および各プロバイダーのエンドポイントを定義します。**このファイルにはAPIキーは含まれません**:
 
 ```json
 {
-  "models": {
-    "providers": [
-      {
-        "name": "groq",
-        "type": "groq",
-        "apiKey": "YOUR_GROQ_API_KEY",
-        "defaultModel": "llama-3.3-70b-versatile"
-      },
-      {
-        "name": "openrouter",
-        "type": "openrouter",
-        "apiKey": "YOUR_OPENROUTER_API_KEY",
-        "defaultModel": "mimo/mimo-v2.5"
-      },
-      {
-        "name": "ollama",
-        "type": "ollama",
-        "endpoint": "http://localhost:11434",
-        "defaultModel": "llama3.2"
-      }
-    ]
-  }
+  "version": 1,
+  "activeProvider": "mimo",
+  "activeModel": "mimo-v2.5-pro",
+  "providers": [
+    {
+      "id": "mimo",
+      "name": "MiMo",
+      "type": "openai_compatible",
+      "baseURL": "https://token-plan-ams.xiaomimimo.com/v1",
+      "enabled": true
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "type": "openai_compatible",
+      "baseURL": "https://api.groq.com/openai/v1",
+      "enabled": true
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "type": "openai_compatible",
+      "baseURL": "https://openrouter.ai/api/v1",
+      "enabled": true
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "type": "ollama",
+      "baseURL": "http://localhost:11434/v1",
+      "enabled": true
+    }
+  ]
+}
+```
+
+### 2. 認証情報設定 (`credentials.json`)
+
+APIキーを個別に安全に保存し、`config.json` 内の対応するプロバイダー `id` にマッピングします:
+
+```json
+{
+  "mimo": "your_mimo_api_key_here",
+  "groq": "your_groq_api_key_here",
+  "openrouter": "your_openrouter_api_key_here"
 }
 ```
 

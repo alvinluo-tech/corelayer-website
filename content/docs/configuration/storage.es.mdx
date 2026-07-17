@@ -71,18 +71,26 @@ Puedes cambiar los modos de almacenamiento en tiempo real desde el Centro de Con
 
 CoreLayer migrara los datos entre modos automaticamente.
 
-## Esquema de Datos
+## Esquema de Datos (Data Schema)
 
-CoreLayer almacena estas entidades principales:
+CoreLayer utiliza un esquema de base de datos local-first altamente estructurado, que almacena las siguientes entidades principales:
 
-- **tasks** — elementos de gestion de tareas
-- **articles** — entradas de lista de lectura
-- **reviews** — resumenes de revision diaria/semanal
-- **conversations** — historial de chat
-- **messages** — mensajes individuales
-- **tool_call_logs** — registro de auditoria de ejecucion de herramientas
-- **model_profiles** — configuraciones de proveedores de modelos
-- **memories** — memoria a largo plazo de Jarvis
+*   **workspaces** — espacios de trabajo de nivel superior que gestionan objetivos, desglose de tareas y estado de ejecución
+*   **projects** — carpetas de proyectos específicas dentro de los espacios de trabajo, incluidos specs, stacks tecnológicos y rutas raíz locales
+*   **tasks** — nodos de tareas que forman el gráfico de dependencias para la ejecución
+*   **artifacts** — entregables finales valiosos, separando los archivos/informes del ruido de la terminal y los logs
+*   **agent_runs** — sesiones de ejecución individuales de agentes, rastreando estados, latencia, enrutamiento y registros
+*   **approval_requests** — acciones de alto riesgo pendientes que esperan la decisión de aprobación manual del usuario
+*   **permission_memories** — almacenamiento en caché temporal de decisiones para evitar ventanas emergentes de permisos repetitivas
+*   **conversations** / **messages** — historiales de conversaciones de chat y registros de mensajes individuales
+*   **tool_call_logs** — registros de auditoría que capturan duración, argumentos, niveles de riesgo y resultados
+*   **app_connections** — servidores MCP locales o remotos configurados y conexiones de aplicaciones
+*   **model_profiles** — configuraciones de gateway de modelos y endpoints de proveedores
+*   **memories** — recuerdos a largo plazo de Jarvis (hechos, preferencias, contexto, fijados)
+*   **scheduled_tasks** — cron jobs que activan tareas automatizadas y habilidades
+*   **environment_sessions** / **environment_events** — contenedores de sandbox aislados y flujos de eventos
+*   **articles** — entradas de listas de lectura
+*   **reviews** — resúmenes de revisión diarios/semanales
 
 ## Siguientes Pasos
 

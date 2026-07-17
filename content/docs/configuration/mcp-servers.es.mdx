@@ -5,30 +5,56 @@ description: Configura las conexiones a servidores del Model Context Protocol.
 
 CoreLayer se conecta a herramientas y fuentes de datos externas a traves de servidores MCP. Cada servidor expone herramientas que Jarvis puede llamar durante las conversaciones, sujeto al Permission Guard.
 
-## Configuracion del Servidor
-
-Cada servidor MCP se define por un nombre, comando y argumentos opcionales:
+El archivo de configuración se encuentra en `~/.jarvis/config/mcp-servers.json`. El formato de configuración es el siguiente:
 
 ```json
 {
-  "mcp": {
-    "servers": [
-      {
-        "name": "filesystem",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-        "env": {}
+  "version": 1,
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": false,
+        "bulkWrite": false
       },
-      {
-        "name": "github",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-github"],
-        "env": {
-          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-        }
+      "riskPolicy": {
+        "low": "auto",
+        "medium": "notify",
+        "high": "confirm",
+        "critical": "deny"
       }
-    ]
-  }
+    },
+    {
+      "id": "github",
+      "name": "github",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": false,
+        "bulkWrite": false
+      },
+      "riskPolicy": {
+        "low": "auto",
+        "medium": "notify",
+        "high": "confirm",
+        "critical": "deny"
+      }
+    }
+  ]
 }
 ```
 

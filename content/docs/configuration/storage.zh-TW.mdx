@@ -71,18 +71,26 @@ SQLite 是預設的儲存模式。資料儲存在本地 `.db` 檔案中：
 
 CoreLayer 會自動在模式之間遷移資料。
 
-## 資料結構
+## 資料模式 (Data Schema)
 
-CoreLayer 儲存以下主要實體：
+CoreLayer 採用本地優先的高完整度資料庫表設計，儲存以下主要實體：
 
-- **tasks** — 任務管理項目
-- **articles** — 閱讀清單條目
-- **reviews** — 每日/每週回顧摘要
-- **conversations** — 聊天歷史
-- **messages** — 個別訊息
-- **tool_call_logs** — 工具執行的稽核軌跡
-- **model_profiles** — 模型供應商設定
-- **memories** — Jarvis 長期記憶
+*   **workspaces** — 頂層工作空間，管理用戶目標、任務拆解與執行階段狀態
+*   **projects** — 工作空間內的項目，包含項目規格（spec）、技術棧及本地根路徑
+*   **tasks** — 任務節點，形成任務圖（Task Graph）並追蹤 Agent 執行依賴
+*   **artifacts** — 交付產物，將最終有價值的交付檔案/報告與執行過程中的日誌及噪音分離
+*   **agent_runs** — 單次 Agent 運行記錄，追蹤狀態、耗時、模型路由與事件日誌
+*   **approval_requests** — 掛起的高風險操作，記錄用戶對工具執行的安全審查決策
+*   **permission_memories** — 權限快取記憶，針對特定項目或會話臨時授權以防頻繁彈窗
+*   **conversations** / **messages** — 聊天對話歷史及單條訊息記錄
+*   **tool_call_logs** — 稽核日誌，記錄每次工具呼叫的耗時、參數、風險等級及結果
+*   **app_connections** — 已經設定的本地/遠端 MCP 伺服器與外部應用程式連接
+*   **model_profiles** — 模型閘道的供應商設定與介面端點
+*   **memories** — Jarvis 的長期記憶（facts、preferences、context、pinned）
+*   **scheduled_tasks** — 定時觸發的自動化 Cron 任務與技能
+*   **environment_sessions** / **environment_events** — 隔離的開發沙箱環境會話及事件流
+*   **articles** — 閱讀清單條目
+*   **reviews** — 每日/每週回顧摘要
 
 ## 下一步
 

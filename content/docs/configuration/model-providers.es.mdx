@@ -5,50 +5,77 @@ description: Configura proveedores de modelos de IA para el enrutamiento de Jarv
 
 El Model Gateway de CoreLayer enruta solicitudes a traves de multiples proveedores de IA. Puedes configurar uno o mas proveedores y dejar que Jarvis seleccione el mejor modelo para cada tarea.
 
-## Proveedores Compatibles
+## Proveedores Admitidos
 
-| Proveedor | Tipo | Modelos |
-|-----------|------|---------|
-| **Groq** | Nube (inferencia rapida) | Llama 3.3, Mixtral, Gemma |
-| **OpenRouter** | Gateway multi-proveedor | MiMo, Claude, GPT-4, Llama, Mistral |
-| **Ollama** | Local | Cualquier modelo compatible con Ollama |
-| **Compatible con OpenAI** | Cualquier | Cualquier proveedor con API compatible con OpenAI |
+El Model Gateway admite de forma nativa los siguientes proveedores a través de ajustes preestablecidos incorporados:
 
-## Configuracion
+| Proveedor | ID | Tipo | Modelos Populares |
+|-----------|----|------|-------------------|
+| **MiMo (Xiaomi)** | `mimo` | `openai_compatible` | `mimo-v2.5-pro`, `mimo-2.5` |
+| **Groq** | `groq` | `openai_compatible` | `llama-3.3-70b-versatile`, `mixtral-8x7b-32768` |
+| **DeepSeek** | `deepseek` | `openai_compatible` | `deepseek-chat`, `deepseek-reasoner` |
+| **Anthropic** | `anthropic` | `openai_compatible` | `claude-sonnet-4`, `claude-haiku-4-5` |
+| **Google Gemini** | `google` | `openai_compatible` | `gemini-2.5-pro`, `gemini-2.5-flash` |
+| **OpenAI** | `openai` | `openai_compatible` | `gpt-4o`, `gpt-4o-mini`, `o3-mini` |
+| **Qwen (Alibaba)** | `qwen` | `openai_compatible` | `qwen-max`, `qwen-plus` |
+| **OpenRouter** | `openrouter` | `openai_compatible` | `anthropic/claude-sonnet-4`, `google/gemini-2.5-pro` |
+| **Ollama** | `ollama` | `ollama` | `llama3.2`, `qwen2.5`, `deepseek-r1` |
 
-### Via Centro de Control
+## Archivos de Configuración
 
-1. Abre **Ajustes → Modelos**
-2. Haz clic en **Aniadir Proveedor**
-3. Selecciona el tipo de proveedor
-4. Introduce la clave API y las preferencias de modelo
+CoreLayer separa la configuración de las credenciales secretas. Los archivos de configuración se guardan en el directorio `~/.jarvis/config/`.
 
-### Via Archivo de Configuracion
+### 1. Configuración Principal (`config.json`)
+
+Define los proveedores activos, las reglas de enrutamiento y los endpoints. **Este archivo no contiene claves API**:
 
 ```json
 {
-  "models": {
-    "providers": [
-      {
-        "name": "groq",
-        "type": "groq",
-        "apiKey": "YOUR_GROQ_API_KEY",
-        "defaultModel": "llama-3.3-70b-versatile"
-      },
-      {
-        "name": "openrouter",
-        "type": "openrouter",
-        "apiKey": "YOUR_OPENROUTER_API_KEY",
-        "defaultModel": "mimo/mimo-v2.5"
-      },
-      {
-        "name": "ollama",
-        "type": "ollama",
-        "endpoint": "http://localhost:11434",
-        "defaultModel": "llama3.2"
-      }
-    ]
-  }
+  "version": 1,
+  "activeProvider": "mimo",
+  "activeModel": "mimo-v2.5-pro",
+  "providers": [
+    {
+      "id": "mimo",
+      "name": "MiMo",
+      "type": "openai_compatible",
+      "baseURL": "https://token-plan-ams.xiaomimimo.com/v1",
+      "enabled": true
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "type": "openai_compatible",
+      "baseURL": "https://api.groq.com/openai/v1",
+      "enabled": true
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "type": "openai_compatible",
+      "baseURL": "https://openrouter.ai/api/v1",
+      "enabled": true
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "type": "ollama",
+      "baseURL": "http://localhost:11434/v1",
+      "enabled": true
+    }
+  ]
+}
+```
+
+### 2. Configuración de Credenciales (`credentials.json`)
+
+Guarda las claves API de forma segura, mapeando los valores al `id` del proveedor correspondiente:
+
+```json
+{
+  "mimo": "your_mimo_api_key_here",
+  "groq": "your_groq_api_key_here",
+  "openrouter": "your_openrouter_api_key_here"
 }
 ```
 

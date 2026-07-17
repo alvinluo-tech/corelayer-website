@@ -7,48 +7,75 @@ CoreLayer 的模型閘道跨多個 AI 供應商路由請求。你可以設定一
 
 ## 支援的供應商
 
-| 供應商 | 類型 | 模型 |
-|----------|------|--------|
-| **Groq** | 雲端（快速推理） | Llama 3.3、Mixtral、Gemma |
-| **OpenRouter** | 多供應商閘道 | MiMo、Claude、GPT-4、Llama、Mistral |
-| **Ollama** | 本地 | 任何 Ollama 相容模型 |
-| **OpenAI 相容** | 任何 | 任何具有 OpenAI 相容 API 的供應商 |
+模型閘道透過內建預設原生支援以下大模型供應商：
 
-## 設定
+| 供應商 | ID | 類型 | 常用模型 |
+|--------|----|------|----------|
+| **MiMo (小米)** | `mimo` | `openai_compatible` | `mimo-v2.5-pro`, `mimo-2.5` |
+| **Groq** | `groq` | `openai_compatible` | `llama-3.3-70b-versatile`, `mixtral-8x7b-32768` |
+| **DeepSeek** | `deepseek` | `openai_compatible` | `deepseek-chat`, `deepseek-reasoner` |
+| **Anthropic** | `anthropic` | `openai_compatible` | `claude-sonnet-4`, `claude-haiku-4-5` |
+| **Google Gemini** | `google` | `openai_compatible` | `gemini-2.5-pro`, `gemini-2.5-flash` |
+| **OpenAI** | `openai` | `openai_compatible` | `gpt-4o`, `gpt-4o-mini`, `o3-mini` |
+| **通義千問 (Qwen)** | `qwen` | `openai_compatible` | `qwen-max`, `qwen-plus` |
+| **OpenRouter** | `openrouter` | `openai_compatible` | `anthropic/claude-sonnet-4`, `google/gemini-2.5-pro` |
+| **Ollama** | `ollama` | `ollama` | `llama3.2`, `qwen2.5`, `deepseek-r1` |
 
-### 透過控制中心
+## 設定檔
 
-1. 開啟 **設定 → 模型**
-2. 按一下 **新增供應商**
-3. 選擇供應商類型
-4. 輸入 API 金鑰和模型偏好設定
+CoreLayer 採用**設定與金鑰分離**的安全設計。設定檔保存在 `~/.jarvis/config/` 目錄下。
 
-### 透過設定檔
+### 1. 基礎設定 (`config.json`)
+
+定義啟用的供應商、預設模型和各個供應商的端點，此檔案**不包含任何 API 金鑰**：
 
 ```json
 {
-  "models": {
-    "providers": [
-      {
-        "name": "groq",
-        "type": "groq",
-        "apiKey": "YOUR_GROQ_API_KEY",
-        "defaultModel": "llama-3.3-70b-versatile"
-      },
-      {
-        "name": "openrouter",
-        "type": "openrouter",
-        "apiKey": "YOUR_OPENROUTER_API_KEY",
-        "defaultModel": "mimo/mimo-v2.5"
-      },
-      {
-        "name": "ollama",
-        "type": "ollama",
-        "endpoint": "http://localhost:11434",
-        "defaultModel": "llama3.2"
-      }
-    ]
-  }
+  "version": 1,
+  "activeProvider": "mimo",
+  "activeModel": "mimo-v2.5-pro",
+  "providers": [
+    {
+      "id": "mimo",
+      "name": "MiMo",
+      "type": "openai_compatible",
+      "baseURL": "https://token-plan-ams.xiaomimimo.com/v1",
+      "enabled": true
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "type": "openai_compatible",
+      "baseURL": "https://api.groq.com/openai/v1",
+      "enabled": true
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "type": "openai_compatible",
+      "baseURL": "https://openrouter.ai/api/v1",
+      "enabled": true
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "type": "ollama",
+      "baseURL": "http://localhost:11434/v1",
+      "enabled": true
+    }
+  ]
+}
+```
+
+### 2. 金鑰設定 (`credentials.json`)
+
+獨立保存金鑰，與 `config.json` 中的 `id` 一一對應。
+
+```json
+{
+  "mimo": "your_mimo_api_key_here",
+  "groq": "your_groq_api_key_here",
+  "openrouter": "your_openrouter_api_key_here"
 }
 ```
 

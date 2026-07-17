@@ -3,46 +3,55 @@ title: Que es CoreLayer?
 description: Una capa de control de IA local para tus aplicaciones de escritorio, herramientas, modelos y flujos de trabajo MCP.
 ---
 
-CoreLayer es una capa de comandos de IA de escritorio impulsada por Jarvis. No es un chatbot generico, no es un copiloto de IDE y no es una herramienta de automatizacion en la nube. Se situa localmente entre tus aplicaciones personales, herramientas, modelos y servidores MCP para que Jarvis pueda coordinar el trabajo a traves de permisos explicitos.
+CoreLayer es un **Agent OS (sistema operativo de agentes de IA)** local de escritorio diseñado para gestionar agentes, herramientas locales, estados de ejecución y espacios de trabajo personales.
 
-## Capacidades Clave
+La personalidad de IA incorporada se llama **Jarvis**. No es otra interfaz de chat genérica, ni un simple plugin de IDE. Sienta una capa de control segura entre tus aplicaciones personales, el sistema operativo local, los LLMs y los servidores MCP mediante reglas de permisos explícitas, sesiones de sandbox locales y registros de ejecución verificables.
 
-- **Enrutamiento multi-modelo** a traves de MiMo, Groq, OpenRouter, Ollama y proveedores compatibles con OpenAI
-- **Integracion MCP primero** con herramientas y servidores externos
-- **Llamadas a herramientas unificadas** desde modulos nativos, MCP, habilidades y adaptadores REST
-- **Permission Guard** con ejecucion basada en riesgo y registros de auditoria
-- **Pipeline de voz** con palabra de activacion, ASR, TTS en streaming e interrupcion por voz
-- **Tres modos de almacenamiento** (SQLite local, Supabase, PostgreSQL) intercambiables en caliente
-- **Paleta de comandos** (Alt+Space) para acciones rapidas
-- **Gestion de tareas** con consultas en lenguaje natural impulsadas por IA
-- **Seguimiento de lista de lectura** con recomendaciones de IA
-- **Resumenes de revision diaria/semanal** con reconocimiento de patrones
+---
 
-## Arquitectura de un Vistazo
+## Visión del Producto (Product Vision)
+
+### 1. De "Historial de Chat" a "Sistema de Ejecución"
+La mayoría de las herramientas de IA actuales entierran las tareas dentro de un solo hilo de chat. A medida que el contexto crece, gestionar el estado se vuelve imposible. CoreLayer estructura las tareas en un sistema de ejecución gestionable:
+- Le indicas un objetivo de alto nivel (Goal) a **Jarvis**.
+- CoreLayer lo resuelve en un **Espacio de Trabajo (Workspace)**, que gestiona un Gráfico de Tareas (Task Graph), ejecuciones de agentes (Agent Runs), aprobaciones limitadas (Scoped Approvals), registros de auditoría y entregables finales (Artifacts).
 
 ```text
-Aplicacion Escritorio Tauri 2
-  └─ Frontend React 19 + Vite + Tailwind 4
-     └─ Puente Tauri IPC
-        └─ Daemon Node.js (Hono)
-           ├─ Model Gateway (Vercel AI SDK)
-           ├─ Tool Registry
-           ├─ Permission Guard
-           ├─ Gestor de Clientes MCP
-           └─ SQLite / Supabase / PostgreSQL
+Objetivo (Goal)
+  ↓
+Espacio de Trabajo (Workspace)
+  ├─ Gráfico de Tareas (Task Graph)
+  ├─ Ejecuciones de Agente (Agent Runs)
+  ├─ Aprobaciones Acotadas (Scoped Approvals)
+  └─ Sesiones de Sandbox (Environment)
+  ↓
+Entregables Verificables (Artifacts) y Trayectorias de Ejecución
 ```
 
-CoreLayer utiliza un modelo de proxy de tres capas: el frontend React se comunica con el daemon Node.js a traves de Tauri IPC, y el daemon gestiona toda la orquestacion de IA, ejecucion de herramientas y almacenamiento de datos.
+### 2. Gobernanza de Ejecutores (Claude Code / Codex / OpenCode)
+Aunque los agentes de codificación como Claude Code, Codex y OpenCode son muy capaces, ejecutar comandos de shell arbitrarios directamente en tu máquina local plantea riesgos de seguridad severos y su ciclo de vida no se rastrea. CoreLayer proporciona adaptadores para ejecutarlos como **Ejecutores Gestionados**:
+- **Sesiones en Sandbox**: Los cambios se aíslan dentro de un git-worktree o sandbox contenedorizado antes de confirmarse.
+- **Aprobaciones Granulares**: Las operaciones de alto riesgo (como eliminación de archivos, escrituras o llamadas de red salientes) son interceptadas y suspendidas por el Permission Guard, solicitando la verificación manual del usuario.
+- **Separación de Entregables**: Los entregables finales (Artifacts como diffs de código, especificaciones o informes) se filtran de forma limpia y se separan del ruido de compilación, registros de pruebas y flujos de terminal.
 
-## Para Quien es CoreLayer?
+### 3. "Jarvis gestiona el trabajo; las herramientas especializadas lo ejecutan"
+Esta es la filosofía de diseño central de CoreLayer. No reinventamos la rueda, sino que proporcionamos el orquestador. Jarvis coordina tareas y aplica reglas de seguridad, mientras que las herramientas especializadas o los servicios MCP ejecutan las operaciones. Esto garantiza que el sistema no esté bloqueado a ningún proveedor de modelos o entorno de desarrollo único.
 
-- **Usuarios tecnicos** que quieren control local sobre flujos de trabajo de IA
-- **Desarrolladores independientes** que construyen con MCP y herramientas de IA locales
-- **Usuarios avanzados** que experimentan con enrutamiento multi-modelo e interfaces de voz
-- **Futuros contribuidores** interesados en el espacio de IA de escritorio de codigo abierto
+---
+
+## Pilares Centrales (Core Pillars)
+
+- **Integración MCP Primero** — Soporta nativamente los protocolos de transporte stdio, HTTP y SSE, registrando herramientas externas bajo el espacio de nombres unificado `mcp:{serverId}:{toolName}`.
+- **Permission Guard** — Clasifica las llamadas de herramientas en niveles de riesgo bajo, medio, alto y crítico, utilizando cachés de decisión (Permission Memories) para evitar la fatiga por alertas, y registra un registro de auditoría completo.
+- **Registro Unificado de Herramientas (Tool Registry)** — Recopila y gestiona módulos nativos de Rust, herramientas MCP, habilidades locales en JS/TS y endpoints REST externos.
+- **Gateway y Enrutamiento de Modelos** — Enruta dinámicamente consultas de LLM a través de MiMo, Groq, DeepSeek, OpenAI, Gemini, Qwen y Ollama, adaptando los endpoints a los requisitos de latencia, llamadas a herramientas o razonamiento.
+- **Pipeline de Voz Nativo** — Cuenta con detección de palabra de activación, transcripción ASR, generación de voz TTS en streaming a nivel de frase e interrupción de audio (barge-in).
+- **Almacenamiento Local de Tres Modos** — Utiliza una base de datos SQLite sin configuración de forma local por defecto, con configuraciones que admiten la sincronización en la nube mediante Supabase o PostgreSQL auto-alojado.
+
+---
 
 ## Siguientes Pasos
 
-- [Instalar CoreLayer](/docs/getting-started/install) — ejecuta la aplicacion de escritorio
-- [Inicio Rapido](/docs/getting-started/quickstart) — conecta tu primer modelo y servidor MCP
-- [Arquitectura](/docs/architecture/system-overview) — entiende el diseno del sistema
+- [Instalar CoreLayer](/docs/getting-started/install) — Descarga y ejecuta el cliente de escritorio.
+- [Inicio Rápido](/docs/getting-started/quickstart) — Conecta tu primer modelo y servidor MCP.
+- [Arquitectura del Sistema](/docs/architecture/system-overview) — Entiende cómo cooperan Tauri Shell y el daemon Node.js.

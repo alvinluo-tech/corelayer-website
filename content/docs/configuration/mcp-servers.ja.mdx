@@ -5,30 +5,56 @@ description: Model Context Protocolサーバー接続を設定します。
 
 CoreLayerはMCPサーバーを通じて外部ツールとデータソースに接続します。各サーバーは、パーミッションガードに従い、Jarvisが会話中に呼び出せるツールを公開します。
 
-## サーバー設定
-
-各MCPサーバーは、名前、コマンド、オプションの引数で定義されます:
+設定ファイルは `~/.jarvis/config/mcp-servers.json` にあります。設定フォーマットは以下の通りです:
 
 ```json
 {
-  "mcp": {
-    "servers": [
-      {
-        "name": "filesystem",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-        "env": {}
+  "version": 1,
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": false,
+        "bulkWrite": false
       },
-      {
-        "name": "github",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-github"],
-        "env": {
-          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-        }
+      "riskPolicy": {
+        "low": "auto",
+        "medium": "notify",
+        "high": "confirm",
+        "critical": "deny"
       }
-    ]
-  }
+    },
+    {
+      "id": "github",
+      "name": "github",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "enabled": true,
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": false,
+        "bulkWrite": false
+      },
+      "riskPolicy": {
+        "low": "auto",
+        "medium": "notify",
+        "high": "confirm",
+        "critical": "deny"
+      }
+    }
+  ]
 }
 ```
 
