@@ -1,81 +1,104 @@
 ---
 title: Permissions
-description: Configure the permission guard for tool execution.
+description: Configure the permission guard's risk policy and per-app overrides.
 ---
 
-The Permission Guard controls which tool calls require approval, which are auto-allowed, and which are blocked.
+The Permission Guard decides, for every tool call, whether to run it, notify you, ask you, or refuse. The decision is a pure function of the tool's declared risk and the policy below.
 
-## Permission Levels
+## Risk → action
 
-| Level | Behavior |
-|-------|----------|
-| **Read** | Auto-allowed (reading files, listing data) |
-| **Write** | Requires approval (writing files, modifying data) |
-| **External** | Requires approval (API calls, network requests) |
-| **Destructive** | Requires approval with warning (deleting data) |
-| **Credential-sensitive** | Always blocked unless explicitly allowed |
+| Risk | Default action |
+|------|----------------|
+| `low` | `auto` — run silently |
+| `medium` | `notify` — run and surface a notification |
+| `high` | `confirm` — suspend until you decide |
+| `critical` | `deny` — refuse |
 
-## Configuration
+## Default policy
 
-```json
-{
-  "permissions": {
-    "defaultPolicy": "confirm",
-    "rules": [
-      {
-        "tool": "filesystem:read",
-        "policy": "allow"
-      },
-      {
-        "tool": "filesystem:write",
-        "policy": "confirm"
-      },
-      {
-        "tool": "github:*",
-        "policy": "confirm"
-      },
-      {
-        "tool": "shell:execute",
-        "policy": "deny"
-      }
-    ]
-  }
+```ts
+defaultPolicy: {
+  low: "auto",
+  medium: "notify",
+  high: "confirm",
+  critical: "deny",
 }
 ```
 
-## Policies
+This is the policy the daemon runs with. The mapping is defined in `@jarvis/permission-guard` and applied to every tool call.
 
-| Policy | Effect |
-|--------|--------|
-| `allow` | Execute without asking |
-| `confirm` | Pause and ask for user approval |
-| `deny` | Block execution entirely |
+**It is not yet user-configurable.** The guard is constructed with its defaults, and `config.json` has no permissions section — an earlier version of these docs described a `permissions.rules` array that does not exist. Do not add one and expect it to take effect.
 
-## Approval Flow
+## Per-app overrides
 
-When a tool call requires confirmation:
+The guard supports per-app overrides in its configuration shape:
 
-1. Jarvis explains what it wants to do
-2. The approval panel shows the tool name, parameters, and risk level
-3. You can **Approve**, **Deny**, or **Approve Always** (for this tool)
-4. All decisions are logged in the audit trail
-
-## Audit Logs
-
-Every tool execution is logged:
-
-```text
-[2026-06-15 14:32:01] filesystem:write /workspace/README.md
-  Risk: write
-  Policy: confirm
-  Decision: approved
-  User: manual approval
+```ts
+appPermissions: {
+  "filesystem": { write: true,  execute: false },
+  "untrusted-mcp": { write: false, execute: false },
+}
 ```
 
-View audit logs in **Control Center → Permissions → Audit Log**.
+How each flag maps:
+
+| Risk | `write: true` | `write: false` |
+|------|---------------|----------------|
+| `medium` | `notify` | `confirm` |
+| `high` | `confirm` | `deny` |
+
+| Risk | `execute: true` | `execute: false` |
+|------|-----------------|------------------|
+| `critical` | `confirm` | `deny` |
+
+`low` is always `auto`.
+
+The overrides are evaluated when present, but nothing in the daemon currently reads them from disk, so they apply only to code that constructs the guard with them.
+
+## Voice mode
+
+Voice execution is stricter regardless of risk: read-only actions are auto-allowed, everything else requires confirmation. A spoken request is easier to trigger by accident than a typed one.
+
+## Approval requests
+
+When the action is `confirm`, the guard does not hold the decision in memory:
+
+1. An `approval_request` is persisted with an action digest, risk, scope, and expiry
+2. The run is suspended
+3. The UI shows the request — approve, deny, or remember
+4. The decision resumes or fails the run
+
+Endpoints:
+
+```text
+GET  /api/approvals
+GET  /api/approvals/:id
+POST /api/approvals/:id/approve
+POST /api/approvals/:id/deny
+POST /api/approvals/:id/remember
+POST /api/approvals/batch/approve
+POST /api/approvals/batch/deny
+POST /api/approvals/expire-stale
+```
+
+"This request is stale" is a real state: unattended queues accumulate requests nobody answered, and `expire-stale` closes them rather than leaving runs suspended forever.
+
+## Permission memories
+
+"Remember" stores a decision against the action digest — the concrete action, not the tool name. The same action is not asked again; a different path, command, or parameter set produces a different digest and is asked again.
+
+## Audit
+
+Every decision is written to `audit_log` and is queryable:
+
+```text
+GET /api/audit?actor=jarvis&action=tool.execute&riskLevel=high&since=2026-10-01T00:00:00Z&limit=50
+```
+
+An entry records `actor`, `action`, `resource`, `riskLevel`, `permissionDecision`, `confirmedByUser`, `result`, `metadata`, and `createdAt`.
 
 ## Next Steps
 
-- [Permission Guard](/docs/core-concepts/permission-guard) — deep dive into the safety model
-- [Review Audit Logs](/docs/guides/review-audit-logs) — working with the audit trail
-- [Security Model](/docs/architecture/security-model) — architecture details
+- [Permission Guard](/docs/core-concepts/permission-guard) — the model behind the policy
+- [Security Model](/docs/architecture/security-model) — enforcement layers
+- [Review the Audit Trail](/docs/guides/review-audit-logs) — working with logs

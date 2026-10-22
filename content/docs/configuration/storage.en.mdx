@@ -1,98 +1,86 @@
 ---
 title: Storage
-description: "Configure data storage modes: local SQLite, Supabase, or PostgreSQL."
+description: Where CoreLayer keeps state, and how to switch between SQLite, Supabase, and PostgreSQL.
 ---
 
-CoreLayer supports three storage backends that can be hot-swapped at runtime.
+CoreLayer stores state locally by default and can run against Supabase or a self-hosted PostgreSQL instead. Storage mode is chosen at startup, not per request.
 
-## Storage Modes
+## Storage modes
 
-| Mode | Description | Use Case |
-|------|-------------|----------|
-| **SQLite** | Local file database (default) | Personal use, offline-first |
-| **Supabase** | Cloud PostgreSQL with real-time sync | Multi-device sync |
-| **PostgreSQL** | Self-hosted PostgreSQL | Team/enterprise use |
+| Mode | Value | Description |
+|------|-------|-------------|
+| SQLite | `local` (default) | Zero-config local file database |
+| Supabase | `cloud` | Cloud PostgreSQL with your own project |
+| PostgreSQL | `postgres` | Self-hosted PostgreSQL |
 
-## SQLite (Default)
-
-SQLite is the default storage mode. Data is stored locally in a `.db` file:
+The mode lives in its own file, `config.json`'s sibling `storage.json` in the config zone:
 
 ```json
 {
-  "storage": {
-    "mode": "sqlite",
-    "path": "~/.corelayer/data.db"
+  "storageMode": "local",
+  "dbConfig": {
+    "supabaseUrl": "https://your-project.supabase.co",
+    "supabaseServiceKey": "…",
+    "postgresUrl": "postgresql://user:pass@host:5432/corelayer"
   }
 }
 ```
 
-No external dependencies required. Works fully offline.
+`dbConfig` is only required for the cloud and postgres modes. `DATABASE_URL` in the environment is also honored for PostgreSQL.
 
-## Supabase
+Switching is done from **Settings → Storage**, which writes this file. A daemon restart picks up the new mode; this is not a live hot-swap.
 
-Connect to Supabase for cloud sync:
+## Disk layout
 
-```json
-{
-  "storage": {
-    "mode": "supabase",
-    "url": "https://your-project.supabase.co",
-    "anonKey": "eyJ..."
-  }
-}
+Local state is split into six zones under the CoreLayer home directory (`JARVIS_HOME` overrides it; the desktop default is `~/.jarvis`):
+
+```text
+~/.jarvis/
+├── config/      config.json · routing.json          (no secrets)
+├── security/    credentials.json                     (0600 on POSIX)
+├── memory/      USER.md · MEMORY.md · journal/ · dreams/
+├── storage/     jarvis.db
+├── worktrees/   active/ · snapshots/
+└── cache/       symbol-graph/ · mcp-schemas/ · delegation-pipes/
 ```
 
-Set up Supabase:
-1. Create a project at [supabase.com](https://supabase.com)
-2. Run the CoreLayer migration scripts
-3. Add your project URL and anon key
+Credentials are read from `security/credentials.json`; a legacy `config/credentials.json` is still honored when the new location does not exist.
 
-## PostgreSQL
+In sidecar mode the shell can override the root through `JARVIS_APP_DATA_DIR`, `JARVIS_LOG_DIR`, and `SQLITE_DB_PATH`.
 
-Connect to a self-hosted PostgreSQL instance:
+### Known exceptions
 
-```json
-{
-  "storage": {
-    "mode": "postgres",
-    "connectionString": "postgresql://user:pass@localhost:5432/corelayer"
-  }
-}
-```
+Two files still resolve from legacy locations rather than the six-zone layout:
 
-## Hot-Switching
+- `mcp-servers.json` is read from `~/.jarvis/config/mcp-servers.json`
+- the SQLite database path follows the app-paths resolution (`data/jarvis.db` unless `SQLITE_DB_PATH` is set)
 
-You can switch storage modes at runtime from the Control Center:
+Both are documented here as exceptions rather than silently described as part of the new layout.
 
-1. Open **Settings → Storage**
-2. Select the new mode
-3. Enter connection details
-4. Click **Switch**
+## Schema
 
-CoreLayer will migrate data between modes automatically.
+The database is managed with Drizzle migrations.
 
-## Data Schema
+| Group | Tables |
+|-------|--------|
+| Work structure | `workspaces`, `workspace_agents`, `projects`, `agent_profiles`, `tasks`, `artifacts`, `goals`, `plans` |
+| Execution | `agent_runs`, `agent_run_events`, `executor_runs`, `execution_logs`, `environment_sessions`, `environment_events` |
+| Governance | `approval_requests`, `permission_memories`, `capability_grants`, `pending_actions`, `tool_call_logs`, `audit_log`, `event_log` |
+| Conversation | `conversations`, `messages` |
+| Knowledge | `memories`, `articles`, `reviews` |
+| Configuration | `app_connections`, `model_profiles`, `scheduled_tasks` |
+| Channels | `channel_accounts`, `channel_conversations`, `channel_messages` |
 
-CoreLayer uses a highly structured local-first database schema, storing the following main entities:
+## Choosing a backend
 
-*   **workspaces** — top-level workspaces managing goals, task breakdowns, and runtime state
-*   **projects** — specific project folders inside workspaces, including specs, tech stacks, and root paths
-*   **tasks** — task nodes forming the dependency graph for execution
-*   **artifacts** — target deliverables separating valuable files/reports from execution log noise
-*   **agent_runs** — single Agent execution sessions, tracking state, latency, routing, and logs
-*   **approval_requests** — pending high-risk actions awaiting user manual approval decisions
-*   **permission_memories** — temporary decision caching to prevent repetitive permission popups
-*   **conversations** / **messages** — chat conversation histories and individual message records
-*   **tool_call_logs** — audit logs capturing duration, args, risk levels, and results
-*   **app_connections** — configured local or remote MCP servers and application connections
-*   **model_profiles** — model gateway configurations and provider endpoints
-*   **memories** — Jarvis long-term memories (facts, preferences, context, pinned)
-*   **scheduled_tasks** — cron jobs triggering automated tasks and skills
-*   **environment_sessions** / **environment_events** — sandbox containers and event streams
-*   **articles** — reading list entries
-*   **reviews** — daily/weekly review summaries
+- **SQLite** — one machine, offline, fastest queries. Default.
+- **Supabase** — several devices, and you want managed backups; you own the project and its policies.
+- **PostgreSQL** — you already operate a database and do not want a third-party control plane.
+
+There is no background replication between backends: switching modes means the daemon reads and writes the backend you selected.
 
 ## Next Steps
 
-- [Permission Guard](/docs/core-concepts/permission-guard) — how data access is controlled
-- [Security Model](/docs/architecture/security-model) — storage security details
+- [Security Model](/docs/architecture/security-model) — what is sensitive and where
+- [Config File](/docs/reference/config-file) — the configuration reference
+- [Permissions](/docs/configuration/permissions) — policy configuration

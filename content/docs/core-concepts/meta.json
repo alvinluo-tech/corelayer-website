@@ -6,6 +6,7 @@
     "model-gateway",
     "tool-registry",
     "permission-guard",
+    "memory",
     "daemon",
     "skills"
   ],

@@ -1,91 +1,134 @@
 ---
 title: 設定ファイル
-description: CoreLayer設定ファイルリファレンス。
+description: CoreLayer が起動時に実際に読むファイルのリファレンス。
 ---
 
-CoreLayerはシステム全体の設定にJSON設定ファイルを使用します。
+CoreLayer は 1 つの巨大な設定ファイルを使いません。設定は機密度で分かれ、秘密を含まない設定は同期・共有でき、資格情報は保護されます。
 
-## 場所
+## ファイル一覧
 
-| プラットフォーム | パス |
-|----------|------|
-| Windows | `%APPDATA%/corelayer/config.json` |
-| macOS | `~/Library/Application Support/corelayer/config.json` |
-| Linux | `~/.config/corelayer/config.json` |
+| ファイル | 場所 | 内容 |
+|---------|------|------|
+| `config.json` | `~/.jarvis/config/` | プロバイダー一覧、有効モデル、ルーティング規則、既定値、adjudication、tick |
+| `routing.json` | `~/.jarvis/config/` | 予約パス。ルーティング規則は現在 `config.json` の `routingRules` にあり、読むコードはまだない |
+| `credentials.json` | `~/.jarvis/security/` | プロバイダーごとの API キー（POSIX で `0600`。旧 `config/credentials.json` も読む） |
+| `mcp-servers.json` | `~/.jarvis/config/` | MCP サーバー定義 |
+| `storage.json` | `~/.jarvis/config/` | ストレージモードと DB 資格情報 |
 
-## 完全なリファレンス
+`JARVIS_HOME` でツリー全体を移動できます。sidecar モードではシェルが `JARVIS_APP_DATA_DIR`、`JARVIS_LOG_DIR`、`SQLITE_DB_PATH` を設定することがあります。
+
+## `config.json`
 
 ```json
 {
-  "models": {
-    "providers": [
-      {
-        "name": "groq",
-        "type": "groq",
-        "apiKey": "${GROQ_API_KEY}",
-        "defaultModel": "llama-3.3-70b-versatile"
-      }
-    ]
-  },
-  "mcp": {
-    "servers": [
-      {
-        "name": "filesystem",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-        "env": {}
-      }
-    ]
-  },
-  "storage": {
-    "mode": "sqlite",
-    "path": "~/.corelayer/data.db"
-  },
-  "voice": {
-    "enabled": true,
-    "wakeWord": {
-      "enabled": true,
-      "keyword": "jarvis"
-    },
-    "asr": {
-      "provider": "web-speech",
-      "language": "en-US"
-    },
-    "tts": {
-      "provider": "mimo",
-      "streaming": true,
-      "sentenceLevel": true
-    }
-  },
-  "permissions": {
-    "defaultPolicy": "confirm",
-    "rules": [
-      {
-        "tool": "filesystem:read",
-        "policy": "allow"
-      }
-    ]
-  },
-  "daemon": {
-    "port": 3001
-  },
-  "runtime": {
-    "skills": {
+  "version": 1,
+  "activeProvider": "mimo",
+  "activeModel": "mimo-v2.5-pro",
+  "providers": [
+    {
+      "id": "mimo",
+      "name": "MiMo",
+      "type": "openai_compatible",
+      "baseURL": "https://token-plan-ams.xiaomimimo.com/v1",
       "enabled": true
     }
+  ],
+  "routingRules": [],
+  "defaults": {
+    "temperature": 0.7,
+    "maxTokens": 4096,
+    "maxSteps": 20,
+    "streamTimeout": 120000,
+    "turnTimeout": 180000,
+    "memoryMinScore": 0.3
+  },
+  "adjudication": {
+    "enabled": false,
+    "maxRetries": 1
+  },
+  "tick": {
+    "enabled": true,
+    "intervalMinutes": 30
   }
 }
 ```
 
+| フィールド | 意味 |
+|-----------|------|
+| `version` | `1` であること |
+| `activeProvider` / `activeModel` | 既定のルーティング先 |
+| `providers[]` | `id`、`name`、`type`（`openai_compatible` または `ollama`）、`baseURL`、`enabled` |
+| `routingRules[]` | `taskType` → `modelId`、任意の `conditions` |
+| `defaults` | サンプリング、ステップ予算、タイムアウト、記憶スコア下限 |
+| `adjudication` | 敵対的ジャッジ：`enabled`（既定 `false`）、`maxRetries`（0–5） |
+| `tick` | 定期的な自律 tick：`enabled`、`intervalMinutes`（5–240）、任意のモデル/プロバイダー |
+
+制約：`maxSteps` は最大 100、`turnTimeout` はモデルに関係なくターンを制約します。
+
+## `storage.json`
+
+```json
+{
+  "storageMode": "local",
+  "dbConfig": {
+    "supabaseUrl": "https://your-project.supabase.co",
+    "supabaseServiceKey": "…",
+    "postgresUrl": "postgresql://user:pass@host:5432/corelayer"
+  }
+}
+```
+
+詳細は [ストレージ](/docs/configuration/storage) を参照。
+
+## `mcp-servers.json`
+
+```json
+{
+  "version": 1,
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "enabled": true,
+      "permissions": { "read": true, "write": true, "delete": false, "bulkWrite": false },
+      "riskPolicy": { "low": "auto", "medium": "notify", "high": "confirm", "critical": "deny" }
+    }
+  ]
+}
+```
+
+詳細は [MCP サーバー](/docs/configuration/mcp-servers) を参照。
+
 ## 環境変数
 
-設定ファイルで`${ENV_VAR_NAME}`構文を使用して環境変数を参照できます。
+プロバイダーキーは環境変数 → `credentials.json` → なしの順で解決されます。プロバイダーごとの認識名：
+
+| プロバイダー | API キー | base URL |
+|-------------|----------|----------|
+| `deepseek` | `DEEPSEEK_API_KEY` | `DEEPSEEK_BASE_URL`、`DEEPSEEK_API_BASE` |
+| `openai` | `OPENAI_API_KEY` | `OPENAI_BASE_URL`、`OPENAI_API_BASE_URL` |
+| `anthropic` | `ANTHROPIC_API_KEY`、`ANTHROPIC_AUTH_TOKEN` | `ANTHROPIC_BASE_URL` |
+| `gemini` | `GEMINI_API_KEY`、`GOOGLE_API_KEY` | `GEMINI_BASE_URL` |
+| `groq` | `GROQ_API_KEY` | `GROQ_BASE_URL` |
+| `mimo` | `MIMO_API_KEY`、`XIAOMI_API_KEY` | `MIMO_API_URL`、`XIAOMI_API_URL` |
+| `qwen` | `DASHSCOPE_API_KEY`、`QWEN_API_KEY` | — |
+| `ollama` | —（ローカル） | `OLLAMA_BASE_URL`、`OLLAMA_HOST` |
+
+その他：`DATABASE_URL`、`STORAGE_MODE`、`JARVIS_HOME`、`JARVIS_RUNTIME_MODE`、`DAEMON_PORT`。
 
 ## 検証
 
-CoreLayerは起動時に設定ファイルを検証します。無効な設定はコントロールセンターにエラーとして表示されます。
+`config.json` は読み込み時に検証されます。不正な値は既定値にフォールバックし警告を記録します。ファイルは上書きされません。
+
+## 削除されたフィールド
+
+古い文書は `config.json` の `models`、`mcp`、`storage`、`voice`、`permissions`、`daemon`、`runtime` セクションと `${ENV_VAR}` 置換を説明していましたが、いずれも読まれません。プロバイダー資格情報は上記の解決チェーン、ストレージモードは `storage.json`、MCP サーバーは `mcp-servers.json`、権限は現在設定不可です。
 
 ## 次のステップ
 
-- [CLIコマンド](/docs/reference/cli-commands) — コマンドラインインターフェース
-- [APIエンドポイント](/docs/reference/api-endpoints) — デーモンHTTP API
+- [モデルプロバイダー](/docs/configuration/model-providers) — プロバイダー設定
+- [ストレージ](/docs/configuration/storage) — ストレージバックエンド
+- [API エンドポイント](/docs/reference/api-endpoints) — HTTP 面

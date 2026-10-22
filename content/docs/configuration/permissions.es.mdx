@@ -1,81 +1,104 @@
 ---
 title: Permisos
-description: Configura el permission guard para la ejecucion de herramientas.
+description: Configura la politica de riesgo del Permission Guard y las anulaciones por app.
 ---
 
-El Permission Guard controla cuales llamadas a herramientas requieren aprobacion, cuales se permiten automaticamente y cuales se bloquean.
+El Permission Guard decide, para cada tool call, si ejecutarla, notificarla, preguntarte o negarse. La decision es una funcion pura del riesgo declarado de la herramienta y de la politica.
 
-## Niveles de Permiso
+## Riesgo → accion
 
-| Nivel | Comportamiento |
-|-------|----------------|
-| **Lectura** | Permitido automaticamente (leer archivos, listar datos) |
-| **Escritura** | Requiere aprobacion (escribir archivos, modificar datos) |
-| **Externo** | Requiere aprobacion (llamadas API, solicitudes de red) |
-| **Destructivo** | Requiere aprobacion con advertencia (eliminar datos) |
-| **Sensible a credenciales** | Siempre bloqueado salvo que se permita explicitamente |
+| Riesgo | Accion por defecto |
+|--------|--------------------|
+| `low` | `auto` — ejecutar en silencio |
+| `medium` | `notify` — ejecutar y notificar |
+| `high` | `confirm` — suspender hasta tu decision |
+| `critical` | `deny` — negar |
 
-## Configuracion
+## Politica por defecto
 
-```json
-{
-  "permissions": {
-    "defaultPolicy": "confirm",
-    "rules": [
-      {
-        "tool": "filesystem:read",
-        "policy": "allow"
-      },
-      {
-        "tool": "filesystem:write",
-        "policy": "confirm"
-      },
-      {
-        "tool": "github:*",
-        "policy": "confirm"
-      },
-      {
-        "tool": "shell:execute",
-        "policy": "deny"
-      }
-    ]
-  }
+```ts
+defaultPolicy: {
+  low: "auto",
+  medium: "notify",
+  high: "confirm",
+  critical: "deny",
 }
 ```
 
-## Politicas
+Es la politica con la que corre el daemon. El mapeo se define en `@jarvis/permission-guard` y se aplica a cada tool call.
 
-| Politica | Efecto |
-|----------|--------|
-| `allow` | Ejecutar sin preguntar |
-| `confirm` | Pausar y pedir aprobacion del usuario |
-| `deny` | Bloquear la ejecucion por completo |
+**Aun no es configurable por el usuario.** El guard se construye con sus valores por defecto y `config.json` no tiene seccion de permisos: una version anterior de este documento describia un array `permissions.rules` que no existe. No lo agregues esperando que tenga efecto.
 
-## Flujo de Aprobacion
+## Anulaciones por app
 
-Cuando una llamada a herramienta requiere confirmacion:
+El guard soporta anulaciones por app en su forma de configuracion:
 
-1. Jarvis explica que quiere hacer
-2. El panel de aprobacion muestra el nombre de la herramienta, los parametros y el nivel de riesgo
-3. Puedes **Aprobar**, **Denegar** o **Aprobar Siempre** (para esta herramienta)
-4. Todas las decisiones se registran en el registro de auditoria
-
-## Registros de Auditoria
-
-Cada ejecucion de herramienta se registra:
-
-```text
-[2026-06-15 14:32:01] filesystem:write /workspace/README.md
-  Riesgo: write
-  Politica: confirm
-  Decision: approved
-  Usuario: aprobacion manual
+```ts
+appPermissions: {
+  "filesystem": { write: true,  execute: false },
+  "untrusted-mcp": { write: false, execute: false },
+}
 ```
 
-Consulta los registros de auditoria en **Centro de Control → Permisos → Registro de Auditoria**.
+Como se mapea cada flag:
 
-## Siguientes Pasos
+| Riesgo | `write: true` | `write: false` |
+|--------|---------------|----------------|
+| `medium` | `notify` | `confirm` |
+| `high` | `confirm` | `deny` |
 
-- [Permission Guard](/docs/core-concepts/permission-guard) — profundiza en el modelo de seguridad
-- [Revisar Registros de Auditoria](/docs/guides/review-audit-logs) — trabajar con el registro de auditoria
-- [Modelo de Seguridad](/docs/architecture/security-model) — detalles de arquitectura
+| Riesgo | `execute: true` | `execute: false` |
+|--------|-----------------|------------------|
+| `critical` | `confirm` | `deny` |
+
+`low` siempre es `auto`.
+
+Las anulaciones se evaluan cuando estan presentes, pero nada en el daemon las lee del disco actualmente, asi que solo aplican al codigo que construye el guard con ellas.
+
+## Modo voz
+
+La ejecucion por voz es mas estricta con independencia del riesgo: las acciones de solo lectura se aprueban automaticamente, todo lo demas requiere confirmacion. Una peticion hablada es mas facil de disparar por accidente que una escrita.
+
+## Solicitudes de aprobacion
+
+Cuando la accion es `confirm`, el guard no mantiene la decision en memoria:
+
+1. Se persiste una `approval_request` con digest de accion, riesgo, alcance y expiracion
+2. Se suspende la ejecucion
+3. La UI muestra la solicitud: aprobar, denegar o recordar
+4. La decision reanuda o falla la ejecucion
+
+Endpoints:
+
+```text
+GET  /api/approvals
+GET  /api/approvals/:id
+POST /api/approvals/:id/approve
+POST /api/approvals/:id/deny
+POST /api/approvals/:id/remember
+POST /api/approvals/batch/approve
+POST /api/approvals/batch/deny
+POST /api/approvals/expire-stale
+```
+
+"Esta solicitud esta obsoleta" es un estado real: las colas sin atencion acumulan solicitudes que nadie respondio, y `expire-stale` las cierra en lugar de dejar ejecuciones suspendidas para siempre.
+
+## Memorias de permiso
+
+"Recordar" guarda una decision contra el digest de la accion — la accion concreta, no el nombre de la herramienta. La misma accion no se pregunta de nuevo; una ruta, comando o conjunto de parametros distinto produce otro digest y se pregunta.
+
+## Auditoria
+
+Cada decision se escribe en `audit_log` y se consulta:
+
+```text
+GET /api/audit?actor=jarvis&action=tool.execute&riskLevel=high&since=2026-10-01T00:00:00Z&limit=50
+```
+
+Una entrada registra `actor`, `action`, `resource`, `riskLevel`, `permissionDecision`, `confirmedByUser`, `result`, `metadata` y `createdAt`.
+
+## Siguientes pasos
+
+- [Permission Guard](/docs/core-concepts/permission-guard) — el modelo detras de la politica
+- [Modelo de Seguridad](/docs/architecture/security-model) — capas de aplicacion
+- [Revisar la Auditoria](/docs/guides/review-audit-logs) — trabajar con los logs

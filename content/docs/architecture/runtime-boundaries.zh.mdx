@@ -1,66 +1,64 @@
 ---
 title: 运行时边界
-description: CoreLayer 如何隔离组件以确保安全和可靠性。
+description: 跨越每个边界的究竟是什么，以及每个层被允许做什么。
 ---
 
-CoreLayer 在组件之间实施严格的边界，以确保安全性、可靠性和可维护性。
+CoreLayer 将界面、桌面外壳、守护进程与外部进程相互隔离，使某一层的故障无法悄悄升级成另一层的问题。
 
 ## 边界模型
 
 ```text
-前端（浏览器/Webview）
-  ║ Tauri IPC（类型化、序列化）
-  ╚═► Rust 后端
-      ║ HTTP（仅限本地主机）
-      ╚═► Node.js 守护进程
-          ║ SDK 接口
-          ╚═► 共享包
+Webview UI（React）
+  ║ Tauri IPC —— 仅限显式注册的命令
+  ╚═► Tauri 外壳（Rust）
+      ║ HTTP —— 仅限回环
+      ╚═► Node.js 守护进程（Hono）
+          ║ 进程内模块调用（public-api 模块）
+          ╠═► 共享包
+          ║ 子进程 / 网络
+          ╠═► ACP 执行器进程（Claude Code、Codex、OpenCode）
+          ╠═► MCP 服务器（stdio 子进程或 HTTP/SSE）
+          ╚═► 数据库（SQLite 文件、Supabase、PostgreSQL）
 ```
 
-每个边界强制执行：
+## 跨边界规则
 
-- **类型安全** — 层与层之间使用类型化接口
-- **隔离** — 组件不能直接访问彼此的内部实现
-- **通信协议** — 仅通过定义良好的 API
+| 边界 | 规则 |
+|------|------|
+| UI → Tauri | 仅限注册命令；不直接访问文件系统或网络 |
+| Tauri → 守护进程 | 回环 HTTP；端口在启动时确定并由 `/api/runtime/status` 上报 |
+| 守护进程 → 包 | 经各运行时 `public-api.ts` 导入，禁止直接进入内部模块 |
+| 守护进程 → 执行器 | 在 git worktree 中的子进程，绑定模型/执行器并受收窄后的边界约束 |
+| 守护进程 → MCP 服务器 | stdio 子进程或远程 HTTP/SSE；上报的每个工具都注册并标注风险 |
+| 守护进程 → 数据库 | 只经仓储层；路由不直接查询数据库 |
 
-## 前端 ↔ Rust
+其中一条由机器强制：若某个 HTTP 路由绕过 `public-api.ts` 直接访问运行时内部，导入边界测试会让构建失败。
 
-通信使用 Tauri 的 IPC 机制：
+## UI ↔ Tauri
 
-- 命令是类型化的（TypeScript ↔ Rust）
-- 序列化为 JSON
-- 默认异步
+- 两端都有类型（TypeScript ↔ Rust 结构体）
+- 载荷为 JSON
+- 调用异步；界面不会阻塞等待守护进程启动
 
-## Rust ↔ 守护进程
+## Tauri ↔ 守护进程
 
-通信使用 HTTP：
+- HTTP，仅限回环。`/api/runtime/shutdown` 还会拒绝非回环对端。
+- 流式对话与运行进度使用 SSE。
+- 外壳掌管守护进程生命周期：启动、健康检查、崩溃重启、退出时终止。
 
-- 仅限本地主机（不暴露到网络）
-- RESTful 端点
-- 流式响应（SSE）用于聊天
+## 守护进程 ↔ 执行器
 
-## 守护进程 ↔ 包
+编码工作不在守护进程内执行。coding 运行时通过适配器（见 [编码执行器适配器](/docs/guides/coding-executors)）在隔离的 git worktree 中启动外部 Agent，只回读结构化事件、产物与 diff。子进程能做什么在派发时就由[委派边界](/docs/architecture/executor-governance#delegation-bounds)固定，子进程无法自行放宽。
 
-通信使用 TypeScript 导入：
+## 为什么重要
 
-- 直接函数调用
-- 共享类型定义
-- 包边界由模块系统强制执行
-
-## 守护进程 ↔ 外部服务
-
-- **AI 提供商** — 通过 HTTPS 连接云端 API
-- **MCP 服务器** — stdio 或 SSE 协议
-- **数据库** — 原生驱动（better-sqlite3、pg）
-
-## 为什么边界很重要
-
-- **安全** — 被入侵的前端不能直接访问数据库
-- **可靠性** — 守护进程崩溃不会导致前端瘫痪
-- **可测试性** — 每一层都可以独立测试
-- **可替换性** — 可以在不更改其他层的情况下更换存储或模型提供商
+- **隔离** — 行为异常的执行器只能破坏自己的工作区
+- **可归因** — 每次状态变化都有 run id、操作者与审计记录
+- **可替换** — 供应商、执行器或存储后端可独立替换
+- **可测试** — 边界由测试强制，而不只靠约定
 
 ## 下一步
 
-- [系统概览](/docs/architecture/system-overview) — 完整架构
-- [安全模型](/docs/architecture/security-model) — 安全细节
+- [安全模型](/docs/architecture/security-model) — 各层强制机制详解
+- [执行器治理](/docs/architecture/executor-governance) — 编码 Agent 的约束
+- [系统概览](/docs/architecture/system-overview) — 完整拓扑

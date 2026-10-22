@@ -1,98 +1,86 @@
 ---
 title: Almacenamiento
-description: "Configura los modos de almacenamiento de datos: SQLite local, Supabase o PostgreSQL."
+description: Donde CoreLayer guarda el estado y como cambiar entre SQLite, Supabase y PostgreSQL.
 ---
 
-CoreLayer admite tres backends de almacenamiento que pueden intercambiarse en caliente durante la ejecucion.
+CoreLayer guarda el estado localmente por defecto y puede correr contra Supabase o un PostgreSQL propio. El modo de almacenamiento se elige al arrancar, no por peticion.
 
-## Modos de Almacenamiento
+## Modos de almacenamiento
 
-| Modo | Descripcion | Caso de Uso |
-|------|-------------|-------------|
-| **SQLite** | Base de datos de archivo local (por defecto) | Uso personal, local primero |
-| **Supabase** | PostgreSQL en la nube con sincronizacion en tiempo real | Sincronizacion multi-dispositivo |
-| **PostgreSQL** | PostgreSQL autoalojado | Uso en equipo/empresa |
+| Modo | Valor | Descripcion |
+|------|-------|-------------|
+| SQLite | `local` (por defecto) | Base de datos en archivo, sin configuracion |
+| Supabase | `cloud` | PostgreSQL en la nube, tu propio proyecto |
+| PostgreSQL | `postgres` | PostgreSQL autogestionado |
 
-## SQLite (Por Defecto)
-
-SQLite es el modo de almacenamiento por defecto. Los datos se almacenan localmente en un archivo `.db`:
+El modo vive en su propio archivo, `storage.json`, junto a `config.json` en la zona de configuracion:
 
 ```json
 {
-  "storage": {
-    "mode": "sqlite",
-    "path": "~/.corelayer/data.db"
+  "storageMode": "local",
+  "dbConfig": {
+    "supabaseUrl": "https://your-project.supabase.co",
+    "supabaseServiceKey": "…",
+    "postgresUrl": "postgresql://user:pass@host:5432/corelayer"
   }
 }
 ```
 
-No requiere dependencias externas. Funciona completamente sin conexion.
+`dbConfig` solo se requiere para los modos cloud y postgres. La variable de entorno `DATABASE_URL` tambien se respeta para PostgreSQL.
 
-## Supabase
+El cambio se hace en **Ajustes → Almacenamiento**, que escribe este archivo. El nuevo modo se aplica tras reiniciar el daemon; no es un hot-swap en vivo.
 
-Conecta a Supabase para sincronizacion en la nube:
+## Diseno en disco
 
-```json
-{
-  "storage": {
-    "mode": "supabase",
-    "url": "https://your-project.supabase.co",
-    "anonKey": "eyJ..."
-  }
-}
+El estado local se divide en seis zonas bajo el directorio home de CoreLayer (`JARVIS_HOME` lo mueve; el valor por defecto en escritorio es `~/.jarvis`):
+
+```text
+~/.jarvis/
+├── config/      config.json · routing.json          (sin secretos)
+├── security/    credentials.json                     (0600 en POSIX)
+├── memory/      USER.md · MEMORY.md · journal/ · dreams/
+├── storage/     jarvis.db
+├── worktrees/   active/ · snapshots/
+└── cache/       symbol-graph/ · mcp-schemas/ · delegation-pipes/
 ```
 
-Configura Supabase:
-1. Crea un proyecto en [supabase.com](https://supabase.com)
-2. Ejecuta los scripts de migracion de CoreLayer
-3. Aniade la URL de tu proyecto y la clave anon
+Las credenciales se leen de `security/credentials.json`; un `config/credentials.json` heredado se sigue respetando si la nueva ubicacion no existe.
 
-## PostgreSQL
+En modo sidecar el shell puede sobrescribir la raiz con `JARVIS_APP_DATA_DIR`, `JARVIS_LOG_DIR` y `SQLITE_DB_PATH`.
 
-Conecta a una instancia de PostgreSQL autoalojada:
+### Excepciones conocidas
 
-```json
-{
-  "storage": {
-    "mode": "postgres",
-    "connectionString": "postgresql://user:pass@localhost:5432/corelayer"
-  }
-}
-```
+Dos archivos aun se resuelven en ubicaciones heredadas en lugar del layout de seis zonas:
 
-## Cambio en Caliente
+- `mcp-servers.json` se lee de `~/.jarvis/config/mcp-servers.json`
+- la ruta de SQLite sigue la resolucion de app-paths (`data/jarvis.db` salvo que se defina `SQLITE_DB_PATH`)
 
-Puedes cambiar los modos de almacenamiento en tiempo real desde el Centro de Control:
+Ambos se documentan como excepciones en lugar de describirse silenciosamente como parte del nuevo layout.
 
-1. Abre **Ajustes → Almacenamiento**
-2. Selecciona el nuevo modo
-3. Introduce los detalles de conexion
-4. Haz clic en **Cambiar**
+## Esquema
 
-CoreLayer migrara los datos entre modos automaticamente.
+La base de datos se gestiona con migraciones de Drizzle.
 
-## Esquema de Datos (Data Schema)
+| Grupo | Tablas |
+|-------|--------|
+| Estructura de trabajo | `workspaces`, `workspace_agents`, `projects`, `agent_profiles`, `tasks`, `artifacts`, `goals`, `plans` |
+| Ejecucion | `agent_runs`, `agent_run_events`, `executor_runs`, `execution_logs`, `environment_sessions`, `environment_events` |
+| Gobernanza | `approval_requests`, `permission_memories`, `capability_grants`, `pending_actions`, `tool_call_logs`, `audit_log`, `event_log` |
+| Conversacion | `conversations`, `messages` |
+| Conocimiento | `memories`, `articles`, `reviews` |
+| Configuracion | `app_connections`, `model_profiles`, `scheduled_tasks` |
+| Canales | `channel_accounts`, `channel_conversations`, `channel_messages` |
 
-CoreLayer utiliza un esquema de base de datos local-first altamente estructurado, que almacena las siguientes entidades principales:
+## Elegir un backend
 
-*   **workspaces** — espacios de trabajo de nivel superior que gestionan objetivos, desglose de tareas y estado de ejecución
-*   **projects** — carpetas de proyectos específicas dentro de los espacios de trabajo, incluidos specs, stacks tecnológicos y rutas raíz locales
-*   **tasks** — nodos de tareas que forman el gráfico de dependencias para la ejecución
-*   **artifacts** — entregables finales valiosos, separando los archivos/informes del ruido de la terminal y los logs
-*   **agent_runs** — sesiones de ejecución individuales de agentes, rastreando estados, latencia, enrutamiento y registros
-*   **approval_requests** — acciones de alto riesgo pendientes que esperan la decisión de aprobación manual del usuario
-*   **permission_memories** — almacenamiento en caché temporal de decisiones para evitar ventanas emergentes de permisos repetitivas
-*   **conversations** / **messages** — historiales de conversaciones de chat y registros de mensajes individuales
-*   **tool_call_logs** — registros de auditoría que capturan duración, argumentos, niveles de riesgo y resultados
-*   **app_connections** — servidores MCP locales o remotos configurados y conexiones de aplicaciones
-*   **model_profiles** — configuraciones de gateway de modelos y endpoints de proveedores
-*   **memories** — recuerdos a largo plazo de Jarvis (hechos, preferencias, contexto, fijados)
-*   **scheduled_tasks** — cron jobs que activan tareas automatizadas y habilidades
-*   **environment_sessions** / **environment_events** — contenedores de sandbox aislados y flujos de eventos
-*   **articles** — entradas de listas de lectura
-*   **reviews** — resúmenes de revisión diarios/semanales
+- **SQLite** — una maquina, offline, consultas mas rapidas. Por defecto.
+- **Supabase** — varios dispositivos y backups gestionados; el proyecto y sus politicas son tuyos.
+- **PostgreSQL** — ya operas una base de datos y no quieres otro plano de control.
 
-## Siguientes Pasos
+No hay replicacion en segundo plano entre backends: cambiar de modo significa que el daemon lee y escribe el backend elegido.
 
-- [Permission Guard](/docs/core-concepts/permission-guard) — como se controla el acceso a datos
-- [Modelo de Seguridad](/docs/architecture/security-model) — detalles de seguridad del almacenamiento
+## Siguientes pasos
+
+- [Modelo de Seguridad](/docs/architecture/security-model) — que es sensible y donde esta
+- [Archivo de Configuracion](/docs/reference/config-file) — la referencia completa
+- [Permisos](/docs/configuration/permissions) — configuracion de politicas

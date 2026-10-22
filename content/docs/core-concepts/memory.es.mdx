@@ -1,0 +1,48 @@
+---
+title: Memoria
+description: Como CoreLayer guarda lo que Jarvis recuerda y por que una escritura a mitad de turno no corrompe el turno.
+---
+
+La memoria de CoreLayer es explicita. No hay estado oculto: lo que el modelo recuerda es lo que se escribio en disco o en la base de datos, y las partes mas importantes puedes leerlas y editarlas a mano.
+
+## Capas
+
+| Capa | Ubicacion | Contenido |
+|------|-----------|-----------|
+| **Perfil** | `memory/USER.md` | Quien eres y las restricciones duras |
+| **Hechos de largo plazo** | `memory/MEMORY.md` | Hechos y preferencias duraderos |
+| **Memorias estructuradas** | tabla `memories` | Entradas `fact` / `preference` / `context` con clave, buscables y puntuadas |
+| **Diario** | `memory/journal/` | Directorio reservado para notas diarias (se crea al arrancar; aun sin escritor) |
+| **Reflexiones** | `memory/dreams/` | Directorio reservado para reflexiones (se crea al arrancar; el bucle esta apagado por defecto) |
+
+## Snapshots congelados
+
+Al inicio de un turno, `USER.md` y `MEMORY.md` se leen en un snapshot inmutable que se coloca en el prefijo del prompt. Una escritura a mitad de turno — un agente guardando un hecho, o tu editando el archivo — actualiza disco e indice inmediatamente, pero **no muta el prefijo del turno activo**.
+
+Es una regla de correccion y de coste a la vez: un prefijo que cambia a mitad de turno invalida la cache de prompt del proveedor en cada paso. Congelarlo mantiene la cache caliente y hace reproducible el contexto del turno.
+
+## Recuperacion
+
+Las memorias estructuradas se recuperan por puntuacion, con un minimo configurable (`defaults.memoryMinScore`, por defecto `0.3`). Por debajo del minimo no se inyectan; inyectar coincidencias debiles gasta contexto y distrae al modelo.
+
+La inyeccion se rastrea: cada memoria registra cuando se inyecto por ultima vez, asi una entrada frecuente no desplaza a todas las demas turno tras turno.
+
+## Escribir memoria
+
+| Herramienta | Riesgo | Nota |
+|-------------|--------|------|
+| `memory_store` | `medium` | Una memoria guardada se reinyecta en cada prompt posterior: es influencia persistente, no un registro inerte |
+| `memory_search` / `memory_list` | `low` | Rutas de lectura |
+| `memory_delete` | `high` | Destructiva; requiere confirmacion |
+
+El `medium` de `memory_store` es deliberado: una entrada envenenada sobrevive a la conversacion que la creo.
+
+## Direccionamiento por clave
+
+Las memorias se direccionan por `key` (corta y estable, por ejemplo `coding_style`). Volver a guardar la misma clave actualiza la entrada en lugar de duplicarla, lo que hace `memory_store` idempotente entre ejecuciones.
+
+## Siguientes pasos
+
+- [Jarvis](/docs/core-concepts/jarvis) — como se usa la memoria en un turno
+- [Almacenamiento](/docs/configuration/storage) — donde viven archivos y tablas
+- [Evaluacion de Fiabilidad](/docs/architecture/reliability-eval) — medir si los cambios de memoria ayudan

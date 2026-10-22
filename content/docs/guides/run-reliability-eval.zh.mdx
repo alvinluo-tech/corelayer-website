@@ -1,0 +1,76 @@
+---
+title: 运行可靠性评测
+description: 度量对编码 Agent 的改动是否真的让它变好。
+---
+
+一次成功运行说明不了任何问题。本指南运行评测框架，用多次尝试的一致性来判断提示词、策略或适配器的改动。
+
+## 前置条件
+
+- 健康的模型网关。执行器经 ACP 运行，因此它使用的变量同样适用：
+  - `ANTHROPIC_MODEL` — 必须是 DeepSeek 模型
+  - `ANTHROPIC_BASE_URL`
+  - `ANTHROPIC_AUTH_TOKEN`
+- 已安装 `acpx`
+- 在 `daemon/` 目录下运行
+
+## 基线运行
+
+```powershell
+cd daemon
+$env:ANTHROPIC_MODEL='deepseek-v4.1-flash'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+```
+
+每次尝试都会获得一个全新的临时 git 仓库，已播种任务文件与一个空提交，因此任务之间不会互相污染，“什么都不改”这类任务才有意义。
+
+请读 `pass^k` 而不是平均值：`pass^3` 表示在每一次尝试中都成功的任务比例。
+
+## 对行为改动做 A/B
+
+```powershell
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/holdout.json --k 3 --compare JARVIS_REFLECTION=1
+```
+
+它把语料跑两遍——变量未设置、再设置——并给出配对结论：
+
+| 结论 | 解读 |
+|------|------|
+| `improved` | 总体超过容差，且没有任何任务退步 |
+| `regressed` | 总体下降 |
+| `mixed` | 均值上升但有任务失去可靠性——**不是**改进 |
+| `unchanged` | 全部落在容差带内 |
+
+## 决策
+
+只有以下四条全部满足，才把改动提升为默认：
+
+1. 结论为 `improved`
+2. `lostReliability` 为空
+3. `tokensPerSuccess` 上升不超过约 20%
+4. 复跑一次仍满足 1–3
+
+否则保持默认关闭。
+
+## 解读失败
+
+| 症状 | 可能原因 |
+|------|----------|
+| 连续大量 `timed-out` | 网关抖动；ACP 会挂到预算耗尽而不是快速失败 |
+| `VOID` 尝试 | 环境故障（配额、连接被拒、5xx）——按设计不计入比率 |
+| 假阳性 | 执行器声称成功但检查失败；该任务的完成证据太弱 |
+| 假阴性 | 检查失败而 Agent 自报失败；检查任务定义 |
+| `--compare` 出现 `mixed` | 某个任务退步但均值上升——聚合门槛看不见的情况 |
+
+## 添加任务
+
+优先使用确定性脚本可判定的检查。当内容比较困难（格式、顺序、散文）时，播种一个 `check.js` 并用 `command` 检查评分。检查类型有 `file-exists`、`file-missing`、`file-contains`、`file-unchanged` 与 `command`；`file-unchanged` 比较摘要，这是检验“别动其他东西”的唯一方式。
+
+## 下一步
+
+- [可靠性评测](/docs/architecture/reliability-eval) — 指标详解
+- [编码执行器适配器](/docs/guides/coding-executors) — 配置被测执行器
+- [故障排除](/docs/reference/troubleshooting) — 网关与超时症状

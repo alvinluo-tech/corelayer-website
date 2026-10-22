@@ -1,91 +1,134 @@
 ---
 title: Archivo de Configuracion
-description: Referencia del archivo de configuracion de CoreLayer.
+description: Referencia de los archivos que CoreLayer lee realmente al arrancar.
 ---
 
-CoreLayer usa un archivo de configuracion JSON para ajustes del sistema.
+CoreLayer no usa un unico archivo de configuracion. Los ajustes se dividen por sensibilidad para que la configuracion sin secretos pueda sincronizarse o compartirse mientras las credenciales quedan protegidas.
 
-## Ubicacion
+## Archivos
 
-| Plataforma | Ruta |
-|------------|------|
-| Windows | `%APPDATA%/corelayer/config.json` |
-| macOS | `~/Library/Application Support/corelayer/config.json` |
-| Linux | `~/.config/corelayer/config.json` |
+| Archivo | Ubicacion | Contenido |
+|---------|-----------|-----------|
+| `config.json` | `~/.jarvis/config/` | Lista de proveedores, modelo activo, reglas de enrutado, valores por defecto, adjudication, tick |
+| `routing.json` | `~/.jarvis/config/` | Ruta reservada; las reglas de enrutado viven hoy en `config.json` (`routingRules`) y nada lee este archivo aun |
+| `credentials.json` | `~/.jarvis/security/` | Claves API por proveedor (`0600` en POSIX; se sigue leyendo el heredado `config/credentials.json`) |
+| `mcp-servers.json` | `~/.jarvis/config/` | Definiciones de servidores MCP |
+| `storage.json` | `~/.jarvis/config/` | Modo de almacenamiento y credenciales de base de datos |
 
-## Referencia Completa
+`JARVIS_HOME` mueve todo el arbol. En modo sidecar el shell puede definir `JARVIS_APP_DATA_DIR`, `JARVIS_LOG_DIR` y `SQLITE_DB_PATH`.
+
+## `config.json`
 
 ```json
 {
-  "models": {
-    "providers": [
-      {
-        "name": "groq",
-        "type": "groq",
-        "apiKey": "${GROQ_API_KEY}",
-        "defaultModel": "llama-3.3-70b-versatile"
-      }
-    ]
-  },
-  "mcp": {
-    "servers": [
-      {
-        "name": "filesystem",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-        "env": {}
-      }
-    ]
-  },
-  "storage": {
-    "mode": "sqlite",
-    "path": "~/.corelayer/data.db"
-  },
-  "voice": {
-    "enabled": true,
-    "wakeWord": {
-      "enabled": true,
-      "keyword": "jarvis"
-    },
-    "asr": {
-      "provider": "web-speech",
-      "language": "en-US"
-    },
-    "tts": {
-      "provider": "mimo",
-      "streaming": true,
-      "sentenceLevel": true
-    }
-  },
-  "permissions": {
-    "defaultPolicy": "confirm",
-    "rules": [
-      {
-        "tool": "filesystem:read",
-        "policy": "allow"
-      }
-    ]
-  },
-  "daemon": {
-    "port": 3001
-  },
-  "runtime": {
-    "skills": {
+  "version": 1,
+  "activeProvider": "mimo",
+  "activeModel": "mimo-v2.5-pro",
+  "providers": [
+    {
+      "id": "mimo",
+      "name": "MiMo",
+      "type": "openai_compatible",
+      "baseURL": "https://token-plan-ams.xiaomimimo.com/v1",
       "enabled": true
     }
+  ],
+  "routingRules": [],
+  "defaults": {
+    "temperature": 0.7,
+    "maxTokens": 4096,
+    "maxSteps": 20,
+    "streamTimeout": 120000,
+    "turnTimeout": 180000,
+    "memoryMinScore": 0.3
+  },
+  "adjudication": {
+    "enabled": false,
+    "maxRetries": 1
+  },
+  "tick": {
+    "enabled": true,
+    "intervalMinutes": 30
   }
 }
 ```
 
-## Variables de Entorno
+| Campo | Significado |
+|-------|-------------|
+| `version` | Debe ser `1` |
+| `activeProvider` / `activeModel` | Destino de enrutado por defecto |
+| `providers[]` | `id`, `name`, `type` (`openai_compatible` u `ollama`), `baseURL`, `enabled` |
+| `routingRules[]` | `taskType` → `modelId`, con `conditions` opcionales |
+| `defaults` | muestreo, presupuesto de pasos, timeouts, minimo de score de memoria |
+| `adjudication` | Juez adversarial: `enabled` (por defecto `false`), `maxRetries` (0–5) |
+| `tick` | Tick autonomo periodico: `enabled`, `intervalMinutes` (5–240), modelo/proveedor opcionales |
 
-Usa la sintaxis `${ENV_VAR_NAME}` para referenciar variables de entorno en el archivo de configuracion.
+Restriccion: `maxSteps` esta limitado a 100 y `turnTimeout` acota el turno con independencia del modelo.
+
+## `storage.json`
+
+```json
+{
+  "storageMode": "local",
+  "dbConfig": {
+    "supabaseUrl": "https://your-project.supabase.co",
+    "supabaseServiceKey": "…",
+    "postgresUrl": "postgresql://user:pass@host:5432/corelayer"
+  }
+}
+```
+
+Ver [Almacenamiento](/docs/configuration/storage).
+
+## `mcp-servers.json`
+
+```json
+{
+  "version": 1,
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "enabled": true,
+      "permissions": { "read": true, "write": true, "delete": false, "bulkWrite": false },
+      "riskPolicy": { "low": "auto", "medium": "notify", "high": "confirm", "critical": "deny" }
+    }
+  ]
+}
+```
+
+Ver [Servidores MCP](/docs/configuration/mcp-servers).
+
+## Variables de entorno
+
+Las claves de proveedor se resuelven primero del entorno, luego de `credentials.json` y, si no hay, nada. Nombres reconocidos por proveedor:
+
+| Proveedor | Clave API | Base URL |
+|-----------|-----------|----------|
+| `deepseek` | `DEEPSEEK_API_KEY` | `DEEPSEEK_BASE_URL`, `DEEPSEEK_API_BASE` |
+| `openai` | `OPENAI_API_KEY` | `OPENAI_BASE_URL`, `OPENAI_API_BASE_URL` |
+| `anthropic` | `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` | `ANTHROPIC_BASE_URL` |
+| `gemini` | `GEMINI_API_KEY`, `GOOGLE_API_KEY` | `GEMINI_BASE_URL` |
+| `groq` | `GROQ_API_KEY` | `GROQ_BASE_URL` |
+| `mimo` | `MIMO_API_KEY`, `XIAOMI_API_KEY` | `MIMO_API_URL`, `XIAOMI_API_URL` |
+| `qwen` | `DASHSCOPE_API_KEY`, `QWEN_API_KEY` | — |
+| `ollama` | — (local) | `OLLAMA_BASE_URL`, `OLLAMA_HOST` |
+
+Otras: `DATABASE_URL`, `STORAGE_MODE`, `JARVIS_HOME`, `JARVIS_RUNTIME_MODE`, `DAEMON_PORT`.
 
 ## Validacion
 
-CoreLayer valida el archivo de configuracion al inicio. Las configuraciones invalidas mostraran un error en el Centro de Control.
+`config.json` se valida al leerlo. Los valores invalidos vuelven a los defaults y se registra una advertencia; el archivo no se sobrescribe.
 
-## Siguientes Pasos
+## Campos eliminados
 
-- [Comandos CLI](/docs/reference/cli-commands) — interfaz de linea de comandos
-- [Endpoints API](/docs/reference/api-endpoints) — HTTP API del daemon
+Documentacion anterior describia secciones `models`, `mcp`, `storage`, `voice`, `permissions`, `daemon` y `runtime` dentro de `config.json`, mas sustitucion `${ENV_VAR}`. Nada de eso se lee. Las credenciales vienen de la cadena de arriba, el modo de almacenamiento de `storage.json`, los servidores MCP de `mcp-servers.json`, y los permisos no son configurables.
+
+## Siguientes pasos
+
+- [Proveedores de Modelos](/docs/configuration/model-providers) — configuracion de proveedores
+- [Almacenamiento](/docs/configuration/storage) — backends
+- [Endpoints API](/docs/reference/api-endpoints) — la superficie HTTP

@@ -1,66 +1,55 @@
 ---
 title: The Daemon
-description: The Node.js backend that powers CoreLayer's AI orchestration.
+description: The Node.js process that owns every runtime, tool call, and piece of state.
 ---
 
-The Daemon is a Node.js process that runs in the background, handling all AI orchestration, tool execution, and data management.
+The daemon is a Node.js process (TypeScript, Hono HTTP) that runs in the background and holds all authority. The Tauri shell supervises it; nothing else may talk to a provider, a database, or an executor directly.
 
-## Architecture
+## Anatomy
 
 ```text
-Tauri Desktop App (Rust)
-  └─ Daemon Supervisor (Rust)
-     └─ Node.js Daemon (Hono HTTP server)
-        ├─ Model Gateway
-        ├─ Tool Registry
-        ├─ Permission Guard
-        ├─ MCP Client Manager
-        └─ Database (SQLite / Supabase / PostgreSQL)
+Tauri Desktop Shell (Rust)
+  └─ Daemon supervisor (spawn · health · restart · terminate)
+     └─ Node.js daemon (Hono, loopback HTTP)
+        ├─ Runtime host        agent · tool · coding · memory · voice · scheduler
+        ├─ Workflow plane      dispatcher · queue · slots · delegation · DAG · judge
+        ├─ Permission Guard    risk → policy → approval → audit
+        ├─ MCP client          stdio / HTTP / SSE servers
+        └─ Persistence         SQLite (default) · Supabase · PostgreSQL
 ```
 
-## Daemon Supervisor
+## Supervising process
 
-The Tauri app includes a Rust-based Daemon Supervisor that:
+The Rust side:
 
-- **Starts** the daemon process when the app launches
-- **Monitors** daemon health
-- **Restarts** the daemon if it crashes
-- **Stops** the daemon when the app closes
+- starts the daemon sidecar when the app launches
+- checks health and restarts on crash
+- passes paths and ports through environment variables
+- terminates the daemon on exit
 
-## HTTP API
+Runtime status is available to the UI through `GET /api/runtime/status` (pid, uptime, memory, storage mode, paths, per-runtime health) and `GET /api/runtime/components`.
 
-The daemon exposes an HTTP API on `localhost:3001` (configurable via the `daemon.port` field in `config.json`). The Tauri frontend communicates with the daemon through this API via Tauri's IPC bridge.
+## HTTP surface
 
-## Development Mode
+The daemon listens on loopback, port `3001` by default. Route groups are mounted in `daemon/src/bootstrap/register-routes.ts`:
 
-In development, the daemon runs with hot reload:
+`/api/chat` · `/api/conversations` · `/api/tasks` · `/api/articles` · `/api/reviews` · `/api/settings` · `/api/voice` · `/api/mcp` · `/api/tools` · `/api/tasks/scheduled` · `/api/approvals` · `/api/workspaces` · `/api/projects` · `/api/runs` · `/api/runtimes` · `/api/runtime/queue` · `/api/memories` · `/api/agent-profiles` · `/api/events` · `/api/audit` · `/api/runtime` · `/api/agent-broker`
 
-```bash
-pnpm dev:daemon
-```
+See [API Endpoints](/docs/reference/api-endpoints) for the important routes.
 
-This uses `tsx watch` to restart on file changes.
+## Development and production
 
-## Production Mode
+| Mode | How it runs |
+|------|-------------|
+| Development | `pnpm dev:daemon` — `tsx watch` restarts on change |
+| Production | `pnpm build:daemon:sidecar` — bundled SEA binary launched by the shell |
 
-In production builds, the daemon is packaged as a sidecar binary:
+## State
 
-```bash
-pnpm build:daemon:sidecar
-```
-
-The sidecar is bundled with the Tauri app and runs as a separate process.
-
-## Health Monitoring
-
-The Control Center shows daemon status:
-
-- **Healthy** — daemon is running and responsive
-- **Starting** — daemon is initializing
-- **Unhealthy** — daemon is not responding
-- **Stopped** — daemon was intentionally stopped
+The daemon is stateless between restarts except for what it persists. Long-running work is persisted as runs and queue entries, and pending approvals are stored, so a restart resumes rather than forgets.
 
 ## Next Steps
 
-- [System Overview](/docs/architecture/system-overview) — full architecture
+- [System Overview](/docs/architecture/system-overview) — the full topology
+- [Storage](/docs/configuration/storage) — where state lives on disk
 - [Build From Source](/docs/guides/build-from-source) — build the daemon

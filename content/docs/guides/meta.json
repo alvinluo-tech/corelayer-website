@@ -3,8 +3,10 @@
   "pages": [
     "connect-mcp-app",
     "add-custom-tool",
+    "coding-executors",
     "configure-local-models",
     "enable-voice",
+    "run-reliability-eval",
     "review-audit-logs",
     "build-from-source"
   ],

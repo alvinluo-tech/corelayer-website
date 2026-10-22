@@ -3,66 +3,71 @@ title: Review the Audit Trail
 description: Understand and work with the Permission Guard audit trail.
 ---
 
-Every tool execution in CoreLayer is logged. This guide shows how to review and work with audit logs.
+Every tool execution decision in CoreLayer is recorded. This guide shows how to query and read audit entries.
 
 ## Accessing Audit Logs
 
-Open **Control Center → Permissions → Audit Log**.
+Audit entries are served by `GET /api/audit` and surfaced in the Control Center. They are a separate resource from approvals (`/api/approvals`) and from the event log (`/api/events`).
 
 ## Log Entry Format
 
-Each entry contains:
+An entry records:
 
 ```text
-[2026-06-15 14:32:01] tool-name
-  Source: mcp | native | skill | rest
-  Risk: read | write | external | destructive
-  Policy: allow | confirm | deny
-  Decision: approved | denied | auto-allowed
-  Parameters: { ... }
-  Result: success | error
+createdAt          2026-10-21T14:32:01Z
+actor              jarvis
+action             tool.execute
+resource           filesystem:write /workspace/README.md
+riskLevel          high
+permissionDecision confirm
+confirmedByUser    true
+result             success
+metadata           { ... }
 ```
 
 ## Filtering Logs
 
-Filter by:
+`GET /api/audit` accepts:
 
-- **Date range** — specific time period
-- **Tool name** — find specific tool calls
-- **Risk level** — see only write/destructive operations
-- **Decision** — find denied or approved calls
+- `actor` — who performed the action
+- `action` — what was performed
+- `riskLevel` — `low` | `medium` | `high` | `critical`
+- `since` — ISO timestamp lower bound
+- `limit` / `offset` — pagination
+
+The response is `{ entries, total, count }`.
 
 ## Common Use Cases
 
 ### Security Review
 
-Check what external API calls were made:
+Check which high-risk actions were approved:
 
-1. Filter by **Risk: external**
-2. Review the tool names and parameters
-3. Verify all calls were expected
+1. Query `GET /api/audit?riskLevel=high&since=2026-10-01T00:00:00Z`
+2. Review `resource` and `metadata` for each entry
+3. Confirm `confirmedByUser` is `true` where you expected a manual decision
 
 ### Debugging
 
-Find why a tool call failed:
+Find why a tool call did not run:
 
-1. Filter by **Result: error**
-2. Check the error message in the log entry
-3. Verify the tool parameters were correct
+1. Filter by `action`
+2. Check `permissionDecision` — `deny` means the policy blocked it
+3. Cross-reference the run id in `GET /api/runs/:id/events`
 
 ### Compliance
 
-Generate a report of all data modifications:
+Produce a record of state-changing actions:
 
-1. Filter by **Risk: write** and **Risk: destructive**
-2. Export the log entries
-3. Review all data changes
+1. Query with `riskLevel=high`, then repeat with `riskLevel=critical`
+2. Export the returned entries
+3. Review every `confirmedByUser: false` entry — those were auto-decided
 
 ## Log Retention
 
-Audit logs are stored locally in the configured database and persist across sessions. By default, logs are kept indefinitely. To limit disk usage, set `permissions.auditRetentionDays` in `config.json` — entries older than the specified number of days are automatically pruned on startup.
+There is no retention setting. Entries live in the `audit_log` table of the configured database for as long as you keep them. An earlier version of this page documented a `permissions.auditRetentionDays` option that does not exist; prune with SQL or your database tooling if you need to limit growth.
 
 ## Next Steps
 
 - [Permissions](/docs/configuration/permissions) — configure policies
-- [Permission Guard](/docs/core-concepts/permission-guard) — safety model details
+- [Permission Guard](/docs/core-concepts/permission-guard) — the safety model

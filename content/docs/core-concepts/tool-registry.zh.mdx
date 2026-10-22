@@ -1,50 +1,86 @@
 ---
 title: 工具注册
-description: 统一的工具注册、发现和路由。
+description: 原生工具、MCP 工具与动态发现的工具如何到达模型。
 ---
 
-工具注册是 Jarvis 可用的所有工具的中心目录。它聚合来自多个来源的工具，并通过统一接口呈现。
+工具注册中心是每次工具调用的解析入口。它汇总原生工具与 MCP 提供的工具，也是工具风险等级被声明的地方。
 
-## 工具来源
+## 来源
 
-| 来源 | 描述 |
-|------|------|
-| **原生模块** | 内置 CoreLayer 工具（任务管理、阅读列表、回顾） |
-| **MCP 服务器** | 来自已连接 MCP 服务器的工具 |
-| **技能** | 自定义脚本化工作流 |
-| **REST 适配器** | 来自 REST API 端点的工具 |
+| 来源 | 说明 | ID 形式 |
+|------|------|---------|
+| **原生** | 在 tool 运行时中实现的工具 | `native:<name>` |
+| **MCP** | 已连接 MCP 服务器上报的工具 | `mcp:<serverId>:<toolName>` |
 
-## 工作原理
+## 风险靠声明，而非推断
 
-```text
-工具来源注册其工具
-  → 工具注册编目所有工具
-  → Jarvis 为请求查询可用工具
-  → 工具注册返回匹配的工具
-  → Jarvis 选择并调用适当的工具
-  → 权限守卫在执行前检查
+每个原生工具注册时必须显式给出风险等级：
+
+```ts
+registerTool("dispatch_agent", tool({ ... }), "high");
 ```
 
-## 工具元数据
+这是一条刻意的约束。曾经用工具名推断风险，结果 `dispatch_agent` 与 `run_task_graph` 因为名字里没有危险词被判为 `low`——而它们都会派生写入文件、执行命令的运行，而 `low` 默认自动放行。名字不是效果的证据。
 
-注册中的每个工具包含：
+## 核心工具与按需发现
 
-- **名称** — 唯一标识符
-- **描述** — 工具的功能
-- **参数** — 输入模式（JSON Schema）
-- **来源** — 哪个提供商拥有此工具
-- **风险级别** — 读取、写入、外部、破坏性
+每轮都暴露全部工具 schema 会消耗上下文并降低工具选择质量。因此路由分两层：
 
-## 查询工具
+1. **核心工具** 始终可用。
+2. **其余工具** 通过 `search_tools` 按查询匹配完整目录并返回匹配项的 schema。模型用找到的工具做计划，而不是背着整个目录。
 
-Jarvis 可以查询注册中心，通过以下方式查找工具：
+## 内建原生工具
 
-- **能力** — "查找可以读取文件的工具"
-- **来源** — "显示所有 MCP 工具"
-- **名称** — "使用 filesystem:read 工具"
+| 工具 | 风险 | 用途 |
+|------|------|------|
+| `get_code_skeleton` | `low` | 文件或符号的 AST 剪枝骨架——保留签名与类型，折叠函数体 |
+| `search_tools` | `low` | 发现核心集之外的工具 |
+| `listConversations` | `low` | 列出会话 |
+| `previewConversationCleanup` | `low` | 清理查询的试运行 |
+| `taskflow_create_task` | `medium` | 创建任务 |
+| `taskflow_list_tasks` | `low` | 列出任务 |
+| `deleteConversation` | `high` | 删除单个会话 |
+| `deleteConversationsByQuery` | `high` | 按查询批量删除 |
+| `requestConversationCleanup` | `high` | 经审批的清理 |
+| `dispatch_agent` | `high` | 向子 Agent 委派一次受限运行 |
+| `run_task_graph` | `high` | 执行编码子任务 DAG |
+| `createTask` / `updateTask` | `medium` | 任务管理 |
+| `getTodayTasks` / `queryTasks` | `low` | 查询任务 |
+| `deleteTask` | `high` | 删除任务 |
+| `addArticle` / `updateReadingStatus` | `medium` | 阅读清单 |
+| `getReadingList` / `getReadingStats` / `recommendNext` | `low` | 阅读查询 |
+| `getDailySummary` / `getWeeklyStats` / `getReviewHistory` | `low` | 回顾查询 |
+| `saveReview` | `medium` | 保存回顾 |
+| `memory_store` | `medium` | 写入长期记忆（会持续影响后续提示，故非 `low`） |
+| `memory_search` / `memory_list` | `low` | 读取记忆 |
+| `memory_delete` | `high` | 删除记忆 |
+
+所有原生工具都在注册时声明风险，不依赖名称或参数推断。
+
+MCP 工具携带服务器配置的风险策略（`riskPolicy` 按等级），并在连接时注册。
+
+## 解析
+
+```text
+模型请求工具 "search_tools"
+  → 注册中心解析 native:search_tools
+  → 权限守卫读取声明的风险
+  → 策略判定 auto / notify / confirm / deny
+  → 执行、审计、返回
+```
+
+解析同时接受裸名称与 `native:` 前缀，因此模型无需了解命名空间。
+
+## 查看注册中心
+
+- `GET /api/tools` — 列出已注册工具
+- `GET /api/tools/:id` — 单个工具
+- `POST /api/tools/filter` — 按来源或风险筛选
+- `POST /api/tools/:id/execute` — 直接执行（仍经过权限检查）
+- `GET /api/tools/logs` — 最近的调用日志
 
 ## 下一步
 
 - [MCP 服务器](/docs/configuration/mcp-servers) — 连接外部工具
+- [权限守卫](/docs/core-concepts/permission-guard) — 风险如何变成决定
 - [添加自定义工具](/docs/guides/add-custom-tool) — 注册你自己的工具
-- [权限守卫](/docs/core-concepts/permission-guard) — 安全检查

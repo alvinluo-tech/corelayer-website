@@ -1,84 +1,69 @@
 ---
 title: Habilidades
-description: Flujos de trabajo scriptados personalizados que extienden las capacidades de Jarvis.
+description: Conocimiento procedimental que debe ganarse el derecho a ejecutarse sin supervision.
 ---
 
-Las habilidades son flujos de trabajo reutilizables que extienden lo que Jarvis puede hacer. Combinan multiples pasos — llamadas a herramientas, logica condicional y salida estructurada — en operaciones nombradas que Jarvis puede invocar automaticamente o bajo solicitud.
+Una habilidad es conocimiento procedimental guardado como `SKILL.md`: como adaptar un proyecto a servidor MCP, como hace revisiones un equipo, como se publica un repositorio. Las habilidades se cargan en el contexto bajo demanda en lugar de estar siempre presentes.
 
-## Que Son las Habilidades?
+## La confianza se gana
 
-Una habilidad es un archivo `SKILL.md` que define un flujo de trabajo multipaso. A diferencia de las llamadas individuales a herramientas, las habilidades pueden:
-
-- Encadenar multiples herramientas
-- Incluir logica condicional
-- Mantener estado entre pasos
-- Presentar resultados en un formato estructurado
-
-## Usar Habilidades
-
-Jarvis descubre automaticamente las habilidades disponibles y puede invocarlas cuando sea apropiado. Tambien puedes solicitar explicitamente una habilidad:
+Acumular una habilidad no es lo mismo que mejorar. Puede venir de una ejecucion afortunada, no aplicar a este repositorio o haber empezado a fallar. Por eso CoreLayer evalua cada habilidad antes de que pueda ejecutarse sin que se le pida:
 
 ```text
-Ejecuta la habilidad code-review sobre los cambios actuales
+Se solicita la habilidad
+  → evaluateSkillTrust(manifest)
+      ¿obsoleta?                  → solo sugerencia
+      ¿autonomy: "suggest"?       → solo sugerencia
+      ¿3 fallos consecutivos?     → degradada a solo sugerencia
+      ¿nunca tuvo exito?          → solo sugerencia
+      en otro caso                → puede ejecutarse automaticamente
 ```
 
-## Formato de Definicion de Habilidad
+"solo sugerencia" no desactiva la habilidad. Sigue disponible; el agente debe solicitarla explicitamente.
 
-Cada habilidad es un archivo Markdown (`SKILL.md`) con secciones estructuradas. Aqui un ejemplo minimo:
+## Historial de ejecucion
 
-```markdown
-# Mi Habilidad
+Cada ejecucion agrega un resultado (`success`, `error`, `runId`, `executedAt`) al provenance de la habilidad, con un maximo de 20 registros. Ese historial es lo que lee la regla de confianza, asi una habilidad que empieza a fallar pierde autonomia sin que nadie la edite.
 
-Descripcion corta de lo que hace esta habilidad.
-
-## Que Hace Esta Habilidad
-
-Explicacion mas larga para el agente de IA que ejecuta esta habilidad.
-
-## Pasos
-
-### Paso 1: Recopilar contexto
-Lee el estado actual del proyecto e identifica los archivos relevantes.
-
-### Paso 2: Ejecutar accion
-Llama a las herramientas apropiadas con el contexto recopilado.
-
-### Paso 3: Reportar resultados
-Resume lo que se hizo y las acciones de seguimiento.
-```
-
-Las habilidades residen en el directorio `skills/`. Cada habilidad tiene su propia carpeta:
+## Formato
 
 ```text
 skills/
-└── corelayer-mcp-adapter/
+└── my-skill/
     └── SKILL.md
 ```
 
-## Fuentes de Habilidades
+```markdown
+# Mi habilidad
 
-Las habilidades pueden venir de:
+Descripcion corta de lo que hace.
 
-- **Integradas** — incluidas con CoreLayer (ej., `corelayer-mcp-adapter`)
-- **Comunidad** — compartidas por otros usuarios
-- **Personalizadas** — escritas por ti
+## Cuando usarla
 
-### Habilidades Integradas
+Las condiciones en las que aplica.
+
+## Pasos
+
+### Paso 1: reunir contexto
+### Paso 2: ejecutar
+### Paso 3: verificar y reportar
+```
+
+## Habilidad integrada
 
 | Habilidad | Proposito |
 |-----------|-----------|
-| `corelayer-mcp-adapter` | Guia la adaptacion de cualquier proyecto a un servidor MCP compatible con CoreLayer |
+| `corelayer-mcp-adapter` | Guia para adaptar cualquier proyecto a un servidor MCP compatible con CoreLayer |
 
-## Escribir una Habilidad Personalizada
+## Guia de autor
 
-1. Crea una carpeta bajo `skills/`: `skills/my-skill/`
-2. Aniade un archivo `SKILL.md` con la definicion de tu flujo de trabajo
-3. Reinicia CoreLayer — Jarvis descubrira la nueva habilidad automaticamente
+- Indica las condiciones de uso, no solo los pasos.
+- Incluye un paso de verificacion; una habilidad sin resultado comprobable no puede ganarse confianza.
+- Prefiere pasos deterministas (comandos, archivos) sobre instrucciones en prosa.
+- Si necesita elevacion, dilo explicitamente en lugar de pedir permisos amplios.
 
-La habilidad `corelayer-mcp-adapter` es una buena referencia de como estructurar flujos de trabajo multipaso con instrucciones claras, listas de verificacion y ejemplos.
+## Siguientes pasos
 
-## Siguientes Pasos
-
-- [Tool Registry](/docs/core-concepts/tool-registry) — como se registran las habilidades
-- [Aniadir una Herramienta Personalizada](/docs/guides/add-custom-tool) — crea tus propias extensiones
-- [Conectar una Aplicacion MCP](/docs/guides/connect-mcp-app) — la habilidad MCP adapter en accion
+- [Tool Registry](/docs/core-concepts/tool-registry) — en que se diferencia una herramienta de una habilidad
+- [Agregar una Herramienta](/docs/guides/add-custom-tool) — crear una herramienta determinista
+- [Conectar una App MCP](/docs/guides/connect-mcp-app) — la habilidad MCP en practica

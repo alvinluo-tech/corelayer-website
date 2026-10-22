@@ -1,0 +1,76 @@
+---
+title: Run a Reliability Eval
+description: Measure whether a change to the coding agent actually improves it.
+---
+
+A single successful run proves nothing. This guide runs the eval harness so a change to a prompt, policy, or adapter is judged by consistency across attempts.
+
+## Prerequisites
+
+- A healthy model gateway. The executor runs over ACP, so the same variables it uses apply:
+  - `ANTHROPIC_MODEL` — must be a DeepSeek model
+  - `ANTHROPIC_BASE_URL`
+  - `ANTHROPIC_AUTH_TOKEN`
+- `acpx` installed
+- Run from the `daemon/` directory
+
+## Baseline run
+
+```powershell
+cd daemon
+$env:ANTHROPIC_MODEL='deepseek-v4.1-flash'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+```
+
+Each attempt gets a fresh temporary git repository seeded with the task's files and one empty commit, so tasks cannot contaminate each other and a "change nothing" task is meaningful.
+
+Read `pass^k`, not the average: `pass^3` is the fraction of tasks that succeeded on every attempt.
+
+## A/B a behaviour change
+
+```powershell
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/holdout.json --k 3 --compare JARVIS_REFLECTION=1
+```
+
+This runs the corpus twice — variable unset, then set — and prints a paired verdict:
+
+| Verdict | Interpretation |
+|---------|----------------|
+| `improved` | Aggregate cleared tolerance **and** no task fell |
+| `regressed` | Aggregate fell |
+| `mixed` | Average rose but a task lost reliability — **not** an improvement |
+| `unchanged` | Everything inside the band |
+
+## Decide
+
+Only promote a change to default when all four hold:
+
+1. verdict is `improved`
+2. `lostReliability` is empty
+3. `tokensPerSuccess` rose by no more than ~20%
+4. a repeat run still clears 1–3
+
+Otherwise leave it off by default.
+
+## Reading failures
+
+| Symptom | Likely cause |
+|---------|--------------|
+| Many `timed-out` attempts in a row | Gateway is flapping; ACP hangs until the budget expires instead of failing fast |
+| `VOID` attempts | Environment fault (quota, refused connection, 5xx) — excluded from rates by design |
+| False positive | The executor claimed success, a check failed; the completion evidence is too weak for that task |
+| False negative | Checks failed while the agent reported failure; check the task definition |
+| `mixed` on `--compare` | One task regressed even though the mean improved — the case aggregate gates miss |
+
+## Adding tasks
+
+Prefer checks a deterministic script can decide. When content comparison is awkward (formatting, ordering, prose), seed a `check.js` and grade with a `command` check. Checks are `file-exists`, `file-missing`, `file-contains`, `file-unchanged`, and `command`; `file-unchanged` compares digests, which is the only way to test "change nothing else".
+
+## Next Steps
+
+- [Reliability Evaluation](/docs/architecture/reliability-eval) — the metrics in depth
+- [Coding Executor Adapters](/docs/guides/coding-executors) — configure the executor under test
+- [Troubleshooting](/docs/reference/troubleshooting) — gateway and timeout symptoms

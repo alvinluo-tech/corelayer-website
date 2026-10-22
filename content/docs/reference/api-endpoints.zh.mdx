@@ -1,168 +1,138 @@
 ---
 title: API 端点参考
-description: 守护进程 HTTP API 参考。
+description: 守护进程 HTTP API，按资源分组。
 ---
 
-CoreLayer 守护进程在 `localhost:3001` 上暴露 HTTP API。Tauri 前端通过 Tauri 的 IPC 桥接使用此 API。
+守护进程暴露回环 HTTP API（默认 `127.0.0.1:3001`，可用 `DAEMON_HOST` / `DAEMON_PORT` 覆盖）。Tauri 界面经外壳代理访问它；工具和脚本可在同一台机器上直接调用。
 
-## 基础 URL
+响应为 JSON。按路由不同，集合的包装形式为 `{ "data": [...] }` 或 `{ "entries": [...], "total": n, "count": n }`。
 
-```text
-http://localhost:3001
-```
+## 健康与运行时
 
-## 聊天
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| GET | `/api/health`、`/health` | `{ status, timestamp, storageMode, aiProvider, aiModel }` |
+| GET | `/api/runtime/status` | pid、运行时长、内存、存储模式、路径、各运行时健康 |
+| GET | `/api/runtime/components` | 已注册运行时组件与状态 |
+| POST | `/api/runtime/shutdown` | 停止守护进程（仅回环对端） |
+| GET | `/api/runtime/queue` · `/status` · `/resources` | 队列深度、槽位状态、资源用量 |
+| GET | `/api/runtimes/coding/diagnostics` | 编码执行器诊断 |
+| POST | `/api/runtimes/coding/:id/dry-run` | 执行器试运行 |
 
-### POST `/api/chat`
+## 对话与会话
 
-向 Jarvis 发送消息并接收流式响应。
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| POST | `/api/chat` | 一次性对话 |
+| POST | `/api/chat/stream` | 流式对话（SSE） |
+| POST | `/api/chat/debug/context` | 查看组装后的上下文 |
+| GET/POST | `/api/conversations` | 列表 / 创建 |
+| GET/PATCH/DELETE | `/api/conversations/:id` | 读取 / 更新 / 删除 |
+| POST | `/api/conversations/:id/messages` | 发送消息 |
+| POST | `/api/conversations/:id/messages/stream` | 发送并以 SSE 流式返回 |
+| PUT | `/api/conversations/:id/messages/:msgId` | 编辑消息 |
+| POST | `/api/conversations/:id/messages/:msgId/regenerate` | 重新生成 |
+| GET | `/api/conversations/:id/messages/:msgId/branches` | 读取分支 |
+| GET | `/api/conversations/:id/tree` | 会话树 |
+| GET | `/api/conversations/messages/search` | 搜索消息 |
+| GET | `/api/conversations/:id/export` | 导出 |
 
-```json
-{
-  "message": "What tasks do I have?",
-  "conversationId": "conv_123"
-}
-```
+## 运行
 
-响应：服务器发送事件（SSE）流。
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| GET | `/api/runs?limit=` | 最近的运行 |
+| GET | `/api/runs/:id` | 运行详情 |
+| GET | `/api/runs/:id/events` | 运行事件流 |
+| GET | `/api/runs/:id/artifacts` | 运行产物 |
+| POST | `/api/runs/:id/cancel` | 取消 |
+| POST | `/api/runs/:id/retry` | 重试失败的运行 |
+| GET | `/api/runs/:id/trajectory` | 轨迹包 |
+| POST | `/api/runs/:id/message` | **410 Gone** — 中途消息注入已随手写循环移除 |
 
-## 任务
+## 工作空间与项目
 
-### GET `/api/tasks`
-
-列出所有任务。
-
-```json
-// 响应
-[
-  {
-    "id": "task_abc123",
-    "title": "Review PR #42",
-    "status": "pending",
-    "priority": "high",
-    "dueDate": "2026-06-30T00:00:00Z",
-    "createdAt": "2026-06-28T10:00:00Z"
-  }
-]
-```
-
-### POST `/api/tasks`
-
-创建新任务。
-
-```json
-// 请求
-{
-  "title": "Review PR #42",
-  "priority": "high",
-  "dueDate": "2026-06-30"
-}
-
-// 响应
-{
-  "id": "task_abc123",
-  "title": "Review PR #42",
-  "status": "pending",
-  "priority": "high",
-  "dueDate": "2026-06-30T00:00:00Z"
-}
-```
-
-### PATCH `/api/tasks/:id`
-
-更新任务。接受部分任务对象。
-
-### DELETE `/api/tasks/:id`
-
-删除任务。
-
-## 文章（阅读列表）
-
-### GET `/api/articles`
-
-列出所有文章。
-
-### POST `/api/articles`
-
-添加文章。
-
-### DELETE `/api/articles/:id`
-
-移除文章。
-
-## 回顾
-
-### GET `/api/reviews`
-
-列出回顾。
-
-### POST `/api/reviews/generate`
-
-生成新的回顾。
-
-## 模型
-
-### GET `/api/models`
-
-列出已配置的模型提供商。
-
-### POST `/api/models`
-
-添加模型提供商。
-
-## MCP
-
-### GET `/api/mcp/servers`
-
-列出 MCP 服务器。
-
-### POST `/api/mcp/servers`
-
-添加 MCP 服务器。
-
-### POST `/api/mcp/servers/:id/restart`
-
-重启 MCP 服务器。
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| GET/POST | `/api/workspaces` | 列表 / 创建 |
+| GET | `/api/workspaces/default` | 默认工作空间 |
+| POST | `/api/workspaces/from-goal` | 从目标创建工作空间 |
+| GET/PATCH/DELETE | `/api/workspaces/:id` | 读取 / 更新 / 删除 |
+| GET | `/api/workspaces/:id/detail` | 含 Agent 与运行的工作空间 |
+| POST/DELETE | `/api/workspaces/:id/agents[/:agentId]` | 挂载 / 移除 Agent |
+| GET | `/api/workspaces/:id/artifacts` | 产物 |
+| GET | `/api/workspaces/:id/deliveries` | 交付分支 |
+| POST | `/api/workspaces/:id/deliveries/merge` | 合并交付分支 |
+| — | `/api/projects` | 项目 CRUD |
 
 ## 工具
 
-### GET `/api/tools`
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| GET | `/api/tools` | 列出已注册工具 |
+| GET | `/api/tools/:id` | 单个工具 |
+| POST | `/api/tools/filter` | 按来源 / 风险筛选 |
+| POST | `/api/tools/:id/execute` | 执行（经过权限检查） |
+| GET | `/api/tools/logs` | 最近调用日志 |
+| GET | `/api/tools/pending-confirmations` | 等待决定的内联确认 |
+| POST | `/api/tools/confirm/:id` | 处理内联确认 |
 
-列出所有已注册的工具。
+## 审批
 
-## 权限
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| GET | `/api/approvals` | 待定与最近 |
+| GET | `/api/approvals/:id` | 单个请求 |
+| POST | `/api/approvals/:id/approve` | 批准并恢复 |
+| POST | `/api/approvals/:id/deny` | 拒绝并终止运行 |
+| POST | `/api/approvals/:id/remember` | 批准并写入权限记忆 |
+| POST | `/api/approvals/batch/approve` · `/batch/deny` | 批量决定 |
+| POST | `/api/approvals/expire-stale` | 关闭无人应答的请求 |
 
-### GET `/api/permissions/audit`
+不存在 `/api/permissions/*` 分组。审批与审计是彼此独立的资源。
 
-获取审计日志条目。
+## 审计与事件
 
-### POST `/api/permissions/approve`
+| 方法 | 路径 | 查询参数 |
+|------|------|----------|
+| GET | `/api/audit` | `actor`、`action`、`riskLevel`、`since`、`limit`、`offset` |
+| GET | `/api/events` | `type`、`projectId`、`workspaceId`、`agentRunId`、`runtimeId`、`since`、`limit`、`offset` |
 
-批准待处理的工具调用。
+## 记忆
 
-### POST `/api/permissions/deny`
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| GET | `/api/memories` | 列表；筛选 `type`、`scopeType` + `scopeId` |
+| GET | `/api/memories/search?q=&limit=` | 评分检索（默认上限 20） |
+| PATCH/DELETE | `/api/memories/:id` | 更新（`key`、`value`、`type`）/ 删除 |
 
-拒绝待处理的工具调用。
+## 任务、阅读、回顾与调度
 
-## 健康检查
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| — | `/api/tasks` | 任务 CRUD |
+| — | `/api/tasks/scheduled` | 定时任务 |
+| — | `/api/articles` | 阅读清单 |
+| — | `/api/reviews` | 每日 / 每周回顾 |
 
-### GET `/api/health`
+这些路由组仍然存在，支撑原生任务、阅读与回顾工具。
 
-检查守护进程健康状况。
+## MCP、设置、语音、画像
 
-```json
-{
-  "status": "healthy",
-  "uptime": 3600,
-  "version": "<current-version>"
-}
-```
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| — | `/api/mcp` | MCP 服务器 CRUD、重启、鉴权 |
+| — | `/api/settings` | 模型、供应商、存储、tick、用量 |
+| — | `/api/voice` | 语音会话控制 |
+| — | `/api/agent-profiles` | Agent 画像 |
+| — | `/api/agent-broker` | Agent broker |
 
-## 身份验证
+## 鉴权
 
-守护进程 API 仅可从本地主机访问。本地访问无需身份验证。
+不需要 token：API 绑定在回环地址，不暴露到网络。`/api/runtime/shutdown` 还会校验对端地址是回环。
 
 ## 下一步
 
 - [配置文件](/docs/reference/config-file) — 配置参考
-- [CLI 命令](/docs/reference/cli-commands) — 命令行接口
+- [CLI 命令](/docs/reference/cli-commands) — 仓库脚本
+- [故障排除](/docs/reference/troubleshooting) — 常见故障

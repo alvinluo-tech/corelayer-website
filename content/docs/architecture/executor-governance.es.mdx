@@ -1,0 +1,69 @@
+---
+title: Gobernanza de Ejecutores
+description: Como CoreLayer convierte un agente de codigo sin control en un ejecutor supervisado.
+---
+
+Claude Code, Codex y OpenCode son capaces, pero ejecutados directamente contra un shell son un proceso sin limites: pueden escribir en cualquier sitio, correr cualquier cosa y reportar lo que quieran. CoreLayer no los reimplementa. Los envuelve en una capa de gobernanza y conserva la parte que decide si su trabajo es aceptable.
+
+## La tuberia
+
+```text
+Solicitud de despacho
+  → validar limites de delegacion (rechazar pronto, antes de crear el proceso)
+  → asignar un slot de cola
+  → crear un worktree git aislado
+  → sondear capacidades (acpx <agent> sessions ensure)
+      ready        → continuar
+      needs_auth   → decir al usuario que login falta
+      unreachable  → reportar el error de lanzamiento, no girar en vacio
+  → lanzar el ejecutor con ejecutor y modelo fijos
+  → mapear su stream de eventos a eventos de ejecucion
+  → capturar diff y artefactos
+  → quality gates → juez adversarial (si esta activo)
+  → politica de completion: entregar, reintentar o fallar con motivo
+```
+
+## Limites de delegacion
+
+Una ejecucion que delega trabajo a un hijo solo puede **estrechar** lo que ella misma podria hacer. Las reglas:
+
+| Limite | Regla de estrechamiento |
+|--------|-------------------------|
+| `allowedPaths` | Interseccion de globs con el alcance del padre; una ruta fuera del repositorio se rechaza |
+| `testCommands` | Aditivas — un hijo no puede quitar una comprobacion que el padre exige |
+| `requiredArtifactTypes` | Aditivas |
+| `timeoutMs` | `min(hijo, padre, 30 min)`, minimo 30 s |
+| `allowedTools` | Interseccion — el hijo puede tener menos herramientas, nunca una que el padre no tiene |
+| `executor` / `executorModel` | Fijos; un hijo no puede cambiar de ejecutor ni de modelo |
+
+Dos consecuencias que conviene decir: un alcance vacio en el padre significa "aun sin confinar", asi que la peticion del hijo se convierte en la primera confinacion; y un prompt de delegacion de mas de 8.000 caracteres se rechaza, porque una delegacion nombra un trabajo, no transfiere un documento.
+
+## Aislamiento
+
+- Cada ejecucion de codigo obtiene su propio worktree git en `worktrees/active`; los snapshots archivados van a `worktrees/snapshots`.
+- La politica de rutas juzga las rutas despues de normalizarlas, asi los separadores de Windows y los prefijos de `git status` no pueden hacer que una ruta legitima parezca una fuga.
+- La entrega es una rama revisable, no una escritura en tu arbol de trabajo.
+
+## Evidencia, no afirmaciones
+
+Que un ejecutor diga "listo" no es evidencia. CoreLayer trata la finalizacion como una afirmacion comprobable:
+
+- **Politica de completion** — los criterios `test: <comando>`, `artifact: <tipo>`, `path: <glob>` de la tarea se compilan en comprobaciones; los criterios en prosa quedan como manuales y no se finge que estan verificados.
+- **Quality gates** — los gates del tipo de tarea deben pasar antes de entregar cuando son obligatorios.
+- **Juez adversarial** — revision independiente del diff contra la tarea, desactivado por defecto (`adjudication.enabled = false`). Cuesta una llamada de modelo por intento y solo tiene evidencia cuando existe un diff y realmente se ejecuto un comando de test.
+
+## Negociacion de capacidades
+
+No se asume que un ejecutor soporte algo. La sonda realiza el handshake ACP completo (`initialize` + `session/new`) sin turno de prompt, por lo que no consume tokens, y cachea el resultado por configuracion de lanzamiento. La distincion importa: "instalado" no dice si un agente esta listo, necesita login o tiene un comando de lanzamiento roto.
+
+## Lo que deliberadamente no se hace
+
+- No se reintenta indefinidamente a un ejecutor colgado: el presupuesto de ejecucion se aplica dos veces (lado ejecutor y lado harness), y los fallos de entorno se clasifican en vez de culpar al agente.
+- Sin ampliacion silenciosa: si un hijo pide un modelo o una ruta que no se le concedio, la ejecucion se rechaza antes de empezar.
+- Sin fingir computer control: ese runtime no esta registrado.
+
+## Siguientes pasos
+
+- [Adaptadores de Ejecutores](/docs/guides/coding-executors) — configurar Claude Code, Codex u OpenCode
+- [Evaluacion de Fiabilidad](/docs/architecture/reliability-eval) — medir si un cambio ayuda de verdad
+- [Modelo de Seguridad](/docs/architecture/security-model) — las capas de aplicacion alrededor

@@ -1,66 +1,55 @@
 ---
 title: 守护进程
-description: 驱动 CoreLayer AI 编排的 Node.js 后端。
+description: 拥有全部运行时、工具调用与状态的 Node.js 进程。
 ---
 
-守护进程是一个在后台运行的 Node.js 进程，负责处理所有 AI 编排、工具执行和数据管理。
+守护进程是一个在后台运行的 Node.js 进程（TypeScript + Hono HTTP），拥有全部权限。Tauri 外壳监管它；除此之外任何组件都不得直连模型供应商、数据库或执行器。
 
-## 架构
+## 结构
 
 ```text
-Tauri 桌面应用（Rust）
-  └─ 守护进程管理器（Rust）
-     └─ Node.js 守护进程（Hono HTTP 服务器）
-        ├─ 模型网关
-        ├─ 工具注册
-        ├─ 权限守卫
-        ├─ MCP 客户端管理器
-        └─ 数据库（SQLite / Supabase / PostgreSQL）
+Tauri 桌面外壳（Rust）
+  └─ 守护进程监管（启动 · 健康 · 重启 · 终止）
+     └─ Node.js 守护进程（Hono，回环 HTTP）
+        ├─ 运行时宿主        agent · tool · coding · memory · voice · scheduler
+        ├─ 工作流平面        dispatcher · queue · slots · delegation · DAG · judge
+        ├─ 权限守卫          风险 → 策略 → 审批 → 审计
+        ├─ MCP 客户端        stdio / HTTP / SSE 服务器
+        └─ 持久化            SQLite（默认）· Supabase · PostgreSQL
 ```
 
-## 守护进程管理器
+## 监管进程
 
-Tauri 应用包含一个基于 Rust 的守护进程管理器，它负责：
+Rust 侧负责：
 
-- **启动** 应用启动时启动守护进程
-- **监控** 守护进程健康状况
-- **重启** 守护进程崩溃时重启
-- **停止** 应用关闭时停止守护进程
+- 应用启动时拉起守护进程 sidecar
+- 健康检查并在崩溃时重启
+- 通过环境变量传入路径与端口
+- 退出时终止守护进程
 
-## HTTP API
+运行状态通过 `GET /api/runtime/status`（pid、运行时长、内存、存储模式、路径、各运行时健康）与 `GET /api/runtime/components` 暴露给界面。
 
-守护进程在 `localhost:3001` 上暴露 HTTP API（可通过 `config.json` 中的 `daemon.port` 字段配置）。Tauri 前端通过 Tauri 的 IPC 桥接与此 API 通信。
+## HTTP 接口
 
-## 开发模式
+守护进程监听回环，默认端口 `3001`。路由分组在 `daemon/src/bootstrap/register-routes.ts` 中挂载：
 
-在开发环境中，守护进程使用热重载运行：
+`/api/chat` · `/api/conversations` · `/api/tasks` · `/api/articles` · `/api/reviews` · `/api/settings` · `/api/voice` · `/api/mcp` · `/api/tools` · `/api/tasks/scheduled` · `/api/approvals` · `/api/workspaces` · `/api/projects` · `/api/runs` · `/api/runtimes` · `/api/runtime/queue` · `/api/memories` · `/api/agent-profiles` · `/api/events` · `/api/audit` · `/api/runtime` · `/api/agent-broker`
 
-```bash
-pnpm dev:daemon
-```
+重要端点见 [API 参考](/docs/reference/api-endpoints)。
 
-这使用 `tsx watch` 在文件更改时重启。
+## 开发与生产
 
-## 生产模式
+| 模式 | 运行方式 |
+|------|----------|
+| 开发 | `pnpm dev:daemon` — `tsx watch` 变更即重启 |
+| 生产 | `pnpm build:daemon:sidecar` — 打包为 SEA 二进制，由外壳拉起 |
 
-在生产构建中，守护进程作为旁路二进制文件打包：
+## 状态
 
-```bash
-pnpm build:daemon:sidecar
-```
-
-旁路二进制文件与 Tauri 应用一起打包，作为独立进程运行。
-
-## 健康监控
-
-控制中心显示守护进程状态：
-
-- **健康** — 守护进程正在运行且响应正常
-- **启动中** — 守护进程正在初始化
-- **不健康** — 守护进程无响应
-- **已停止** — 守护进程被有意停止
+除持久化的内容外，守护进程在重启之间是无状态的。长任务以运行记录与队列条目持久化，待定审批也会落库，因此重启是“续上”而不是“遗忘”。
 
 ## 下一步
 
-- [系统概览](/docs/architecture/system-overview) — 完整架构
+- [系统概览](/docs/architecture/system-overview) — 完整拓扑
+- [存储](/docs/configuration/storage) — 状态在磁盘上的位置
 - [从源码构建](/docs/guides/build-from-source) — 构建守护进程

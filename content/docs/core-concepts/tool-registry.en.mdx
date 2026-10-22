@@ -1,50 +1,86 @@
 ---
 title: Tool Registry
-description: Unified tool registration, discovery, and routing.
+description: How native tools, MCP tools, and discovered tools reach the model.
 ---
 
-The Tool Registry is a central catalog of all tools available to Jarvis. It aggregates tools from multiple sources and presents them through a unified interface.
+The Tool Registry is the catalog every tool call resolves through. It aggregates native tools and MCP-provided tools, and it is the place where a tool's risk level is declared.
 
-## Tool Sources
+## Sources
 
-| Source | Description |
-|--------|-------------|
-| **Native modules** | Built-in CoreLayer tools (task management, reading list, reviews) |
-| **MCP servers** | Tools from connected MCP servers |
-| **Skills** | Custom scripted workflows |
-| **REST adapters** | Tools from REST API endpoints |
+| Source | Description | ID form |
+|--------|-------------|---------|
+| **Native** | Tools implemented in the tool runtime | `native:<name>` |
+| **MCP** | Tools reported by a connected MCP server | `mcp:<serverId>:<toolName>` |
 
-## How It Works
+## Declared risk, not inferred risk
 
-```text
-Tool sources register their tools
-  → Tool Registry catalogs all tools
-  → Jarvis queries available tools for a request
-  → Tool Registry returns matching tools
-  → Jarvis selects and calls the appropriate tool
-  → Permission Guard checks before execution
+Every native tool is registered with an explicit risk level:
+
+```ts
+registerTool("dispatch_agent", tool({ ... }), "high");
 ```
 
-## Tool Metadata
+This is a deliberate constraint. Inferring risk from the tool name once rated `dispatch_agent` and `run_task_graph` as `low` — they contain no risky-sounding word — while both spawn runs that write files and execute commands, and `low` is auto-approved by default. A name is not evidence about an effect.
 
-Each tool in the registry includes:
+## Core tools and on-demand discovery
 
-- **Name** — unique identifier
-- **Description** — what the tool does
-- **Parameters** — input schema (JSON Schema)
-- **Source** — which provider owns this tool
-- **Risk level** — read, write, external, destructive
+Exposing every tool schema on every turn burns context and degrades tool selection. The router therefore works in two tiers:
 
-## Querying Tools
+1. **Core tools** are always available.
+2. **Everything else** is reachable through `search_tools`, which matches the full catalog by query and returns schemas for the matches. The model plans with the tools it found rather than carrying the whole catalog.
 
-Jarvis can query the registry to find tools by:
+## Built-in native tools
 
-- **Capability** — "find tools that can read files"
-- **Source** — "show me all MCP tools"
-- **Name** — "use the filesystem:read tool"
+| Tool | Risk | Purpose |
+|------|------|---------|
+| `get_code_skeleton` | `low` | AST-pruned skeleton of a file or symbol — signatures and types preserved, bodies collapsed |
+| `search_tools` | `low` | Discover tools outside the core set |
+| `listConversations` | `low` | List conversations |
+| `previewConversationCleanup` | `low` | Dry-run a cleanup query |
+| `taskflow_create_task` | `medium` | Create a task |
+| `taskflow_list_tasks` | `low` | List tasks |
+| `deleteConversation` | `high` | Delete one conversation |
+| `deleteConversationsByQuery` | `high` | Bulk delete by query |
+| `requestConversationCleanup` | `high` | Cleanup behind an approval |
+| `dispatch_agent` | `high` | Delegate a bounded run to a child agent |
+| `run_task_graph` | `high` | Execute a DAG of coding sub-tasks |
+| `createTask` / `updateTask` | `medium` | Task management |
+| `getTodayTasks` / `queryTasks` | `low` | Query tasks |
+| `deleteTask` | `high` | Delete a task |
+| `addArticle` / `updateReadingStatus` | `medium` | Reading list |
+| `getReadingList` / `getReadingStats` / `recommendNext` | `low` | Reading queries |
+| `getDailySummary` / `getWeeklyStats` / `getReviewHistory` | `low` | Review queries |
+| `saveReview` | `medium` | Persist a review |
+| `memory_store` | `medium` | Write a long-term memory (persistent influence, so not `low`) |
+| `memory_search` / `memory_list` | `low` | Read memories |
+| `memory_delete` | `high` | Delete a memory |
+
+Every native tool declares its risk at registration; none of them rely on name or argument inference.
+
+MCP tools carry the risk policy configured for their server (`riskPolicy` per level) and are registered on connect.
+
+## Resolution
+
+```text
+Model requests tool "search_tools"
+  → registry resolves native:search_tools
+  → Permission Guard reads the declared risk
+  → policy decides auto / notify / confirm / deny
+  → execute, audit, return
+```
+
+Resolution accepts both the bare name and the `native:` prefix, so the model does not need to know the namespacing.
+
+## Inspecting the registry
+
+- `GET /api/tools` — list registered tools
+- `GET /api/tools/:id` — one tool
+- `POST /api/tools/filter` — filter by source or risk
+- `POST /api/tools/:id/execute` — execute directly (still permission-checked)
+- `GET /api/tools/logs` — recent call log
 
 ## Next Steps
 
 - [MCP Servers](/docs/configuration/mcp-servers) — connect external tools
-- [Add a Custom Tool](/docs/guides/add-custom-tool) — register your own tools
-- [Permission Guard](/docs/core-concepts/permission-guard) — safety checks
+- [Permission Guard](/docs/core-concepts/permission-guard) — how risk becomes a decision
+- [Add a Custom Tool](/docs/guides/add-custom-tool) — register your own

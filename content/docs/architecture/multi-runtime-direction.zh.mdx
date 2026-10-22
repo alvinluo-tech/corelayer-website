@@ -1,80 +1,65 @@
 ---
-title: 多运行时路线图
-description: CoreLayer 的长期架构愿景。
+title: 多运行时演进方向
+description: 长期架构目标，以及今天真实的状态。
 ---
 
-当前的单 TypeScript 守护进程是一个过渡阶段。长期目标是由 Tauri/Rust 核心监督的多运行时架构。
+CoreLayer 目前是单个 Node.js 守护进程，在进程内承载六个已注册运行时。长期目标是 Rust/Tauri 核心通过显式的权限、审计、更新与运行时协议来监管多个受管运行时。
 
-## 当前架构
+本页刻意区分“已存在”与“计划中”，因为此前版本的文档把二者混为一谈。
+
+## 今天
 
 ```text
-Tauri 桌面应用
-  └─ 单一 Node.js 守护进程
-     └─ 所有服务在一个进程中
+Tauri 桌面外壳（Rust）
+  └─ Node.js 守护进程（Hono）
+       ├─ agent       （已注册）
+       ├─ tool        （已注册）
+       ├─ coding      （已注册）
+       ├─ memory      （已注册）
+       ├─ voice       （已注册）
+       └─ scheduler   （已注册）
+
+       computer-control   （模块已实现，未注册）
 ```
 
-这在当前范围内运作良好，但存在局限性：
+运行时宿主已提供注册、生命周期与状态，`GET /api/runtime/components` 会上报各注册运行时的健康状况。这属于**进程内监管**，不是进程隔离。
 
-- 单点故障
-- 所有服务共享同一进程
-- TypeScript 对某些工作负载存在固有的性能限制
-
-## 目标架构
+## 目标
 
 ```text
 Tauri/Rust 核心
-  ├─ 代理运行时（TypeScript）
-  ├─ 工具运行时（TypeScript）
-  ├─ 编码运行时（TypeScript）
-  ├─ 语音运行时（TypeScript）
-  ├─ 记忆运行时（TypeScript）
-  ├─ 调度运行时（TypeScript）
-  └─ 计算机控制运行时（Rust）
+  ├─ 运行时监管器（启动、重启、资源限制）
+  ├─ 基于 IPC 的 Runtime Protocol
+  ├─ agent / tool / coding / memory / voice / scheduler 作为受管进程
+  └─ Computer control（Rust，真正的操作系统能力）
 ```
 
-每个运行时：
+每个受管运行时应当：
 
-- 作为受管理的子进程运行
-- 通过运行时协议通信
-- 可以独立重启
-- 有自己的资源限制
-
-## 运行时协议
-
-`@jarvis/runtime-protocol` 包定义了 Tauri 核心与受管理运行时之间的通信契约：
-
-- **生命周期** — 启动、停止、重启、健康检查
-- **消息传递** — 类型化的请求/响应
-- **事件** — 运行时到核心的通知
-- **资源限制** — 内存、CPU、时间约束
-
-## 已就绪的包
-
-| 包 | 状态 | 用途 |
-|----|------|------|
-| `@jarvis/runtime-core` | 活跃 | 运行时管理核心 |
-| `@jarvis/runtime-protocol` | 活跃 | 协议定义 |
-| `@jarvis/execution-environment` | 新建 | 执行抽象 |
+- 独立进程运行，可单独重启
+- 只通过 `@jarvis/runtime-protocol` 通信
+- 拥有自己的资源上限
+- 能力显式授予，绝不隐式获得
 
 ## 迁移路径
 
-迁移是渐进式的：
+1. **当前** — 单守护进程，模块边界由导入测试与各运行时 `public-api.ts` 强制
+2. **下一步** — 抽出故障域已经分化的运行时（coding、voice）
+3. **之后** — 把监管器从 Node 守护进程移入 Rust 核心
+4. **最终** — computer control 建立在真实的原生能力之上，而非空壳
 
-1. **阶段 1**（当前） — 带有包边界的单一守护进程
-2. **阶段 2** — 将语音管线提取到独立运行时
-3. **阶段 3** — 将工具执行提取到独立运行时
-4. **阶段 4** — 完整的多运行时，由 Rust 核心监督
+每一步都保持 HTTP 契约稳定，因此前端无需改动。
 
-每个阶段都是向后兼容的。前端不会改变 — 它仍然与同一个 HTTP API 通信。
+## 为什么不做整体 Rust 重写
 
-## 为什么需要多运行时？
+守护进程的职责不是 CPU 密集：它是编排、策略与持久化。整体重写为 Rust 收益有限，却会牺牲治理模型仍在演进时最需要的迭代速度。真正适合 Rust 的是监管器与原生能力——这也正是目标架构安排的位置。
 
-- **可靠性** — 一个运行时的崩溃不会影响其他运行时
-- **性能** — Rust 用于性能关键路径
-- **可扩展性** — 运行时可以独立扩展
-- **灵活性** — 根据需要混合使用 TypeScript 和 Rust
+## 什么情况下本页会过时
+
+如果 computer control 被注册且具备真实能力，或某个运行时开始以独立进程运行、拥有独立生命周期，请在同一次变更中更新本页。把目标当成现状来描述，正是本页要防止的失败模式。
 
 ## 下一步
 
-- [系统概览](/docs/architecture/system-overview) — 当前架构
-- [运行时边界](/docs/architecture/runtime-boundaries) — 当前隔离模型
+- [系统概览](/docs/architecture/system-overview) — 今天实际运行的内容
+- [运行时边界](/docs/architecture/runtime-boundaries) — 当前的隔离模型
+- [执行器治理](/docs/architecture/executor-governance) — 目前最接近运行时监管的能力

@@ -1,0 +1,76 @@
+---
+title: Ejecutar una Evaluacion de Fiabilidad
+description: Mide si un cambio al agente de codigo realmente lo mejora.
+---
+
+Una sola ejecucion exitosa no prueba nada. Esta guia ejecuta el harness de evaluacion para juzgar un cambio de prompt, politica o adaptador por su consistencia entre intentos.
+
+## Prerrequisitos
+
+- Un gateway de modelos sano. El ejecutor corre por ACP, asi que las mismas variables que usa aplican:
+  - `ANTHROPIC_MODEL` — debe ser un modelo DeepSeek
+  - `ANTHROPIC_BASE_URL`
+  - `ANTHROPIC_AUTH_TOKEN`
+- `acpx` instalado
+- Ejecutar desde el directorio `daemon/`
+
+## Ejecucion base
+
+```powershell
+cd daemon
+$env:ANTHROPIC_MODEL='deepseek-v4.1-flash'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+```
+
+Cada intento recibe un repositorio git temporal nuevo sembrado con los archivos de la tarea y un commit vacio, asi las tareas no se contaminan y una tarea de "no cambiar nada" tiene sentido.
+
+Lee `pass^k`, no el promedio: `pass^3` es la fraccion de tareas que tuvieron exito en todos los intentos.
+
+## A/B de un cambio de comportamiento
+
+```powershell
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/holdout.json --k 3 --compare JARVIS_REFLECTION=1
+```
+
+Ejecuta el corpus dos veces — variable sin definir y luego definida — e imprime un veredicto pareado:
+
+| Veredicto | Interpretacion |
+|-----------|----------------|
+| `improved` | El agregado supero la tolerancia **y** ninguna tarea cayo |
+| `regressed` | El agregado bajo |
+| `mixed` | La media subio pero una tarea perdio fiabilidad — **no** es una mejora |
+| `unchanged` | Todo dentro de la banda |
+
+## Decidir
+
+Solo promueve un cambio a por defecto cuando se cumplen las cuatro:
+
+1. el veredicto es `improved`
+2. `lostReliability` esta vacio
+3. `tokensPerSuccess` subio como maximo ~20%
+4. una repeticion sigue cumpliendo 1–3
+
+Si no, dejalo apagado por defecto.
+
+## Leer fallos
+
+| Sintoma | Causa probable |
+|---------|----------------|
+| Muchos `timed-out` seguidos | El gateway esta inestable; ACP se cuelga hasta agotar el presupuesto en lugar de fallar rapido |
+| Intentos `VOID` | Fallo de entorno (cuota, conexion rechazada, 5xx); excluidos de las tasas por diseno |
+| Falso positivo | El ejecutor afirmo exito y una comprobacion fallo; la evidencia de finalizacion es demasiado debil para esa tarea |
+| Falso negativo | Las comprobaciones fallaron aunque el agente reporto fallo; revisa la definicion de la tarea |
+| `mixed` en `--compare` | Una tarea regreso aunque la media mejoro — el caso que los gates agregados no ven |
+
+## Agregar tareas
+
+Prefiere comprobaciones que un script determinista pueda decidir. Cuando comparar contenido es incomodo (formato, orden, prosa), siembra un `check.js` y califica con una comprobacion `command`. Las comprobaciones son `file-exists`, `file-missing`, `file-contains`, `file-unchanged` y `command`; `file-unchanged` compara digests, la unica forma de probar "no cambies nada mas".
+
+## Siguientes pasos
+
+- [Evaluacion de Fiabilidad](/docs/architecture/reliability-eval) — las metricas en detalle
+- [Adaptadores de Ejecutores](/docs/guides/coding-executors) — configura el ejecutor bajo prueba
+- [Solucion de Problemas](/docs/reference/troubleshooting) — sintomas de gateway y timeouts

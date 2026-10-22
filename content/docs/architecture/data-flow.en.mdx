@@ -1,92 +1,98 @@
 ---
-title: Request & Data Flow
-description: How requests flow through CoreLayer from user input to response.
+title: Data & Control Flow
+description: How a message, a tool call, and a long-running agent run move through CoreLayer.
 ---
 
-This page traces the complete data flow for common operations in CoreLayer.
+This page traces the three flows that matter: a chat turn, a tool call inside that turn, and a dispatched run that outlives the turn.
 
-## Chat Message Flow
+## Chat turn
 
 ```text
-1. User types message in chat panel
-2. Frontend sends via Tauri IPC
-3. Rust backend proxies to daemon HTTP API
-4. Daemon receives at /api/chat
-5. Jarvis assembles context:
-   - Conversation history
-   - User memory
-   - Available tools
-6. Model Gateway selects provider
-7. Request sent to AI provider (streaming)
-8. Response streams back:
-   - Text chunks → frontend
-   - Tool calls → Permission Guard
-9. If tool call:
-   a. Permission Guard checks risk
-   b. If approval needed → pause, show panel
-   c. User approves → execute tool
-   d. Result sent back to model
-   e. Model continues response
-10. Final response rendered in chat
+1. User sends a message from the chat panel
+2. Frontend → Tauri IPC → daemon HTTP
+     POST /api/conversations/:id/messages/stream   (or POST /api/chat/stream)
+3. Agent runtime assembles context:
+     - conversation history (per conversation, branch-aware)
+     - long-term memory retrieved from the memory runtime
+     - the core tool set, plus any on-demand tools the router selects
+4. Model Gateway resolves the active provider/model and opens a streaming call
+     (Vercel AI SDK v6; step control happens inside prepareStep)
+5. Each step can:
+     - emit text → streamed to the UI
+     - request a tool call → step 3 of the tool-call flow below
+6. Loop breakers and step budget decide whether the turn continues or stops
+7. Completion policy + quality gates decide whether the result is acceptable
+8. Final message is persisted and the SSE stream closes
 ```
 
-## Tool Execution Flow
+## Tool call
 
 ```text
-Tool call requested
-  → Tool Registry resolves tool
-  → Permission Guard classifies risk
-  → Policy check:
-    - allow → execute immediately
-    - confirm → pause for approval
-    - deny → block and log
-  → Execute tool (MCP/native/REST)
-  → Return result to model
-  → Log to audit trail
+Tool call requested by the model
+  → Tool Registry resolves the tool (native / MCP / skill)
+  → Permission Guard classifies risk (declared at registration, not inferred)
+  → Policy decision:
+      auto    → execute
+      notify  → execute, surface a notification
+      confirm → create an approval request, suspend the run, resume on decision
+      deny    → block, record the decision
+  → Execute
+  → Write audit entry (actor, action, risk, decision, result)
+  → Return the tool result to the model
 ```
 
-## MCP Connection Flow
+Approvals are persisted, not held in memory: a pending approval survives a daemon restart and is resumed by the resume service after the user decides.
+
+## Dispatched run
 
 ```text
-1. Daemon reads MCP server config
-2. Spawns child process (stdio) or connects via SSE
-3. MCP handshake (initialize)
-4. Server reports available tools
-5. Tool Registry registers tools
-6. Tools available to Jarvis
-7. On disconnect → attempt reconnect
+User goal / delegated task
+  → run dispatcher validates bounds (delegation may only narrow)
+  → queue entry takes a slot (concurrency is bounded per resource class)
+  → coding runtime creates a git worktree
+  → executor adapter spawns the child agent (ACP)
+  → capability probe: ready / needs_auth / unreachable
+  → child streams events → event mapper → event log
+  → diff + artifacts are captured into the run record
+  → quality gates / adversarial judge (if enabled)
+  → completion policy: pass → delivered branch; fail → failed with a reason
 ```
 
-## Data Storage Flow
+Every transition writes an `agent_run` event, which is why `GET /api/runs/:id/events` can reconstruct a run after the fact and why a run can be cancelled or retried by id.
+
+## MCP connection
 
 ```text
-Write operation:
-  → Storage layer receives write request
-  → Validates data schema
-  → Writes to active backend (SQLite/Supabase/PostgreSQL)
-  → Returns confirmation
-
-Read operation:
-  → Storage layer receives read request
-  → Queries active backend
-  → Returns results
+1. Daemon loads server definitions from mcp-servers.json
+2. Spawns the child process (stdio) or connects over HTTP/SSE
+3. Performs the MCP initialize handshake
+4. Reads the tool list and registers each tool with its risk policy
+5. Tools become available to the router and to the model
+6. On disconnect, the server is marked disconnected and can be restarted
 ```
 
-## Voice Pipeline Flow
+## Storage writes
 
 ```text
-Wake word detected (Picovoice)
-  → Start listening
-  → Audio stream to ASR provider
-  → Transcription returned
-  → Text sent to chat pipeline (same as typed input)
-  → Response generated
-  → TTS streams audio back
-  → Audio plays through system output
-  → Barge-in: if user speaks during playback → restart from ASR
+Route or runtime → repository (SQLite / Supabase / PostgreSQL)
+  → schema validation
+  → write
+  → (if event) also appended to the event log
+```
+
+Storage mode is read at startup from `storage.json` (`local`, `cloud`, `postgres`). See [Storage](/docs/configuration/storage).
+
+## Voice turn
+
+```text
+Wake word → microphone opens → ASR streams partial + final transcripts
+  → final transcript enters the chat pipeline exactly like typed text
+  → response streams; TTS speaks completed sentences
+  → barge-in: speaking during playback interrupts audio and returns to ASR
 ```
 
 ## Next Steps
 
-- [System Overview](/docs/architecture/system-overview) — architecture overview
-- [Security Model](/docs/architecture/security-model) — how data is protected
+- [System Overview](/docs/architecture/system-overview) — topology
+- [Executor Governance](/docs/architecture/executor-governance) — what happens inside a dispatched run
+- [Reliability Evaluation](/docs/architecture/reliability-eval) — how run quality is measured

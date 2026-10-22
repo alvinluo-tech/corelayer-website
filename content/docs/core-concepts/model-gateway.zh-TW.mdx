@@ -1,52 +1,54 @@
 ---
 title: 模型閘道
-description: 多供應商模型路由和選擇。
+description: CoreLayer 如何把供應商 id 變成一次串流模型呼叫。
 ---
 
-模型閘道管理與 AI 模型供應商的連接，並將請求路由到最佳可用模型。
+模型閘道是一次 Agent 回合通往模型的唯一路徑。它解析目前供應商、按模型族調整請求、串流回傳，並在供應商不健康時降級。
 
-## 架構
+## 路徑
 
 ```text
-Jarvis 請求
-  → 模型閘道
-  → 供應商選擇邏輯
-  → Vercel AI SDK
-  → 供應商 API（Groq / OpenRouter / Ollama / OpenAI 相容）
-  → 回應串流回傳到 Jarvis
+Agent 回合
+  → activeProvider / activeModel（或命中路由規則）
+  → resolveProvider(id)：設定 → 憑證 → 環境變數 → 預設 base URL
+  → OpenAI 相容用戶端（Vercel AI SDK v6）
+  → 模型族調整（推理模型、Anthropic）
+  → 串流呼叫
+  → 文字增量與工具呼叫回到迴圈
 ```
 
-## 基於 Vercel AI SDK 建構
+## 一個轉接器，多家供應商
 
-模型閘道使用 [Vercel AI SDK v6+](https://sdk.vercel.ai) 來實現：
+所有遠端供應商都透過同一個 OpenAI 相容轉接器呼叫。這正是供應商可互換的原因：供應商就是一個 base URL 加一把密鑰，它的模型清單是資料而不是程式碼分支。
 
-- 跨供應商的統一介面
-- 串流回應
-- 工具呼叫支援
-- 結構化輸出
+## 迴圈控制
 
-## 路由邏輯
+Agent 迴圈是 Vercel AI SDK 的核心迴圈，而不是手寫 `while`：
 
-閘道根據以下條件選擇模型：
+- `prepareStep` 逐步決定可用工具以及本回合是否繼續
+- 熔斷器（重複相同呼叫、無進展偵測）與步數預算（`defaults.maxSteps`，上限 100）約束本回合
+- 逾時：每次呼叫 `streamTimeout`，每回合 `turnTimeout`
 
-1. **任務類型** — 推理、程式碼生成、摘要、分類
-2. **延遲需求** — 即時語音需要快速模型
-3. **成本** — 日常任務使用較便宜的模型
-4. **備用方案** — 主要供應商不可用時的備選
-
-## 供應商設定
-
-參閱[模型供應商](/docs/configuration/model-providers)了解設定詳情。
+向手寫迴圈注入中途訊息的機制已移除；`POST /api/runs/:id/message` 回傳 `410`。
 
 ## 串流
 
-所有模型回應預設為串流。這意味著：
+回應預設串流：
 
-- 文字在生成時就出現
-- TTS 可以在句子完成時就播放（句級串流）
-- 工具呼叫在被識別後就立即執行
+- 文字隨生成逐段出現
+- TTS 可按句播報
+- 工具呼叫在步驟產出時立即執行
+
+## 健康與降級
+
+連續失敗兩次的供應商進入 20 秒冷卻，重複失敗時指數退避。冷卻期間呼叫會跳過它，而不是再等一次同樣的逾時。首次成功即重置計數。
+
+## 成本統計
+
+供應商回報用量時才會記錄 token。經 ACP 驅動的執行器無法計量（協定沒有用量更新），因此這些執行的成本數字明確標註為估算值，而非供應商標稱計數。
 
 ## 下一步
 
 - [模型供應商](/docs/configuration/model-providers) — 設定供應商
-- [設定本地模型](/docs/guides/configure-local-models) — 設定 Ollama
+- [設定本機模型](/docs/guides/configure-local-models) — Ollama
+- [可靠性評測](/docs/architecture/reliability-eval) — 為什麼只看通過率不夠

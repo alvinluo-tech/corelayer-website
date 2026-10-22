@@ -1,33 +1,36 @@
 ---
 title: モデルプロバイダー
-description: Jarvisルーティング用のAIモデルプロバイダーを設定します。
+description: モデルゲートウェイがルーティングできるプロバイダーを設定します。
 ---
 
-CoreLayerのモデルゲートウェイは、複数のAIプロバイダーにリクエストをルーティングします。1つ以上のプロバイダーを設定し、Jarvisが各タスクに最適なモデルを選択できるようにします。
+すべてのモデル呼び出しは 1 つの OpenAI 互換アダプターを通ります。つまりプロバイダーは `baseURL` とキーであり、ベンダーごとの SDK ではありません。OpenAI のワイヤ形式を話すプロバイダーの追加はコードではなく設定です。
 
-## サポートされているプロバイダー
+## 対応プロバイダー ID
 
-モデルゲートウェイは、組み込みのプリセットを介して以下のプロバイダーをネイティブにサポートしています:
+以下の ID はプロバイダーリゾルバーが認識し、それぞれの環境変数と既定 base URL を持ちます：
 
-| プロバイダー | ID | タイプ | 代表的なモデル |
-|------------|----|------|----------------|
-| **MiMo (小米)** | `mimo` | `openai_compatible` | `mimo-v2.5-pro`, `mimo-v2.5` |
-| **Groq** | `groq` | `openai_compatible` | `llama-4-scout`, `llama-4-maverick`, `llama-3.3-70b-versatile` |
-| **DeepSeek** | `deepseek` | `openai_compatible` | `deepseek-v4-pro`, `deepseek-v4-flash` |
-| **Anthropic** | `anthropic` | `openai_compatible` | `claude-sonnet-5`, `claude-fable-5`, `claude-opus-4.8` |
-| **Google Gemini** | `google` | `openai_compatible` | `gemini-3.5-flash`, `gemini-3.1-flash`, `gemini-3.1-pro` |
-| **OpenAI** | `openai` | `openai_compatible` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.5`, `gpt-5.4` |
-| **通義千問 (Qwen)** | `qwen` | `openai_compatible` | `qwen-3.7-max-preview`, `qwen-3.7-plus-preview`, `qwen-3.6` |
-| **OpenRouter** | `openrouter` | `openai_compatible` | `anthropic/claude-sonnet-5`, `google/gemini-3.5-flash` |
-| **Ollama** | `ollama` | `ollama` | `llama4`, `qwen3.5`, `deepseek-v4` |
+| プロバイダー | ID | 既定 base URL |
+|-------------|----|---------------|
+| DeepSeek | `deepseek` | `https://api.deepseek.com/v1` |
+| OpenAI | `openai` | `https://api.openai.com/v1` |
+| Anthropic | `anthropic` | `https://api.anthropic.com/v1` |
+| Google Gemini | `gemini` | `https://generativelanguage.googleapis.com/v1beta/openai` |
+| Groq | `groq` | `https://api.groq.com/openai/v1` |
+| OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` |
+| MiMo（Xiaomi） | `mimo` | `https://token-plan-ams.xiaomimimo.com/v1` |
+| Qwen（Alibaba） | `qwen` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| Ollama | `ollama` | `http://localhost:11434/v1` |
 
-## 設定ファイル
+Gemini の ID は `gemini` で、`google` ではありません。後者は環境変数名 `GOOGLE_API_KEY` にのみ現れます。
 
-CoreLayerは設定と認証情報を分離するセキュリティ設計を採用しています。設定ファイルは `~/.jarvis/config/` ディレクトリに保存されます。
+## 設定の場所
 
-### 1. メイン設定 (`config.json`)
+| ファイル | 内容 |
+|---------|------|
+| `~/.jarvis/config/config.json` | `providers[]`、`activeProvider`、`activeModel`、ルーティング規則、既定値 |
+| `~/.jarvis/security/credentials.json` | API キー（プロバイダー id ごと） |
 
-有効なプロバイダー、モデルのルーティングルール、および各プロバイダーのエンドポイントを定義します。**このファイルにはAPIキーは含まれません**:
+API キーが `config.json` に書かれることはありません。
 
 ```json
 {
@@ -36,76 +39,49 @@ CoreLayerは設定と認証情報を分離するセキュリティ設計を採�
   "activeModel": "mimo-v2.5-pro",
   "providers": [
     {
-      "id": "mimo",
-      "name": "MiMo",
+      "id": "deepseek",
+      "name": "DeepSeek",
       "type": "openai_compatible",
-      "baseURL": "https://token-plan-ams.xiaomimimo.com/v1",
-      "enabled": true
-    },
-    {
-      "id": "groq",
-      "name": "Groq",
-      "type": "openai_compatible",
-      "baseURL": "https://api.groq.com/openai/v1",
-      "enabled": true
-    },
-    {
-      "id": "openrouter",
-      "name": "OpenRouter",
-      "type": "openai_compatible",
-      "baseURL": "https://openrouter.ai/api/v1",
-      "enabled": true
-    },
-    {
-      "id": "ollama",
-      "name": "Ollama",
-      "type": "ollama",
-      "baseURL": "http://localhost:11434/v1",
+      "baseURL": "https://api.deepseek.com/v1",
       "enabled": true
     }
   ]
 }
 ```
 
-### 2. 認証情報設定 (`credentials.json`)
+`type` はリモートプロバイダーでは `openai_compatible`、ローカルサーバーでは `ollama` です。
 
-APIキーを個別に安全に保存し、`config.json` 内の対応するプロバイダー `id` にマッピングします:
+## キーと base URL の解決順
 
-```json
-{
-  "mimo": "your_mimo_api_key_here",
-  "groq": "your_groq_api_key_here",
-  "openrouter": "your_openrouter_api_key_here"
-}
-```
+プロバイダーについて、リゾルバーは次の順で確認します：
 
-## モデルルーティング
+1. `security/credentials.json` と `config.json` のプロバイダー項目
+2. プロバイダーの環境変数（例：`DEEPSEEK_API_KEY`、`ANTHROPIC_AUTH_TOKEN`）
+3. 組み込みの既定 base URL
 
-複数のプロバイダーが設定されている場合、モデルゲートウェイは以下に基づいて選択します:
+URL がプロバイダー名として認識されない場合、リゾルバーはホスト名から推測します（例：`api.deepseek.com` → `deepseek`）。
 
-- **タスクの複雑さ** — 複雑な推論はより高性能なモデルにルーティング
-- **レイテンシー要件** — 時間に敏感なリクエストはGroqまたはローカルモデルを優先
-- **コスト最適化** — 日常タスクはより安価なプロバイダーを使用
-- **可用性** — プロバイダーがダウンした場合のフォールバック
+環境変数の完全な表は [設定ファイル](/docs/reference/config-file#environment-variables) を参照。
 
-## 環境変数
+## ルーティングとフォールバック
 
-APIキーをハードコードする代わりに環境変数を使用できます:
+- `activeProvider` / `activeModel` が既定のターゲット。
+- `routingRules[]` は `taskType` を `modelId` にマップし、任意の `conditions` を持てます。
+- プロバイダーが繰り返し失敗すると「デッド」とされクールダウンします（2 回連続失敗、以降は指数バックオフ）。以後の呼び出しは同じタイムアウトを払わずにスキップします。成功でリセット。
 
-```bash
-GROQ_API_KEY=your_groq_api_key_here
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-```
+## モデルファミリー
 
-設定で参照:
+アダプターはファミリーごとに小さな調整を行い、設定項目として露出しません：
 
-```json
-{
-  "apiKey": "${GROQ_API_KEY}"
-}
-```
+- 推論モデル（`o1`…`o4` とプレビュー）はそれらのエンドポイントが受け付けるパラメータを使う
+- Anthropic モデルは OpenAI 互換エンドポイント経由で呼ばれ、ツール呼び出しとストリーミングは他と同様に振る舞う
+
+## 「現在のモデル」について
+
+本ページは意図的にモデル名を列挙しません。モデル ID の変化は文書より速いためです。**設定 → モデル**（プロバイダーがモデル一覧を公開している場合はそれを読む）か、プロバイダーの公式ドキュメントを使ってください。ここに名前を固定すると、1 リリースで古くなります。
 
 ## 次のステップ
 
-- [モデルゲートウェイ](/docs/core-concepts/model-gateway) — ルーティングロジックの理解
-- [ローカルモデル設定](/docs/guides/configure-local-models) — Ollamaのセットアップ
+- [モデルゲートウェイ](/docs/core-concepts/model-gateway) — ルーティングとストリーミング
+- [ローカルモデルの設定](/docs/guides/configure-local-models) — Ollama
+- [設定ファイル](/docs/reference/config-file) — 完全なリファレンス

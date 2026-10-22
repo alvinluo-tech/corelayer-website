@@ -1,81 +1,104 @@
 ---
 title: 权限
-description: 配置工具执行的权限守卫。
+description: 配置权限守卫的风险策略与按应用覆盖。
 ---
 
-权限守卫控制哪些工具调用需要审批、哪些被自动允许、哪些被阻止。
+权限守卫对每次工具调用决定：直接执行、执行并提示、挂起询问，还是拒绝。这个决定是工具声明风险与策略的纯函数。
 
-## 权限级别
+## 风险 → 动作
 
-| 级别 | 行为 |
-|------|------|
-| **读取** | 自动允许（读取文件、列出数据） |
-| **写入** | 需要审批（写入文件、修改数据） |
-| **外部** | 需要审批（API 调用、网络请求） |
-| **破坏性** | 需要审批并显示警告（删除数据） |
-| **凭据敏感** | 除非明确允许，否则始终阻止 |
+| 风险 | 默认动作 |
+|------|----------|
+| `low` | `auto` — 静默执行 |
+| `medium` | `notify` — 执行并提示 |
+| `high` | `confirm` — 挂起直到你决定 |
+| `critical` | `deny` — 拒绝 |
 
-## 配置
+## 默认策略
 
-```json
-{
-  "permissions": {
-    "defaultPolicy": "confirm",
-    "rules": [
-      {
-        "tool": "filesystem:read",
-        "policy": "allow"
-      },
-      {
-        "tool": "filesystem:write",
-        "policy": "confirm"
-      },
-      {
-        "tool": "github:*",
-        "policy": "confirm"
-      },
-      {
-        "tool": "shell:execute",
-        "policy": "deny"
-      }
-    ]
-  }
+```ts
+defaultPolicy: {
+  low: "auto",
+  medium: "notify",
+  high: "confirm",
+  critical: "deny",
 }
 ```
 
-## 策略
+这是守护进程实际运行的策略，映射定义在 `@jarvis/permission-guard` 中并作用于每次工具调用。
 
-| 策略 | 效果 |
-|------|------|
-| `allow` | 无需询问直接执行 |
-| `confirm` | 暂停并请求用户审批 |
-| `deny` | 完全阻止执行 |
+**它目前还不支持用户配置。** 守卫以默认值构造，`config.json` 中也没有权限段落——本文件历史版本描述过一个 `permissions.rules` 数组，那个数组并不存在，写进去也不会生效。
 
-## 审批流程
+## 按应用覆盖
 
-当工具调用需要确认时：
+守卫的配置结构支持按应用覆盖：
 
-1. Jarvis 解释它想要做什么
-2. 审批面板显示工具名称、参数和风险级别
-3. 你可以**批准**、**拒绝**或**始终批准**（针对此工具）
-4. 所有决策都记录在审计日志中
-
-## 审计日志
-
-每次工具执行都被记录：
-
-```text
-[2026-06-15 14:32:01] filesystem:write /workspace/README.md
-  风险: write
-  策略: confirm
-  决策: approved
-  用户: manual approval
+```ts
+appPermissions: {
+  "filesystem": { write: true,  execute: false },
+  "untrusted-mcp": { write: false, execute: false },
+}
 ```
 
-在**控制中心 → 权限 → 审计日志**中查看审计日志。
+各标志的映射：
+
+| 风险 | `write: true` | `write: false` |
+|------|---------------|----------------|
+| `medium` | `notify` | `confirm` |
+| `high` | `confirm` | `deny` |
+
+| 风险 | `execute: true` | `execute: false` |
+|------|-----------------|------------------|
+| `critical` | `confirm` | `deny` |
+
+`low` 始终是 `auto`。
+
+覆盖在存在时会被评估，但守护进程中目前没有代码从磁盘读取它们，因此只对以覆盖配置构造守卫的调用方生效。
+
+## 语音模式
+
+语音执行不论风险都更严格：只读动作自动放行，其余都需要确认。口头发起比手动输入更容易被误触发。
+
+## 审批请求
+
+动作为 `confirm` 时，守卫不会把决定留在内存里：
+
+1. 持久化 `approval_request`，包含动作摘要、风险、范围与过期时间
+2. 挂起运行
+3. 界面展示请求——批准、拒绝或记住
+4. 决定后恢复或终止运行
+
+端点：
+
+```text
+GET  /api/approvals
+GET  /api/approvals/:id
+POST /api/approvals/:id/approve
+POST /api/approvals/:id/deny
+POST /api/approvals/:id/remember
+POST /api/approvals/batch/approve
+POST /api/approvals/batch/deny
+POST /api/approvals/expire-stale
+```
+
+“请求已过期”是真实状态：无人值守队列会堆积没人应答的请求，`expire-stale` 会把它们关闭，而不是让运行永久挂起。
+
+## 权限记忆
+
+“记住”会把决定记录在动作摘要上——是具体动作，而不是工具名。同一动作不再询问；不同路径、命令或参数集合会产生不同摘要，仍会询问。
+
+## 审计
+
+每次决定都写入 `audit_log`，可按条件查询：
+
+```text
+GET /api/audit?actor=jarvis&action=tool.execute&riskLevel=high&since=2026-10-01T00:00:00Z&limit=50
+```
+
+一条记录包含 `actor`、`action`、`resource`、`riskLevel`、`permissionDecision`、`confirmedByUser`、`result`、`metadata` 与 `createdAt`。
 
 ## 下一步
 
-- [权限守卫](/docs/core-concepts/permission-guard) — 深入了解安全模型
-- [查看审计日志](/docs/guides/review-audit-logs) — 使用审计追踪
-- [安全模型](/docs/architecture/security-model) — 架构细节
+- [权限守卫](/docs/core-concepts/permission-guard) — 策略背后的模型
+- [安全模型](/docs/architecture/security-model) — 强制层
+- [审查审计日志](/docs/guides/review-audit-logs) — 日志的实际用法

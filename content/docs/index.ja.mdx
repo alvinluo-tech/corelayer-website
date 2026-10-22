@@ -32,9 +32,9 @@ CoreLayerは、あなたとパーソナルアプリエコシステムの間に�
 
 - **Voice-native** — ウェイクワード、ストリーミングASR/TTS、バージイン割り込み
 - **MCP-first** — Model Context Protocolを通じて外部ツールサーバーを接続
-- **Tool-aware** — ネイティブモジュール、MCPツール、スキル、RESTアダプターの統一レジストリ
-- **Permission-guarded** — リスクのあるアクションは分類され、承認待ちになり、ログに記録されます
-- **Local-first** — ローカルのSQLite、オプションのSupabaseクラウド同期
+- **Tool-aware** — ネイティブツール、MCPツール、スキルの統一レジストリとオンデマンド発見
+- **Permission-guarded** — リスクは登録時に宣言され名前から推測しない。承認は再起動をまたいで残り、監査は完全
+- **Local-first** — 6 ゾーンのディスクレイアウト、既定 SQLite、Supabase / PostgreSQL は任意
 
 ## ドキュメントセクション
 
@@ -42,7 +42,7 @@ CoreLayerは、あなたとパーソナルアプリエコシステムの間に�
 |---------|-----------------|
 | [はじめに](/docs/getting-started/what-is-corelayer) | インストール、クイックスタート、最初のMCP接続 |
 | [設定](/docs/configuration/model-providers) | モデルプロバイダー、MCPサーバー、ストレージ、音声、権限 |
-| [コアコンセプト](/docs/core-concepts/jarvis) | Jarvis、コントロールセンター、モデルゲートウェイ、ツールレジストリ、パーミッションガード |
-| [ガイド](/docs/guides/connect-mcp-app) | 一般的なワークフローのステップバイステップガイド |
-| [リファレンス](/docs/reference/config-file) | 設定ファイル、CLIコマンド、APIエンドポイント |
-| [アーキテクチャ](/docs/architecture/system-overview) | システム設計、ランタイム境界、データフロー |
+| [コアコンセプト](/docs/core-concepts/jarvis) | Jarvis、コントロールセンター、モデルゲートウェイ、ツールレジストリ、パーミッションガード、記憶、スキル |
+| [ガイド](/docs/guides/connect-mcp-app) | 一般的なワークフローの手順。コーディングエグゼキューターと信頼性評価を含む |
+| [リファレンス](/docs/reference/config-file) | 設定ファイル、CLIコマンド、APIエンドポイント、トラブルシューティング |
+| [アーキテクチャ](/docs/architecture/system-overview) | システム設計、ランタイム境界、データフロー、エグゼキューターガバナンス |

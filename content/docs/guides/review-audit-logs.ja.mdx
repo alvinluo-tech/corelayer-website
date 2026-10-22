@@ -3,66 +3,71 @@ title: 監査証跡の確認
 description: パーミッションガードの監査証跡を理解して操作します。
 ---
 
-CoreLayerのすべてのツール実行はログに記録されます。このガイドでは、監査ログの確認と操作方法を説明します。
+CoreLayer のすべてのツール実行決定は記録されます。本ガイドでは監査エントリの照会と読み方を説明します。
 
 ## 監査ログへのアクセス
 
-**コントロールセンター → 権限 → 監査ログ**を開く。
+監査エントリは `GET /api/audit` で提供され、コントロールセンターにも表示されます。承認（`/api/approvals`）やイベントログ（`/api/events`）とは別のリソースです。
 
-## ログエントリのフォーマット
+## ログエントリの形式
 
-各エントリには以下が含まれます:
+エントリには次が記録されます：
 
 ```text
-[2026-06-15 14:32:01] tool-name
-  Source: mcp | native | skill | rest
-  Risk: read | write | external | destructive
-  Policy: allow | confirm | deny
-  Decision: approved | denied | auto-allowed
-  Parameters: { ... }
-  Result: success | error
+createdAt          2026-10-21T14:32:01Z
+actor              jarvis
+action             tool.execute
+resource           filesystem:write /workspace/README.md
+riskLevel          high
+permissionDecision confirm
+confirmedByUser    true
+result             success
+metadata           { ... }
 ```
 
-## ログのフィルタリング
+## ログの絞り込み
 
-以下でフィルタリング:
+`GET /api/audit` は次を受け付けます：
 
-- **日付範囲** — 特定期間
-- **ツール名** — 特定のツール呼び出しを検索
-- **リスクレベル** — write/destructive操作のみ表示
-- **決定** — 拒否または承認された呼び出しを検索
+- `actor` — 実行者
+- `action` — 実行された内容
+- `riskLevel` — `low` | `medium` | `high` | `critical`
+- `since` — ISO タイムスタンプの下限
+- `limit` / `offset` — ページング
 
-## 一般的なユースケース
+レスポンスは `{ entries, total, count }`。
+
+## 一般的な用途
 
 ### セキュリティレビュー
 
-行われた外部API呼び出しを確認:
+どの高リスク操作が承認されたかを確認：
 
-1. **Risk: external**でフィルタリング
-2. ツール名とパラメータを確認
-3. すべての呼び出しが想定通りであることを確認
+1. `GET /api/audit?riskLevel=high&since=2026-10-01T00:00:00Z` を照会
+2. 各エントリの `resource` と `metadata` を確認
+3. 手動決定を想定した箇所で `confirmedByUser` が `true` か確認
 
 ### デバッグ
 
-ツール呼び出しの失敗原因を検索:
+ツール呼び出しが実行されなかった理由を探す：
 
-1. **Result: error**でフィルタリング
-2. ログエントリのエラーメッセージを確認
-3. ツールパラメータが正しかったか確認
+1. `action` で絞り込む
+2. `permissionDecision` を確認 — `deny` はポリシーによるブロック
+3. `GET /api/runs/:id/events` で run id を突き合わせる
 
 ### コンプライアンス
 
-すべてのデータ変更のレポートを生成:
+状態変更操作の記録を作る：
 
-1. **Risk: write**と**Risk: destructive**でフィルタリング
-2. ログエントリをエクスポート
-3. すべてのデータ変更を確認
+1. `riskLevel=high` で照会し、続けて `riskLevel=critical` で照会
+2. 返されたエントリをエクスポート
+3. `confirmedByUser: false` のエントリをすべて確認 — それらは自動決定
 
-## ログ保持
+## ログの保持
 
-監査ログは設定されたデータベースにローカル保存され、セッション間で永続化されます。デフォルトでは、ログは無期限に保持されます。ディスク使用量を制限するには、`config.json`で`permissions.auditRetentionDays`を設定 — 指定日数より古いエントリは起動時に自動的に剪定されます。
+保持期間の設定はありません。エントリは設定されたデータベースの `audit_log` テーブルに残り続けます。本ページの過去版は `permissions.auditRetentionDays` を説明していましたが、そのオプションは存在しません。増加を抑えたい場合は SQL やデータベースのツールで削除してください。
 
 ## 次のステップ
 
 - [権限](/docs/configuration/permissions) — ポリシー設定
-- [パーミッションガード](/docs/core-concepts/permission-guard) — 安全モデルの詳細
+- [パーミッションガード](/docs/core-concepts/permission-guard) — 安全モデル

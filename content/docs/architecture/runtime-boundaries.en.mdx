@@ -1,66 +1,64 @@
 ---
 title: Runtime Boundaries
-description: How CoreLayer isolates components for safety and reliability.
+description: What crosses each boundary, and what each layer is allowed to do.
 ---
 
-CoreLayer enforces strict boundaries between components to ensure safety, reliability, and maintainability.
+CoreLayer separates the UI, the desktop shell, the daemon, and external processes so that a failure in one cannot silently escalate into another.
 
 ## Boundary Model
 
 ```text
-Frontend (Browser/Webview)
-  ║ Tauri IPC (typed, serialized)
-  ╚═► Rust Backend
-      ║ HTTP (localhost only)
-      ╚═► Node.js Daemon
-          ║ SDK interfaces
-          ╚═► Shared Packages
+Webview UI (React)
+  ║ Tauri IPC — typed, registered commands only
+  ╚═► Tauri shell (Rust)
+      ║ HTTP — loopback only
+      ╚═► Node.js daemon (Hono)
+          ║ in-process module calls (public-api modules)
+          ╠═► shared packages
+          ║ subprocess / network
+          ╠═► ACP executor process (Claude Code, Codex, OpenCode)
+          ╠═► MCP servers (stdio child processes or HTTP/SSE)
+          ╚═► database (SQLite file, Supabase, PostgreSQL)
 ```
 
-Each boundary enforces:
+## Cross-boundary rules
 
-- **Type safety** — typed interfaces between layers
-- **Isolation** — components can't directly access each other's internals
-- **Communication protocol** — well-defined APIs only
+| Boundary | Rule |
+|----------|------|
+| UI → Tauri | Only registered commands; no direct filesystem or network |
+| Tauri → daemon | HTTP on loopback; daemon port is chosen at spawn and reported by `/api/runtime/status` |
+| Daemon → packages | Import through each runtime's `public-api.ts`, never into internal modules |
+| Daemon → executor | Child process in a git worktree, with a pinned model/executor and a narrowed bounds envelope |
+| Daemon → MCP server | stdio child process or remote HTTP/SSE; every reported tool is registered and risk-tagged |
+| Daemon → database | Through the repository layer only; no route queries the database directly |
 
-## Frontend ↔ Rust
+The daemon enforces one of these mechanically: an import-boundary test fails the build if an HTTP route reaches into a runtime's internals instead of its `public-api.ts`.
 
-Communication uses Tauri's IPC mechanism:
+## UI ↔ Tauri
 
-- Commands are typed (TypeScript ↔ Rust)
-- Serializes to JSON
-- Async by default
+- Commands are typed on both sides (TypeScript ↔ Rust structs)
+- Payloads are JSON
+- Calls are async; the UI never blocks on daemon startup
 
-## Rust ↔ Daemon
+## Tauri ↔ daemon
 
-Communication uses HTTP:
+- HTTP, loopback only. `/api/runtime/shutdown` additionally refuses non-loopback peers.
+- SSE for streaming chat and run progress
+- The shell owns the daemon lifecycle: spawn, health check, restart on crash, terminate on exit
 
-- Localhost only (not exposed to network)
-- RESTful endpoints
-- Streaming responses (SSE) for chat
+## Daemon ↔ executors
 
-## Daemon ↔ Packages
+Coding work is not run in the daemon process. The coding runtime spawns an external agent through an adapter (see [Coding Executor Adapters](/docs/guides/coding-executors)) inside an isolated git worktree, and reads back only structured events, artifacts, and a diff. What the child may do is fixed at dispatch time by the [delegation bounds](/docs/architecture/executor-governance#delegation-bounds) and cannot be widened by the child.
 
-Communication uses TypeScript imports:
+## Why this matters
 
-- Direct function calls
-- Shared type definitions
-- Package boundaries enforced by module system
-
-## Daemon ↔ External Services
-
-- **AI Providers** — HTTPS to cloud APIs
-- **MCP Servers** — stdio or SSE protocol
-- **Databases** — native drivers (better-sqlite3, pg)
-
-## Why Boundaries Matter
-
-- **Security** — compromised frontend can't directly access database
-- **Reliability** — daemon crash doesn't take down the frontend
-- **Testability** — each layer can be tested independently
-- **Replaceability** — swap storage or model providers without changing other layers
+- **Containment** — a misbehaving executor can only damage its own worktree
+- **Attribution** — every state change has a run id, an actor, and an audit entry
+- **Replaceability** — a provider, an executor, or a storage backend can be swapped without touching the others
+- **Testability** — boundaries are enforced by tests, not by convention alone
 
 ## Next Steps
 
-- [System Overview](/docs/architecture/system-overview) — full architecture
-- [Security Model](/docs/architecture/security-model) — safety details
+- [Security Model](/docs/architecture/security-model) — the enforcement layers in detail
+- [Executor Governance](/docs/architecture/executor-governance) — containment for coding agents
+- [System Overview](/docs/architecture/system-overview) — the full topology

@@ -1,66 +1,64 @@
 ---
 title: 執行階段邊界
-description: CoreLayer 如何隔離元件以確保安全和可靠性。
+description: 跨越每個邊界的究竟是什麼，以及每個層被允許做什麼。
 ---
 
-CoreLayer 在元件之間實施嚴格的邊界，以確保安全、可靠和可維護性。
+CoreLayer 將介面、桌面外殼、守護行程與外部行程相互隔離，使某一層的故障無法悄悄升級成另一層的問題。
 
 ## 邊界模型
 
 ```text
-前端（瀏覽器/Webview）
-  ║ Tauri IPC（型別化、序列化）
-  ╚═► Rust 後端
-      ║ HTTP（僅限本機）
-      ╚═► Node.js 守護程式
-          ║ SDK 介面
-          ╚═► 共享套件
+Webview UI（React）
+  ║ Tauri IPC —— 僅限顯式註冊的指令
+  ╚═► Tauri 外殼（Rust）
+      ║ HTTP —— 僅限回環
+      ╚═► Node.js 守護行程（Hono）
+          ║ 行程內模組呼叫（public-api 模組）
+          ╠═► 共享套件
+          ║ 子行程 / 網路
+          ╠═► ACP 執行器行程（Claude Code、Codex、OpenCode）
+          ╠═► MCP 伺服器（stdio 子行程或 HTTP/SSE）
+          ╚═► 資料庫（SQLite 檔案、Supabase、PostgreSQL）
 ```
 
-每個邊界實施：
+## 跨邊界規則
 
-- **型別安全** — 層之間的型別化介面
-- **隔離** — 元件不能直接存取彼此的內部
-- **通訊協定** — 僅限定義明確的 API
+| 邊界 | 規則 |
+|------|------|
+| UI → Tauri | 僅限註冊指令；不直接存取檔案系統或網路 |
+| Tauri → 守護行程 | 回環 HTTP；連接埠在啟動時確定並由 `/api/runtime/status` 上報 |
+| 守護行程 → 套件 | 經各執行階段 `public-api.ts` 匯入，禁止直接進入內部模組 |
+| 守護行程 → 執行器 | 在 git worktree 中的子行程，綁定模型/執行器並受收窄後的邊界約束 |
+| 守護行程 → MCP 伺服器 | stdio 子行程或遠端 HTTP/SSE；上報的每個工具都註冊並標註風險 |
+| 守護行程 → 資料庫 | 只經倉儲層；路由不直接查詢資料庫 |
 
-## 前端 ↔ Rust
+其中一條由機器強制：若某個 HTTP 路由繞過 `public-api.ts` 直接存取執行階段內部，匯入邊界測試會讓建置失敗。
 
-通訊使用 Tauri 的 IPC 機制：
+## UI ↔ Tauri
 
-- 指令是型別化的（TypeScript ↔ Rust）
-- 序列化為 JSON
-- 預設為非同步
+- 兩端都有型別（TypeScript ↔ Rust 結構體）
+- 載荷為 JSON
+- 呼叫非同步；介面不會阻塞等待守護行程啟動
 
-## Rust ↔ 守護程式
+## Tauri ↔ 守護行程
 
-通訊使用 HTTP：
+- HTTP，僅限回環。`/api/runtime/shutdown` 還會拒絕非回環對端。
+- 串流對話與執行進度使用 SSE。
+- 外殼掌管守護行程生命週期：啟動、健康檢查、崩潰重啟、結束時終止。
 
-- 僅限本機（不暴露到網路）
-- RESTful 端點
-- 串流回應（SSE）用於聊天
+## 守護行程 ↔ 執行器
 
-## 守護程式 ↔ 套件
+編碼工作不在守護行程內執行。coding 執行階段透過轉接器（見 [編碼執行器轉接器](/docs/guides/coding-executors)）在隔離的 git worktree 中啟動外部 Agent，只回讀結構化事件、產物與 diff。子行程能做什麼在派發時就由[委派邊界](/docs/architecture/executor-governance#delegation-bounds)固定，子行程無法自行放寬。
 
-通訊使用 TypeScript 匯入：
+## 為什麼重要
 
-- 直接函式呼叫
-- 共享型別定義
-- 模組系統實施的套件邊界
-
-## 守護程式 ↔ 外部服務
-
-- **AI 供應商** — HTTPS 到雲端 API
-- **MCP 伺服器** — stdio 或 SSE 協定
-- **資料庫** — 原生驅動程式（better-sqlite3、pg）
-
-## 為什麼邊界很重要
-
-- **安全** — 被入侵的前端不能直接存取資料庫
-- **可靠性** — 守護程式崩潰不會拖垮前端
-- **可測試性** — 每一層都可以獨立測試
-- **可替換性** — 更換儲存或模型供應商而不需要更改其他層
+- **隔離** — 行為異常的執行器只能破壞自己的工作區
+- **可歸因** — 每次狀態變化都有 run id、操作者與稽核記錄
+- **可替換** — 供應商、執行器或儲存後端可獨立替換
+- **可測試** — 邊界由測試強制，而不只靠約定
 
 ## 下一步
 
-- [系統概覽](/docs/architecture/system-overview) — 完整架構
-- [安全模型](/docs/architecture/security-model) — 安全細節
+- [安全模型](/docs/architecture/security-model) — 各層強制機制詳解
+- [執行器治理](/docs/architecture/executor-governance) — 編碼 Agent 的約束
+- [系統概覽](/docs/architecture/system-overview) — 完整拓撲

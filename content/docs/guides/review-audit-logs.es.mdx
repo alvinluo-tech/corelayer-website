@@ -3,66 +3,71 @@ title: Revisar el Registro de Auditoria
 description: Entiende y trabaja con el registro de auditoria del Permission Guard.
 ---
 
-Cada ejecucion de herramienta en CoreLayer se registra. Esta guia muestra como revisar y trabajar con los registros de auditoria.
+Cada decision de ejecucion de herramienta en CoreLayer queda registrada. Esta guia muestra como consultar y leer las entradas de auditoria.
 
-## Acceder a los Registros de Auditoria
+## Acceder a los Registros
 
-Abre **Centro de Control → Permisos → Registro de Auditoria**.
+Las entradas se sirven por `GET /api/audit` y se muestran en el Centro de Control. Son un recurso distinto de las aprobaciones (`/api/approvals`) y del event log (`/api/events`).
 
-## Formato de Entrada de Registro
+## Formato de Entrada
 
-Cada entrada contiene:
+Una entrada registra:
 
 ```text
-[2026-06-15 14:32:01] tool-name
-  Fuente: mcp | native | skill | rest
-  Riesgo: read | write | external | destructive
-  Politica: allow | confirm | deny
-  Decision: approved | denied | auto-allowed
-  Parametros: { ... }
-  Resultado: success | error
+createdAt          2026-10-21T14:32:01Z
+actor              jarvis
+action             tool.execute
+resource           filesystem:write /workspace/README.md
+riskLevel          high
+permissionDecision confirm
+confirmedByUser    true
+result             success
+metadata           { ... }
 ```
 
 ## Filtrar Registros
 
-Filtra por:
+`GET /api/audit` acepta:
 
-- **Rango de fechas** — periodo de tiempo especifico
-- **Nombre de herramienta** — buscar llamadas a herramientas especificas
-- **Nivel de riesgo** — ver solo operaciones de escritura/destructivas
-- **Decision** — buscar llamadas denegadas o aprobadas
+- `actor` — quien realizo la accion
+- `action` — que se realizo
+- `riskLevel` — `low` | `medium` | `high` | `critical`
+- `since` — limite inferior de timestamp ISO
+- `limit` / `offset` — paginacion
+
+La respuesta es `{ entries, total, count }`.
 
 ## Casos de Uso Comunes
 
 ### Revision de Seguridad
 
-Verifica que llamadas API externas se hicieron:
+Comprueba que acciones de alto riesgo se aprobaron:
 
-1. Filtra por **Riesgo: externo**
-2. Revisa los nombres de herramientas y parametros
-3. Verifica que todas las llamadas fueran esperadas
+1. Consulta `GET /api/audit?riskLevel=high&since=2026-10-01T00:00:00Z`
+2. Revisa `resource` y `metadata` de cada entrada
+3. Confirma que `confirmedByUser` es `true` donde esperabas una decision manual
 
 ### Depuracion
 
-Encuentra por que fallo una llamada a herramienta:
+Encuentra por que una tool call no se ejecuto:
 
-1. Filtra por **Resultado: error**
-2. Revisa el mensaje de error en la entrada del registro
-3. Verifica que los parametros de la herramienta fueran correctos
+1. Filtra por `action`
+2. Revisa `permissionDecision` — `deny` significa que la politica la bloqueo
+3. Cruza el run id con `GET /api/runs/:id/events`
 
 ### Cumplimiento
 
-Genera un reporte de todas las modificaciones de datos:
+Genera un registro de acciones que cambian estado:
 
-1. Filtra por **Riesgo: escritura** y **Riesgo: destructivo**
-2. Exporta las entradas del registro
-3. Revisa todos los cambios de datos
+1. Consulta con `riskLevel=high` y luego repite con `riskLevel=critical`
+2. Exporta las entradas devueltas
+3. Revisa cada entrada con `confirmedByUser: false` — se decidieron automaticamente
 
 ## Retencion de Registros
 
-Los registros de auditoria se almacenan localmente en la base de datos configurada y persisten entre sesiones. Por defecto, los registros se conservan indefinidamente. Para limitar el uso de disco, configura `permissions.auditRetentionDays` en `config.json` — las entradas mas antiguas que el numero de dias especificado se eliminan automaticamente al inicio.
+No hay opcion de retencion. Las entradas viven en la tabla `audit_log` de la base de datos configurada mientras las conserves. Una version anterior de esta pagina documentaba `permissions.auditRetentionDays`, que no existe; depura con SQL o las herramientas de tu base de datos si necesitas limitar el crecimiento.
 
-## Siguientes Pasos
+## Siguientes pasos
 
 - [Permisos](/docs/configuration/permissions) — configurar politicas
-- [Permission Guard](/docs/core-concepts/permission-guard) — detalles del modelo de seguridad
+- [Permission Guard](/docs/core-concepts/permission-guard) — el modelo de seguridad

@@ -1,0 +1,79 @@
+---
+title: 編碼執行器轉接器
+description: 連接 Claude Code、Codex 或 OpenCode，並弄清 CoreLayer 對它們施加了什麼約束。
+---
+
+CoreLayer 不實作編碼 Agent。它把工作派發給你已經信任的 Agent，並對其施加約束。系統註冊了四個轉接器：`claude-code`、`codex`、`opencode`、`acp`。
+
+## 轉接器
+
+| ID | 驅動對象 | 說明 |
+|----|----------|------|
+| `claude-code` | Claude Code CLI | 只能執行 DeepSeek 模型（見下） |
+| `codex` | Codex CLI | |
+| `opencode` | OpenCode CLI | |
+| `acp` | 透過 `acpx` 驅動任意 ACP Agent | 結構化事件、能力探測、模型守護 |
+
+CLI 轉接器無法逐個攔截工具呼叫——CLI Agent 自己決定執行什麼。因此當呼叫方要求「工具呼叫需經核准攔截」時，它們會被排除，而不是以更弱的保證被使用。`acp` 是支援逐工具權限路由的轉接器。
+
+## 選擇
+
+執行器按能力選擇，而不是「裝了哪個用哪個」：
+
+- 呼叫方指定了首選轉接器時，優先嘗試它。
+- 否則按確定性回退順序，選擇第一個滿足要求（`requiresCancellation`、`requiresStructuredEvents`、工具呼叫核准攔截）的已註冊轉接器。
+- 選擇原因會被記錄，因此一次執行能解釋自己為何使用該執行器。
+
+## Claude Code 只允許 DeepSeek
+
+ACP 轉接器在啟動前強制檢查：
+
+```text
+ANTHROPIC_MODEL（或執行器策略模型）必須以 "deepseek" 開頭
+否則直接拒絕執行——不改寫、不靜默降級
+```
+
+原因很具體：把 Claude 家族標籤（`opus`、`sonnet`）路由到 DeepSeek 相容端點會回傳 `model_not_found`，讀起來像憑證錯誤，會讓你去排查錯誤的層。
+
+## 轉接器負責什麼
+
+- **與 `~/.claude` 隔離** — 執行使用暫存 `CLAUDE_CONFIG_DIR`，其中只有一個空的 `settings.json`，你的個人設定無法覆寫 CoreLayer 傳入的端點或模型。
+- **沒有 TTY** — `session/request_permission` 依據設定的權限策略與允許工具確定性應答，絕不會阻塞等待終端輸入。
+- **事件翻譯** — ACP `session/update` 轉換為正規化編碼事件；結束時未閉合的工具呼叫會被沖刷上報而不是丟棄。
+- **預算** — 逾時既傳給 `acpx`，也由守護行程自身強制。
+
+## 前置條件
+
+必須安裝 `acpx`（`npm install acpx`）。若缺失，能力探測會以 `unreachable` 加上安裝提示回傳，而不是等到執行中途再失敗。
+
+憑證來自 Agent 使用的 Anthropic 相容變數：
+
+```powershell
+$env:ANTHROPIC_MODEL='deepseek-v4.1-flash'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+```
+
+## 能力狀態
+
+| 狀態 | 含義 | 處理 |
+|------|------|------|
+| `ready` | 握手成功 | 無需處理 |
+| `needs_auth` | Agent 已啟動但缺少憑證 | 完成該 Agent 的登入 |
+| `unreachable` | 啟動失敗或 `acpx` 缺失 | 檢查安裝與指令 |
+
+探測只執行 `initialize` + `session/new`，不送提示回合，因此不消耗模型 token。結果按啟動設定快取。
+
+## 診斷
+
+```text
+GET  /api/runtimes/coding/diagnostics
+GET  /api/runtimes/coding/diagnostics/health
+POST /api/runtimes/coding/:id/dry-run
+```
+
+## 下一步
+
+- [執行器治理](/docs/architecture/executor-governance) — 邊界、隔離與證據
+- [執行可靠性評測](/docs/guides/run-reliability-eval) — 度量你剛接好的執行器
+- [權限](/docs/configuration/permissions) — 工具核准如何作用於執行器

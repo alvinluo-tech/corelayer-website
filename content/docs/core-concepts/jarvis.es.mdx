@@ -1,47 +1,58 @@
 ---
 title: Asistente IA Jarvis
-description: La persona del asistente IA que coordina el trabajo en CoreLayer.
+description: La persona del asistente que planifica, delega y responde por el trabajo que CoreLayer ejecuta.
 ---
 
-Jarvis es el asistente IA integrado que opera dentro de CoreLayer. No es un chatbot independiente — es un coordinador que enruta solicitudes a traves del Model Gateway, descubre herramientas via el Tool Registry y aplica seguridad a traves del Permission Guard.
+Jarvis es la persona del asistente integrada. No es un servicio aparte: es el bucle de conversacion del runtime agent junto con el prompt de sistema, las herramientas y la gobernanza que lo rodean. Coordina trabajo; no salta el sistema de permisos para hacerlo.
 
-## Como Funciona Jarvis
+## Como funciona un turno
 
 ```text
-Entrada del Usuario (voz, texto, atajo)
-  → Interpretacion de intencion
-  → Ensamblaje de contexto (historial de conversacion, memoria, herramientas)
-  → Seleccion de modelo via Model Gateway
-  → Generacion de respuesta con llamadas a herramientas
-  → Verificacion de permisos antes de ejecutar herramientas
-  → Entrega de resultados
+Entrada (texto o transcripcion de voz)
+  → ensamblado de contexto
+      historial de conversacion (con ramas)
+      memoria de largo plazo (snapshot de MEMORY.md / USER.md + memorias recuperadas)
+      herramientas core + herramientas on-demand elegidas por el router
+  → el Model Gateway resuelve proveedor y modelo activos
+  → bucle de Vercel AI SDK v6; el control de pasos vive en prepareStep
+  → las tool calls pasan por el Permission Guard
+  → loop breakers, presupuesto de pasos y timeout de turno acotan el turno
+  → la politica de completion y los quality gates deciden si entregar
 ```
 
-## Capacidades
+## Que puede hacer
 
-- **Gestion de tareas en lenguaje natural** — crear, consultar y actualizar tareas
-- **Gestion de lista de lectura** — rastrear articulos con recomendaciones impulsadas por IA
-- **Revisiones diarias/semanales** — resumir actividad con reconocimiento de patrones
-- **Llamadas a herramientas** — ejecutar herramientas de modulos nativos, servidores MCP, habilidades o adaptadores REST
-- **Interaccion por voz** — pipeline de voz completa con palabra de activacion, ASR, TTS e interrupcion
+| Capacidad | Notas |
+|-----------|-------|
+| Conversacion y tool calling | Herramientas nativas, MCP y descubiertas |
+| Trabajo de larga duracion | Despacha una ejecucion; sobrevive al turno y se cancela por id |
+| Delegacion de codigo | Entrega la tarea a un ejecutor externo gestionado dentro de un worktree |
+| Task graphs | DAG declarativo de subtareas; los nodos independientes corren en paralelo |
+| Memoria | Memoria persistente mas un snapshot congelado inyectado por turno |
+| Voz | Wake word, ASR en streaming, TTS por oracion, barge-in |
+| Planificacion | Ejecuciones autonomas disparadas por cron |
 
 ## Memoria
 
-Jarvis mantiene memoria a largo plazo entre conversaciones. La memoria se almacena localmente en la base de datos configurada (SQLite por defecto) y persiste entre sesiones.
+La memoria esta estratificada en lugar de ser un unico historial:
 
-- **Contexto de conversacion** — historial de la sesion actual, mantenido en memoria durante conversaciones activas y guardado en la base de datos al finalizar la sesion
-- **Preferencias del usuario** — patrones aprendidos (ej., modelos preferidos, herramientas frecuentes, estilo de respuesta) acumulados con el tiempo
-- **Contexto de tareas** — tareas activas, fechas limite y estado — Jarvis referencia esto cuando preguntas sobre tu trabajo
-- **Contexto de herramientas** — herramientas usadas recientemente y sus resultados, para que Jarvis pueda hacer seguimiento de acciones anteriores sin volver a consultar
+- **Memoria Markdown explicita** — `USER.md` y `MEMORY.md` en la zona de memoria, legibles y editables por ti
+- **Memorias recuperadas** — entradas puntuadas contra el turno actual, por encima de un minimo configurable (`defaults.memoryMinScore`)
+- **Snapshot congelado** — la memoria inyectada se congela por ejecucion, asi un turno no ve memoria escrita despues de empezar
+- **Seguimiento de inyeccion** — cada memoria registra cuando se inyecto por ultima vez, para que las frecuentes no se reinyecten sin fin
 
-La memoria esta alcance por usuario y nunca se comparte entre instancias de CoreLayer a menos que habilites la sincronizacion en la nube con Supabase.
+## Delegacion
 
-## Enrutamiento Multi-Modelo
+Jarvis puede entregar una tarea a una ejecucion hija, pero los limites solo pueden estrecharse: las rutas se intersectan, las herramientas se intersectan, las comprobaciones requeridas se suman y el ejecutor y el modelo quedan fijos. Ver [Gobernanza de Ejecutores](/docs/architecture/executor-governance).
 
-Jarvis no depende de un solo modelo. El Model Gateway selecciona el mejor modelo para cada solicitud basandose en la complejidad, requisitos de latencia y disponibilidad.
+## Restricciones de honestidad
 
-## Siguientes Pasos
+- A Jarvis se le indica tratar la salida de herramientas como dato, no como instruccion.
+- Una finalizacion solo se entrega cuando la evidencia configurada (tests, artefactos, alcance) la sostiene.
+- Cuando el juez adversarial esta activo y rechaza un diff, el intento se reintenta dentro de `adjudication.maxRetries` y luego falla en lugar de reportarse como exito.
 
-- [Centro de Control](/docs/core-concepts/control-center) — la interfaz que aloja a Jarvis
-- [Model Gateway](/docs/core-concepts/model-gateway) — como se seleccionan los modelos
-- [Pipeline de Voz](/docs/configuration/voice) — configuracion de interaccion por voz
+## Siguientes pasos
+
+- [Tool Registry](/docs/core-concepts/tool-registry) — como llegan las herramientas a Jarvis
+- [Permission Guard](/docs/core-concepts/permission-guard) — que puede ejecutar
+- [Memoria](/docs/core-concepts/memory) — como se guarda y recupera

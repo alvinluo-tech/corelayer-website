@@ -1,73 +1,74 @@
 ---
 title: Permission Guard
-description: Control de ejecucion basado en riesgo con flujos de aprobacion y registros de auditoria.
+description: Control de ejecucion por riesgo, con aprobaciones persistidas y auditoria completa.
 ---
 
-El Permission Guard es el sistema de seguridad de CoreLayer. Clasifica las llamadas a herramientas por nivel de riesgo, pausa las operaciones riesgosas para aprobacion del usuario y mantiene un registro de auditoria completo.
+El Permission Guard se interpone entre el modelo y cada efecto secundario. Clasifica una llamada por el riesgo declarado en la herramienta, aplica la politica y, cuando la respuesta es "preguntar", suspende el trabajo en lugar de adivinar.
 
-## Por Que Existe
+## Modelo de riesgo
 
-Los agentes de IA que pueden llamar herramientas necesitan limites. Sin un sistema de permisos, un agente podria:
+Cuatro niveles, cada uno asociado a una accion:
 
-- Eliminar archivos sin preguntar
-- Hacer llamadas API externas con tus credenciales
-- Modificar datos que no pretendias cambiar
+| Riesgo | Accion por defecto | Herramientas tipicas |
+|--------|--------------------|----------------------|
+| `low` | `auto` | Lectura, consulta, descubrimiento, esqueleto de codigo |
+| `medium` | `notify` | Crear o actualizar tarea, agregar articulo, guardar revision |
+| `high` | `confirm` | Borrar, despachar agente, ejecutar task graph |
+| `critical` | `deny` | Bloqueado salvo concesion explicita |
 
-El Permission Guard hace que la ejecucion de herramientas sea **visible, controlable y auditable**.
+Las anulaciones por app endurecen o relajan un nivel (se evaluan cuando se construye el guard con ellas; el daemon usa los valores por defecto):
 
-## Clasificacion de Riesgo
-
-Cada llamada a herramienta se clasifica:
-
-| Nivel de Riesgo | Ejemplos | Politica por Defecto |
-|-----------------|----------|----------------------|
-| **Lectura** | Listar archivos, leer datos, buscar | Permitir automaticamente |
-| **Escritura** | Crear/modificar archivos, actualizar registros | Confirmar |
-| **Externo** | Llamadas API, solicitudes web | Confirmar |
-| **Destructivo** | Eliminar archivos, eliminar tablas | Confirmar + advertencia |
-| **Sensible a credenciales** | Tokens de acceso, contrasenas | Bloquear salvo explicito |
-
-## Flujo de Aprobacion
-
-```text
-Solicitud de llamada a herramienta
-  → Clasificacion de riesgo
-  → Verificacion de politica (allow / confirm / deny)
-  → Si es confirm: pausar, mostrar panel de aprobacion
-  → El usuario aprueba o deniega
-  → Ejecutar u omitir
-  → Registrar decision en el registro de auditoria
+```ts
+appPermissions: {
+  "some-app": { write: false, execute: false }
+}
+// medium → confirm (write: false)
+// high   → deny    (write: false)
+// critical → deny  (execute: false)
 ```
 
-## Panel de Aprobacion
+La ejecucion por voz es mas estricta: solo las acciones de lectura se aprueban automaticamente, todo lo demas requiere confirmacion.
 
-Cuando se necesita aprobacion, el Centro de Control muestra:
+## Por que el riesgo se declara
 
-- **Nombre de la herramienta** y origen
-- **Parametros** que se pasan
-- Indicador de **nivel de riesgo**
-- **Explicacion** de lo que ocurrira
-- Botones de **Aprobar** / **Denegar** / **Aprobar Siempre**
+La inferencia desde nombres y argumentos falla en una direccion predecible. `dispatch_agent` y `run_task_graph` no contienen palabras de riesgo pero lanzan ejecuciones que escriben archivos y ejecutan comandos; la inferencia por nombre las clasifico `low`, que la politica por defecto aprueba. Por eso el registro exige un nivel de riesgo explicito para cada herramienta nativa.
 
-## Registros de Auditoria
+## Flujo de aprobacion
 
-Cada ejecucion de herramienta se registra con:
+```text
+Tool call o solicitud de permiso de un ejecutor
+  → se lee el riesgo de la definicion de la herramienta
+  → politica: auto / notify / confirm / deny
+  → confirm: se persiste una solicitud de aprobacion
+      - digest de accion (que se ejecutara exactamente)
+      - riesgo, alcance, expiracion
+  → se suspende la ejecucion
+  → decision en la UI: aprobar / denegar / recordar
+  → el servicio de reanudacion continua o falla la ejecucion
+  → se escribe auditoria en cualquier caso
+```
 
-- Marca de tiempo
-- Nombre y origen de la herramienta
-- Parametros (sanitizados)
-- Nivel de riesgo
-- Decision del usuario (aprobada/denegada/permitida automaticamente)
-- Resultado de la ejecucion
+Como las aprobaciones se persisten, una decision pendiente no se pierde al reiniciar el daemon. `POST /api/approvals/expire-stale` cierra solicitudes que nadie respondio, y existen endpoints por lote para colas acumuladas sin atencion.
 
-Consulta los registros en **Centro de Control → Permisos → Registro de Auditoria**.
+## Memorias de permiso
 
-## Configuracion
+"Recordar" registra una decision contra el digest de la accion, asi la accion identica no se vuelve a preguntar. Esta acotado: una ruta, comando o conjunto de parametros distinto es otro digest y se vuelve a preguntar.
 
-Consulta [Configuracion de Permisos](/docs/configuration/permissions) para las reglas de politica.
+## Auditoria
 
-## Siguientes Pasos
+Cada decision se escribe con actor, accion, riesgo, decision y resultado. Las entradas se consultan con `GET /api/audit` y los filtros `actor`, `action`, `riskLevel`, `since`, `limit` y `offset`.
 
-- [Permisos](/docs/configuration/permissions) — configurar politicas
-- [Revisar Registros de Auditoria](/docs/guides/review-audit-logs) — trabajar con el registro de auditoria
-- [Modelo de Seguridad](/docs/architecture/security-model) — detalles de arquitectura
+El audit log es distinto del event log: la auditoria responde "que se permitio o denego", el event log responde "que ocurrio durante esta ejecucion" (`GET /api/events`).
+
+## Inspeccionar el estado
+
+- `GET /api/approvals` — pendientes y recientes
+- `GET /api/approvals/:id` — una solicitud
+- `POST /api/approvals/:id/approve` / `deny` / `remember`
+- `GET /api/audit?riskLevel=high` — decisiones de alto riesgo
+
+## Siguientes pasos
+
+- [Permisos](/docs/configuration/permissions) — configurar politicas y anulaciones por app
+- [Modelo de Seguridad](/docs/architecture/security-model) — las capas que lo rodean
+- [Revisar la Auditoria](/docs/guides/review-audit-logs) — trabajar con los logs

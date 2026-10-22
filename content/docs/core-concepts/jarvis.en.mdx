@@ -1,47 +1,58 @@
 ---
-title: Jarvis AI Assistant
-description: The AI assistant persona that coordinates work across CoreLayer.
+title: Jarvis
+description: The assistant persona that plans, delegates, and answers for the work CoreLayer runs.
 ---
 
-Jarvis is the built-in AI assistant that operates within CoreLayer. It is not a standalone chatbot — it is a coordinator that routes requests through the Model Gateway, discovers tools via the Tool Registry, and enforces safety through the Permission Guard.
+Jarvis is the built-in assistant persona. It is not a separate service — it is the agent runtime's conversation loop plus the system prompt, tools, and governance around it. It coordinates work; it does not bypass the permission system to do so.
 
-## How Jarvis Works
+## How a turn works
 
 ```text
-User Input (voice, text, shortcut)
-  → Intent interpretation
-  → Context assembly (conversation history, memory, tools)
-  → Model selection via Model Gateway
-  → Response generation with tool calling
-  → Permission check before tool execution
-  → Result delivery
+Input (text or voice transcript)
+  → context assembly
+      conversation history (branch-aware)
+      long-term memory (MEMORY.md / USER.md snapshot + retrieved memories)
+      core tools + on-demand tools selected by the router
+  → Model Gateway resolves the active provider and model
+  → Vercel AI SDK v6 loop; step control lives in prepareStep
+  → tool calls are gated by the Permission Guard
+  → loop breakers, step budget, and turn timeout bound the turn
+  → completion policy and quality gates decide whether to deliver
 ```
 
-## Capabilities
+## What it can do
 
-- **Natural language task management** — create, query, and update tasks
-- **Reading list management** — track articles with AI-powered recommendations
-- **Daily/weekly reviews** — summarize activity with pattern recognition
-- **Tool calling** — execute tools from native modules, MCP servers, skills, or REST adapters
-- **Voice interaction** — full voice pipeline with wake word, ASR, TTS, and interruption
+| Capability | Notes |
+|------------|-------|
+| Conversation and tool calling | Native tools, MCP tools, and discovered tools |
+| Long-running work | Dispatch a run; it survives the chat turn and is cancellable by id |
+| Coding delegation | Hands a task to a managed external executor inside a worktree |
+| Task graphs | Declarative DAG of sub-tasks, independent nodes run concurrently |
+| Memory | Persistent long-term memory plus a frozen snapshot injected per turn |
+| Voice | Wake word, streaming ASR, sentence-level TTS, barge-in |
+| Scheduling | Cron-driven autonomous runs |
 
 ## Memory
 
-Jarvis maintains long-term memory across conversations. Memory is stored locally in the configured database (SQLite by default) and persists across sessions.
+Memory is layered rather than a single chat history:
 
-- **Conversation context** — current session history, kept in memory during active conversations and written to the database on session end
-- **User preferences** — learned patterns (e.g., preferred models, frequent tools, response style) accumulated over time
-- **Task context** — active tasks, deadlines, and status — Jarvis references this when you ask about your work
-- **Tool context** — recently used tools and their results, so Jarvis can follow up on previous actions without re-querying
+- **Explicit Markdown memory** — `USER.md` and `MEMORY.md` under the memory zone, readable and editable by you
+- **Retrieved memories** — stored entries scored against the current turn, above a configurable minimum score (`defaults.memoryMinScore`)
+- **Frozen snapshot** — the injected memory is snapshotted per run, so a turn cannot see memory that was written after it started
+- **Injection tracking** — memories track when they were last injected, so frequently retrieved ones are not re-injected indefinitely
 
-Memory is scoped per user and never shared across CoreLayer instances unless you enable Supabase cloud sync.
+## Delegation
 
-## Multi-Model Routing
+Jarvis can hand a task to a child run, but the bounds can only narrow: paths intersect, tools intersect, required checks are additive, and the executor and model are pinned. See [Executor Governance](/docs/architecture/executor-governance).
 
-Jarvis doesn't depend on a single model. The Model Gateway selects the best model for each request based on complexity, latency requirements, and availability.
+## Honesty constraints
+
+- Jarvis is told to treat tool output as data, not instructions.
+- A completion is only delivered when the configured evidence (tests, artifacts, scope) supports it.
+- When the adversarial judge is enabled and rejects a diff, the attempt is retried within `adjudication.maxRetries` and then fails rather than being reported as success.
 
 ## Next Steps
 
-- [Control Center](/docs/core-concepts/control-center) — the UI that hosts Jarvis
-- [Model Gateway](/docs/core-concepts/model-gateway) — how models are selected
-- [Voice Pipeline](/docs/configuration/voice) — voice interaction setup
+- [Tool Registry](/docs/core-concepts/tool-registry) — how tools reach Jarvis
+- [Permission Guard](/docs/core-concepts/permission-guard) — what it may execute
+- [Memory Runtime](/docs/core-concepts/memory) — how memory is stored and retrieved

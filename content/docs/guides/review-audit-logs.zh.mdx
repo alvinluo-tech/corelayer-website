@@ -3,66 +3,71 @@ title: 查看审计追踪
 description: 了解并使用权限守卫审计追踪。
 ---
 
-CoreLayer 中的每次工具执行都会被记录。本指南展示如何查看和使用审计日志。
+CoreLayer 中每一次工具执行决定都会被记录。本指南展示如何查询与解读审计条目。
 
 ## 访问审计日志
 
-打开**控制中心 → 权限 → 审计日志**。
+审计条目由 `GET /api/audit` 提供，并在控制中心展示。它与审批（`/api/approvals`）以及事件日志（`/api/events`）是彼此独立的资源。
 
 ## 日志条目格式
 
-每个条目包含：
+一条记录包含：
 
 ```text
-[2026-06-15 14:32:01] tool-name
-  来源: mcp | native | skill | rest
-  风险: read | write | external | destructive
-  策略: allow | confirm | deny
-  决策: approved | denied | auto-allowed
-  参数: { ... }
-  结果: success | error
+createdAt          2026-10-21T14:32:01Z
+actor              jarvis
+action             tool.execute
+resource           filesystem:write /workspace/README.md
+riskLevel          high
+permissionDecision confirm
+confirmedByUser    true
+result             success
+metadata           { ... }
 ```
 
 ## 过滤日志
 
-按以下条件过滤：
+`GET /api/audit` 支持：
 
-- **日期范围** — 特定时间段
-- **工具名称** — 查找特定工具调用
-- **风险级别** — 仅查看写入/破坏性操作
-- **决策** — 查找已拒绝或已批准的调用
+- `actor` — 谁执行了该动作
+- `action` — 执行了什么
+- `riskLevel` — `low` | `medium` | `high` | `critical`
+- `since` — ISO 时间下界
+- `limit` / `offset` — 分页
+
+响应为 `{ entries, total, count }`。
 
 ## 常见用例
 
 ### 安全审查
 
-检查进行了哪些外部 API 调用：
+查看哪些高风险动作被批准：
 
-1. 按**风险：外部**过滤
-2. 查看工具名称和参数
-3. 验证所有调用都是预期的
+1. 查询 `GET /api/audit?riskLevel=high&since=2026-10-01T00:00:00Z`
+2. 逐条查看 `resource` 与 `metadata`
+3. 确认你期望人工决定的地方 `confirmedByUser` 为 `true`
 
 ### 调试
 
-查找工具调用失败的原因：
+查找某个工具调用为何没有执行：
 
-1. 按**结果：错误**过滤
-2. 检查日志条目中的错误消息
-3. 验证工具参数是否正确
+1. 按 `action` 过滤
+2. 查看 `permissionDecision`——`deny` 表示被策略拦截
+3. 用 `GET /api/runs/:id/events` 交叉核对 run id
 
 ### 合规
 
-生成所有数据修改的报告：
+生成状态变更记录：
 
-1. 按**风险：写入**和**风险：破坏性**过滤
-2. 导出日志条目
-3. 审查所有数据更改
+1. 先用 `riskLevel=high` 查询，再用 `riskLevel=critical` 查询
+2. 导出返回的条目
+3. 检查所有 `confirmedByUser: false` 的条目——它们是被自动决定的
 
 ## 日志保留
 
-审计日志存储在配置的数据库中，跨会话持久化。默认情况下，日志无限期保留。要限制磁盘使用，在 `config.json` 中设置 `permissions.auditRetentionDays` — 超过指定天数的条目在启动时会自动清理。
+没有保留期设置。条目一直存放在所配置数据库的 `audit_log` 表中。本文件早期版本描述过一个 `permissions.auditRetentionDays` 选项，它并不存在；如需限制增长，请用 SQL 或数据库自身工具清理。
 
 ## 下一步
 
 - [权限](/docs/configuration/permissions) — 配置策略
-- [权限守卫](/docs/core-concepts/permission-guard) — 安全模型详情
+- [权限守卫](/docs/core-concepts/permission-guard) — 安全模型

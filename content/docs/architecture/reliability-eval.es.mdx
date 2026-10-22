@@ -1,0 +1,71 @@
+---
+title: Evaluacion de Fiabilidad
+description: Como CoreLayer decide si un cambio al agente realmente lo mejora.
+---
+
+La mayoria de los cambios a un agente parecen mejoras en una sola ejecucion. CoreLayer incluye un harness de evaluacion para que esa afirmacion se pueda comprobar: `daemon/src/eval` ejecuta un agente de codigo contra un corpus, repetidamente, y reporta consistencia en lugar del mejor caso.
+
+El harness **no** forma parte de `pnpm test`: cada intento cuesta un turno real de modelo.
+
+## Que mide
+
+| Metrica | Por que existe |
+|---------|----------------|
+| **pass^k** | La fraccion de tareas que tuvieron exito en *todos* los intentos. Mas estricta que pass@k y la cifra que importa para uso sin supervision. |
+| **Falsos positivos / negativos** | Intentos donde el ejecutor afirmo exito y una comprobacion fallo (o al reves). Explican *por que* el harness y el agente discrepan. |
+| **Estado del ejecutor** | `succeeded`, `failed`, `cancelled`, `timed-out`. |
+| **Intentos anulados (VOID)** | Fallos de entorno (cuota, conexion rechazada, 5xx del proveedor) se excluyen de las tasas en vez de contarse como fallos del agente. Tres seguidos detienen la ejecucion. |
+| **Coste** | `tokens/attempt` y `tokens/success`; una mejora de tasa que duplica el gasto no es una mejora. |
+
+## Ejecutarlo
+
+```powershell
+cd daemon
+$env:ANTHROPIC_MODEL='<model>'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+```
+
+Se incluyen dos corpus: `core` (archivo unico: escribir, editar, depurar, borrar, renombrar) y `holdout` (coordinacion multi-paso, disciplina de alcance byte a byte, contencion y rechazo a inventar hechos). Se puntuan por separado a proposito.
+
+## Comparacion pareada
+
+`--compare NAME=VALUE` ejecuta el mismo corpus dos veces — una con la variable sin definir y otra definida — y reporta un veredicto pareado:
+
+| Veredicto | Significado |
+|-----------|-------------|
+| `improved` | El agregado supera la tolerancia **y** ninguna tarea individual cayo |
+| `regressed` | El agregado bajo |
+| `mixed` | La media subio pero una tarea perdio fiabilidad |
+| `unchanged` | Todo dentro de la banda |
+
+Un resultado `mixed` es el modo de fallo que un gate agregado no ve: un cambio que "mejora la fiabilidad" en promedio mientras rompe una tarea que antes funcionaba. No debe reportarse como mejora.
+
+## Regla de admision
+
+Un cambio que altera el comportamiento del agente (un bucle de reflexion, un ajuste de prompt, un nuevo gate) solo puede volverse por defecto cuando una ejecucion pareada muestra:
+
+1. `improved` — no `mixed`, no `unchanged`
+2. ninguna tarea perdio fiabilidad
+3. `tokens/success` no subio mas de ~20%
+4. la ejecucion se repite y sigue cumpliendo (1)–(3)
+
+Si falla cualquier clausula, el cambio queda desactivado por defecto. El bucle de reflexion sigue esta regla y se entrega **apagado**.
+
+## Linea base
+
+A 2026-10-21 con `deepseek-v4.1-flash`:
+
+```text
+core, k = 3        pass^3 = 100.0%   0 falsos positivos / 0 falsos negativos
+holdout, k = 1     pass^1 = 100.0%   0 falsos positivos / 0 falsos negativos
+```
+
+El corpus es un detector de regresiones, no un marcador. Su valor es la fila roja tras el siguiente cambio.
+
+## Siguientes pasos
+
+- [Ejecutar una Evaluacion](/docs/guides/run-reliability-eval) — paso a paso, incluido el flujo A/B
+- [Gobernanza de Ejecutores](/docs/architecture/executor-governance) — que mide la evaluacion
+- [Solucion de Problemas](/docs/reference/troubleshooting) — un timeout suele ser un gateway inestable

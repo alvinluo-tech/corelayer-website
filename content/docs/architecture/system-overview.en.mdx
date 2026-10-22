@@ -1,94 +1,100 @@
 ---
 title: System Overview
-description: "CoreLayer architecture: three-layer proxy model."
+description: "How CoreLayer fits together: the Tauri shell, the Node.js daemon, the registered runtimes, and the execution pipeline."
 ---
 
-CoreLayer uses a three-layer proxy model that separates the user interface, business logic, and data access.
+CoreLayer is a local-first desktop **Agent OS**. A Tauri shell hosts the UI and supervises a Node.js daemon; the daemon owns every runtime, every tool call, and every piece of persisted state.
 
-## Architecture Diagram
+This page describes what the running system actually contains. For the long-term direction, see [Multi-Runtime Direction](/docs/architecture/multi-runtime-direction).
+
+## Topology
 
 ```text
-┌─────────────────────────────────────────────┐
-│              Tauri Desktop App              │
-│  ┌───────────────────────────────────────┐  │
-│  │     React 19 + Vite + Tailwind 4     │  │
-│  │         (Frontend UI Layer)           │  │
-│  └──────────────┬────────────────────────┘  │
-│                 │ Tauri IPC                  │
-│  ┌──────────────┴────────────────────────┐  │
-│  │      Rust Backend (lib.rs)            │  │
-│  │   Daemon Supervisor + HTTP Proxy      │  │
-│  └──────────────┬────────────────────────┘  │
-└─────────────────┼───────────────────────────┘
-                  │ HTTP
-┌─────────────────┴───────────────────────────┐
-│          Node.js Daemon (Hono)              │
-│  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
-│  │  Model   │ │   Tool   │ │ Permission  │ │
-│  │ Gateway  │ │ Registry │ │   Guard     │ │
-│  └──────────┘ └──────────┘ └─────────────┘ │
-│  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
-│  │   MCP    │ │ Runtime  │ │  Storage    │ │
-│  │  Client  │ │  Core    │ │   Layer     │ │
-│  └──────────┘ └──────────┘ └─────────────┘ │
-└─────────────────────────────────────────────┘
-         │              │              │
-    MCP Servers    AI Providers    Database
+┌──────────────────────────────────────────────────────────────┐
+│ Tauri Desktop Shell (Rust)                                   │
+│   ├─ Webview UI (React 19 + Vite + Tailwind)                 │
+│   ├─ Daemon supervisor: spawn / health / restart / shutdown  │
+│   └─ HTTP proxy → localhost daemon                           │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ HTTP (loopback, port 3001 by default)
+┌───────────────────────────┴──────────────────────────────────┐
+│ Node.js Daemon (TypeScript + Hono)                           │
+│                                                              │
+│  Runtime host (registry · lifecycle · status)                │
+│   ├─ agent        — conversation loop, tool calling          │
+│   ├─ tool         — registry, routing, native tools          │
+│   ├─ coding       — executor adapters, worktrees, gates      │
+│   ├─ memory       — long-term memory + snapshots             │
+│   ├─ voice        — wake word, ASR, TTS, barge-in            │
+│   └─ scheduler    — cron-driven autonomous work              │
+│                                                              │
+│  Workflow plane                                              │
+│   ├─ run dispatcher / queue / slot manager                   │
+│   ├─ delegation (monotonic narrowing)                        │
+│   ├─ task graph DAG executor                                 │
+│   └─ adjudication (adversarial judge)                        │
+│                                                              │
+│  Cross-cutting                                               │
+│   ├─ Permission guard + approvals (HITL)                     │
+│   ├─ Audit + event log                                       │
+│   └─ Persistence (SQLite by default; Supabase / PostgreSQL)  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-## Layer Responsibilities
+## Layers
 
 ### Frontend (React)
 
-- User interface rendering
-- State management (Zustand)
-- User input handling
-- Display of AI responses and tool results
+Renders conversations, workspaces, runs, approvals, and settings. Talks to the daemon only through the Tauri bridge; it never opens a database or a provider connection itself.
 
-### Tauri Bridge (Rust)
+### Tauri bridge (Rust)
 
-- IPC between frontend and daemon
-- Daemon lifecycle management (start, stop, restart)
-- Native system integration (file system, notifications)
-- HTTP proxy to daemon
+Spawns and supervises the daemon sidecar, forwards HTTP calls, and provides native capabilities (paths, window, tray). All IPC commands are explicitly registered.
 
 ### Daemon (Node.js)
 
-- AI orchestration and model routing
-- Tool registration and execution
-- Permission checking and audit logging
-- MCP server management
-- Data persistence
+The only component with authority. It holds the runtime registry, assembles context, calls models through the Model Gateway, executes tools behind the Permission Guard, and persists everything through the repository layer.
 
-## Communication Flow
+### Shared packages
 
-```text
-User types message
-  → React frontend captures input
-  → Tauri IPC sends to Rust backend
-  → Rust proxies HTTP to daemon
-  → Daemon processes with Jarvis
-  → Response streams back through the same path
-  → Frontend renders response
-```
-
-## Package Architecture
-
-The daemon consumes shared packages from the monorepo:
+The daemon composes eight workspace packages rather than duplicating their logic:
 
 | Package | Role |
 |---------|------|
 | `@jarvis/types` | Shared TypeScript types |
-| `@jarvis/model-gateway` | Multi-provider model routing |
-| `@jarvis/mcp-client` | MCP server connections |
-| `@jarvis/tool-registry` | Tool management |
-| `@jarvis/permission-guard` | Safety system |
-| `@jarvis/runtime-core` | Runtime management |
-| `@jarvis/runtime-protocol` | Protocol definitions |
-| `@jarvis/execution-environment` | Execution abstraction |
+| `@jarvis/model-gateway` | Provider resolution and model routing |
+| `@jarvis/mcp-client` | MCP server connections (stdio, HTTP, SSE) |
+| `@jarvis/tool-registry` | Tool catalog and resolution |
+| `@jarvis/permission-guard` | Risk classification, policy, audit |
+| `@jarvis/runtime-core` | Runtime lifecycle primitives |
+| `@jarvis/runtime-protocol` | Runtime contract definitions |
+| `@jarvis/execution-environment` | Execution abstraction (worktree-backed) |
+
+## What is registered
+
+Runtime registration lives in `daemon/src/runtimes/index.ts`. Six runtimes are registered with the runtime host and report status through `GET /api/runtime/components`:
+
+`agent`, `tool`, `coding`, `memory`, `voice`, `scheduler`.
+
+**Computer control is not registered.** Its risk, permission, and audit layers exist and its tools are defined, but the execute path still returns without touching the OS and no Rust-side capability backs it. Registering it would advertise a runtime that silently does nothing, so it stays out of the host until a real implementation lands. Treat any documentation that lists it as a live runtime as incorrect.
+
+## Communication
+
+```text
+User input
+  → React frontend
+  → Tauri IPC
+  → Rust daemon supervisor (HTTP proxy)
+  → Hono route (/api/conversations/:id/messages/stream, /api/chat/stream, …)
+  → agent runtime: context assembly → model → tool calls → completion policy
+  → SSE / JSON response back along the same path
+```
+
+Long-running work does not block a chat turn: the run dispatcher persists an `agent_run`, the queue holds a slot for it, and events are written to the event log as it progresses. Clients read them through `GET /api/events` and `GET /api/runs/:id/events`.
 
 ## Next Steps
 
-- [Runtime Boundaries](/docs/architecture/runtime-boundaries) — how components are isolated
-- [Data Flow](/docs/architecture/data-flow) — detailed request/response flow
-- [Security Model](/docs/architecture/security-model) — safety architecture
+- [Runtime Boundaries](/docs/architecture/runtime-boundaries) — what each boundary may do
+- [Data & Control Flow](/docs/architecture/data-flow) — the full request and run lifecycle
+- [Security Model](/docs/architecture/security-model) — the enforcement layers
+- [Executor Governance](/docs/architecture/executor-governance) — how coding agents are contained

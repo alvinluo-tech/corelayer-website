@@ -1,168 +1,138 @@
 ---
 title: Referencia de Endpoints API
-description: Referencia del HTTP API del daemon.
+description: La API HTTP del daemon, agrupada por recurso.
 ---
 
-El daemon de CoreLayer expone un HTTP API en `localhost:3001`. El frontend de Tauri usa esta API a traves del puente IPC de Tauri.
+El daemon expone una API HTTP en loopback (`127.0.0.1:3001` por defecto; `DAEMON_HOST` / `DAEMON_PORT` para cambiarlo). La UI de Tauri llega por el proxy del shell; las herramientas y scripts pueden llamarla directamente desde la misma maquina.
 
-## URL Base
+Las respuestas son JSON. Segun la ruta, las colecciones se envuelven como `{ "data": [...] }` o `{ "entries": [...], "total": n, "count": n }`.
 
-```text
-http://localhost:3001
-```
+## Salud y runtimes
 
-## Chat
+| Metodo | Ruta | Proposito |
+|--------|------|-----------|
+| GET | `/api/health`, `/health` | `{ status, timestamp, storageMode, aiProvider, aiModel }` |
+| GET | `/api/runtime/status` | pid, uptime, memoria, modo de almacenamiento, rutas, salud por runtime |
+| GET | `/api/runtime/components` | Componentes de runtime registrados y su estado |
+| POST | `/api/runtime/shutdown` | Detener el daemon (solo peers loopback) |
+| GET | `/api/runtime/queue` · `/status` · `/resources` | Profundidad de cola, estado de slots, uso de recursos |
+| GET | `/api/runtimes/coding/diagnostics` | Diagnostico de ejecutores de codigo |
+| POST | `/api/runtimes/coding/:id/dry-run` | Dry-run de un ejecutor |
 
-### POST `/api/chat`
+## Chat y conversaciones
 
-Envia un mensaje a Jarvis y recibe una respuesta en streaming.
+| Metodo | Ruta | Proposito |
+|--------|------|-----------|
+| POST | `/api/chat` | Chat puntual |
+| POST | `/api/chat/stream` | Chat en streaming (SSE) |
+| POST | `/api/chat/debug/context` | Inspeccionar el contexto ensamblado |
+| GET/POST | `/api/conversations` | Listar / crear |
+| GET/PATCH/DELETE | `/api/conversations/:id` | Leer / actualizar / borrar |
+| POST | `/api/conversations/:id/messages` | Enviar mensaje |
+| POST | `/api/conversations/:id/messages/stream` | Enviar con SSE |
+| PUT | `/api/conversations/:id/messages/:msgId` | Editar mensaje |
+| POST | `/api/conversations/:id/messages/:msgId/regenerate` | Regenerar |
+| GET | `/api/conversations/:id/messages/:msgId/branches` | Leer ramas |
+| GET | `/api/conversations/:id/tree` | Arbol de la conversacion |
+| GET | `/api/conversations/messages/search` | Buscar mensajes |
+| GET | `/api/conversations/:id/export` | Exportar |
 
-```json
-{
-  "message": "What tasks do I have?",
-  "conversationId": "conv_123"
-}
-```
+## Ejecuciones
 
-Respuesta: Stream de Server-Sent Events (SSE).
+| Metodo | Ruta | Proposito |
+|--------|------|-----------|
+| GET | `/api/runs?limit=` | Ejecuciones recientes |
+| GET | `/api/runs/:id` | Detalle |
+| GET | `/api/runs/:id/events` | Eventos de la ejecucion |
+| GET | `/api/runs/:id/artifacts` | Artefactos |
+| POST | `/api/runs/:id/cancel` | Cancelar |
+| POST | `/api/runs/:id/retry` | Reintentar una ejecucion fallida |
+| GET | `/api/runs/:id/trajectory` | Paquete de trayectoria |
+| POST | `/api/runs/:id/message` | **410 Gone** — la inyeccion de mensajes en ejecucion se elimino con el bucle escrito a mano |
 
-## Tareas
+## Workspaces y proyectos
 
-### GET `/api/tasks`
-
-Lista todas las tareas.
-
-```json
-// Respuesta
-[
-  {
-    "id": "task_abc123",
-    "title": "Review PR #42",
-    "status": "pending",
-    "priority": "high",
-    "dueDate": "2026-06-30T00:00:00Z",
-    "createdAt": "2026-06-28T10:00:00Z"
-  }
-]
-```
-
-### POST `/api/tasks`
-
-Crea una nueva tarea.
-
-```json
-// Solicitud
-{
-  "title": "Review PR #42",
-  "priority": "high",
-  "dueDate": "2026-06-30"
-}
-
-// Respuesta
-{
-  "id": "task_abc123",
-  "title": "Review PR #42",
-  "status": "pending",
-  "priority": "high",
-  "dueDate": "2026-06-30T00:00:00Z"
-}
-```
-
-### PATCH `/api/tasks/:id`
-
-Actualiza una tarea. Acepta un objeto de tarea parcial.
-
-### DELETE `/api/tasks/:id`
-
-Elimina una tarea.
-
-## Articulos (Lista de Lectura)
-
-### GET `/api/articles`
-
-Lista todos los articulos.
-
-### POST `/api/articles`
-
-Aniade un articulo.
-
-### DELETE `/api/articles/:id`
-
-Elimina un articulo.
-
-## Revisiones
-
-### GET `/api/reviews`
-
-Lista las revisiones.
-
-### POST `/api/reviews/generate`
-
-Genera una nueva revision.
-
-## Modelos
-
-### GET `/api/models`
-
-Lista los proveedores de modelos configurados.
-
-### POST `/api/models`
-
-Aniade un proveedor de modelos.
-
-## MCP
-
-### GET `/api/mcp/servers`
-
-Lista los servidores MCP.
-
-### POST `/api/mcp/servers`
-
-Aniade un servidor MCP.
-
-### POST `/api/mcp/servers/:id/restart`
-
-Reinicia un servidor MCP.
+| Metodo | Ruta | Proposito |
+|--------|------|-----------|
+| GET/POST | `/api/workspaces` | Listar / crear |
+| GET | `/api/workspaces/default` | Workspace por defecto |
+| POST | `/api/workspaces/from-goal` | Crear desde un objetivo |
+| GET/PATCH/DELETE | `/api/workspaces/:id` | Leer / actualizar / borrar |
+| GET | `/api/workspaces/:id/detail` | Con agentes y ejecuciones |
+| POST/DELETE | `/api/workspaces/:id/agents[/:agentId]` | Adjuntar / quitar agente |
+| GET | `/api/workspaces/:id/artifacts` | Artefactos |
+| GET | `/api/workspaces/:id/deliveries` | Ramas de entrega |
+| POST | `/api/workspaces/:id/deliveries/merge` | Fusionar una rama de entrega |
+| — | `/api/projects` | CRUD de proyectos |
 
 ## Herramientas
 
-### GET `/api/tools`
+| Metodo | Ruta | Proposito |
+|--------|------|-----------|
+| GET | `/api/tools` | Listar herramientas registradas |
+| GET | `/api/tools/:id` | Una herramienta |
+| POST | `/api/tools/filter` | Filtrar por fuente / riesgo |
+| POST | `/api/tools/:id/execute` | Ejecutar (con comprobacion de permisos) |
+| GET | `/api/tools/logs` | Log reciente de llamadas |
+| GET | `/api/tools/pending-confirmations` | Confirmaciones inline pendientes |
+| POST | `/api/tools/confirm/:id` | Resolver una confirmacion inline |
 
-Lista todas las herramientas registradas.
+## Aprobaciones
 
-## Permisos
+| Metodo | Ruta | Proposito |
+|--------|------|-----------|
+| GET | `/api/approvals` | Pendientes y recientes |
+| GET | `/api/approvals/:id` | Una solicitud |
+| POST | `/api/approvals/:id/approve` | Aprobar y reanudar |
+| POST | `/api/approvals/:id/deny` | Denegar y fallar la ejecucion |
+| POST | `/api/approvals/:id/remember` | Aprobar y guardar memoria de permiso |
+| POST | `/api/approvals/batch/approve` · `/batch/deny` | Decisiones por lote |
+| POST | `/api/approvals/expire-stale` | Cerrar solicitudes sin respuesta |
 
-### GET `/api/permissions/audit`
+No existe un grupo `/api/permissions/*`. Aprobaciones y auditoria son recursos distintos.
 
-Obtiene las entradas del registro de auditoria.
+## Auditoria y eventos
 
-### POST `/api/permissions/approve`
+| Metodo | Ruta | Query |
+|--------|------|-------|
+| GET | `/api/audit` | `actor`, `action`, `riskLevel`, `since`, `limit`, `offset` |
+| GET | `/api/events` | `type`, `projectId`, `workspaceId`, `agentRunId`, `runtimeId`, `since`, `limit`, `offset` |
 
-Aprueba una llamada a herramienta pendiente.
+## Memoria
 
-### POST `/api/permissions/deny`
+| Metodo | Ruta | Proposito |
+|--------|------|-----------|
+| GET | `/api/memories` | Listar; filtros `type`, `scopeType` + `scopeId` |
+| GET | `/api/memories/search?q=&limit=` | Busqueda puntuada (limite por defecto 20) |
+| PATCH/DELETE | `/api/memories/:id` | Actualizar (`key`, `value`, `type`) / borrar |
 
-Deniega una llamada a herramienta pendiente.
+## Tareas, lectura, revisiones y planificacion
 
-## Salud
+| Metodo | Ruta | Proposito |
+|--------|------|-----------|
+| — | `/api/tasks` | CRUD de tareas |
+| — | `/api/tasks/scheduled` | Tareas programadas |
+| — | `/api/articles` | Lista de lectura |
+| — | `/api/reviews` | Revisiones diarias / semanales |
 
-### GET `/api/health`
+Estos grupos siguen existiendo y respaldan las herramientas nativas de tarea, lectura y revision.
 
-Verifica la salud del daemon.
+## MCP, ajustes, voz y perfiles
 
-```json
-{
-  "status": "healthy",
-  "uptime": 3600,
-  "version": "<current-version>"
-}
-```
+| Metodo | Ruta | Proposito |
+|--------|------|-----------|
+| — | `/api/mcp` | CRUD de servidores MCP, reinicio, auth |
+| — | `/api/settings` | Modelos, proveedores, almacenamiento, tick, uso |
+| — | `/api/voice` | Control de sesion de voz |
+| — | `/api/agent-profiles` | Perfiles de agente |
+| — | `/api/agent-broker` | Broker de agentes |
 
 ## Autenticacion
 
-La API del daemon solo es accesible desde localhost. No se requiere autenticacion para acceso local.
+No se requiere token: la API esta ligada a loopback y no se expone a la red. `/api/runtime/shutdown` ademas verifica que la direccion del peer sea loopback.
 
-## Siguientes Pasos
+## Siguientes pasos
 
 - [Archivo de Configuracion](/docs/reference/config-file) — referencia de configuracion
-- [Comandos CLI](/docs/reference/cli-commands) — interfaz de linea de comandos
+- [Comandos CLI](/docs/reference/cli-commands) — scripts del repositorio
+- [Solucion de Problemas](/docs/reference/troubleshooting) — fallos comunes

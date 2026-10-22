@@ -60,9 +60,42 @@ description: Common issues and solutions.
 **Symptom:** All tool calls require approval.
 
 **Solutions:**
-- Check permission policies in Settings → Permissions
-- Add `allow` rules for trusted tools
-- Use "Approve Always" for tools you trust
+- `high` risk always requires confirmation and `critical` is denied — this is the default policy, not a bug
+- Use "Remember" on the approval to stop being asked for that exact action
+- Clear stale requests with `POST /api/approvals/expire-stale`
+- The policy is not user-configurable yet; see [Permissions](/docs/configuration/permissions)
+
+## Approval Appears Stuck
+
+**Symptom:** A run never finishes and no approval dialog is visible.
+
+**Solutions:**
+- Check `GET /api/approvals` for a pending request belonging to the run
+- Approvals are persisted, so a daemon restart does not lose them; it also does not auto-decide them
+- Inline tool confirmations live at `GET /api/tools/pending-confirmations`
+
+## Coding Executor Fails Immediately
+
+**Symptom:** A coding run fails before producing any output.
+
+**Solutions:**
+- `GET /api/runtimes/coding/diagnostics` — check the agent probe state
+- `needs_auth` means the agent started but has no credentials; complete its login
+- `unreachable` usually means `acpx` is not installed (`npm install acpx`) or the launch command is wrong
+- Claude Code runs on DeepSeek models only; a non-DeepSeek `ANTHROPIC_MODEL` is rejected on purpose
+
+## Eval Attempts Time Out
+
+**Symptom:** `pass^k` collapses with many `timed-out` attempts.
+
+**Solutions:**
+- Check the gateway first: a flapping endpoint makes `acpx` hang until the run budget expires instead of failing fast
+- `VOID` attempts are environment faults (quota, refused connection, 5xx) and are excluded from rates
+- Three environment faults in a row stop the eval run by design
+
+## `POST /api/runs/:id/message` returns 410
+
+This endpoint was removed with the hand-written agent loop. Use the standard conversation send API (`POST /api/conversations/:id/messages/stream`) instead.
 
 ## Build Failures
 
@@ -79,10 +112,10 @@ description: Common issues and solutions.
 **Symptom:** Data not saving or loading errors.
 
 **Solutions:**
-- Check storage configuration in Settings → Storage
-- Verify database file exists and is writable
-- Try switching to a different storage mode
-- For Supabase: verify URL and anon key
+- Check storage mode in `storage.json` (Settings → Storage writes it)
+- Verify the database file exists and is writable under `storage/`
+- Switching storage mode requires a daemon restart — it is not a live hot-swap
+- For Supabase: verify project URL and service key
 
 ## Still Stuck?
 

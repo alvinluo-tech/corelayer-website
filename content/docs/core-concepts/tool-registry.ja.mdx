@@ -1,50 +1,86 @@
 ---
 title: ツールレジストリ
-description: 統一されたツール登録、ディスカバリー、ルーティング。
+description: ネイティブツール、MCP ツール、発見されたツールがモデルに届く仕組み。
 ---
 
-ツールレジストリは、Jarvisが利用可能なすべてのツールの中央カタログです。複数のソースからツールを集約し、統一されたインターフェースを通じて提示します。
+ツールレジストリは、すべてのツール呼び出しが解決されるカタログです。ネイティブツールと MCP 提供のツールを集約し、ツールのリスクレベルが宣言される場所でもあります。
 
-## ツールソース
+## ソース
 
-| ソース | 説明 |
-|--------|-------------|
-| **ネイティブモジュール** | 組み込みCoreLayerツール（タスク管理、リーディングリスト、レビュー） |
-| **MCPサーバー** | 接続されたMCPサーバーからのツール |
-| **スキル** | カスタムスクリプトワークフロー |
-| **RESTアダプター** | REST APIエンドポイントからのツール |
+| ソース | 説明 | ID 形式 |
+|--------|------|---------|
+| **ネイティブ** | tool ランタイム内で実装されたツール | `native:<name>` |
+| **MCP** | 接続中の MCP サーバーが報告するツール | `mcp:<serverId>:<toolName>` |
 
-## 仕組み
+## リスクは推測ではなく宣言
 
-```text
-ツールソースがツールを登録
-  → ツールレジストリがすべてのツールをカタログ化
-  → Jarvisがリクエストに対して利用可能なツールをクエリ
-  → ツールレジストリが一致するツールを返却
-  → Jarvisが適切なツールを選択して呼び出し
-  → パーミッションガードが実行前にチェック
+すべてのネイティブツールは登録時に明示的なリスクレベルを要求します：
+
+```ts
+registerTool("dispatch_agent", tool({ ... }), "high");
 ```
 
-## ツールメタデータ
+これは意図的な制約です。かつてツール名からリスクを推測した結果、`dispatch_agent` と `run_task_graph` は危険語を含まないため `low` と判定されました。しかし両者はファイルを書きコマンドを実行する実行を派生させ、`low` は既定で自動承認されます。名前は効果の証拠ではありません。
 
-レジストリ内の各ツールには以下が含まれます:
+## コアツールとオンデマンド発見
 
-- **名前** — 一意の識別子
-- **説明** — ツールの機能
-- **パラメータ** — 入力スキーマ（JSON Schema）
-- **ソース** — このツールを所有するプロバイダー
-- **リスクレベル** — read、write、external、destructive
+毎ターンすべてのツールスキーマを公開するとコンテキストを消費し、ツール選択の質を下げます。そこでルーターは 2 段構えです：
 
-## ツールのクエリ
+1. **コアツール** は常に利用可能。
+2. **それ以外** は `search_tools` でカタログ全体をクエリ照合し、一致したもののスキーマを返します。モデルは見つけたツールで計画を立て、カタログ全体を背負いません。
 
-Jarvisはレジストリにクエリしてツールを検索できます:
+## 内蔵ネイティブツール
 
-- **機能別** — "ファイルを読み取れるツールを見つけて"
-- **ソース別** — "すべてのMCPツールを表示"
-- **名前別** — "filesystem:readツールを使用して"
+| ツール | リスク | 用途 |
+|--------|--------|------|
+| `get_code_skeleton` | `low` | ファイル/シンボルの AST 剪枝スケルトン。シグネチャと型を保持し本体を折りたたむ |
+| `search_tools` | `low` | コア外のツールを発見 |
+| `listConversations` | `low` | 会話一覧 |
+| `previewConversationCleanup` | `low` | クリーンアップのドライラン |
+| `taskflow_create_task` | `medium` | タスク作成 |
+| `taskflow_list_tasks` | `low` | タスク一覧 |
+| `deleteConversation` | `high` | 会話 1 件を削除 |
+| `deleteConversationsByQuery` | `high` | クエリによる一括削除 |
+| `requestConversationCleanup` | `high` | 承認付きクリーンアップ |
+| `dispatch_agent` | `high` | 境界付き実行を子エージェントへ委譲 |
+| `run_task_graph` | `high` | コーディングサブタスクの DAG を実行 |
+| `createTask` / `updateTask` | `medium` | タスク管理 |
+| `getTodayTasks` / `queryTasks` | `low` | タスク照会 |
+| `deleteTask` | `high` | タスク削除 |
+| `addArticle` / `updateReadingStatus` | `medium` | リーディングリスト |
+| `getReadingList` / `getReadingStats` / `recommendNext` | `low` | 読書照会 |
+| `getDailySummary` / `getWeeklyStats` / `getReviewHistory` | `low` | 振り返り照会 |
+| `saveReview` | `medium` | 振り返りの保存 |
+| `memory_store` | `medium` | 長期記憶の書き込み（以後の提示に持続的に影響するため `low` ではない） |
+| `memory_search` / `memory_list` | `low` | 記憶の読み取り |
+| `memory_delete` | `high` | 記憶の削除 |
+
+ネイティブツールはすべて登録時にリスクを宣言し、名前や引数の推測に依存しません。
+
+MCP ツールはサーバー設定のリスクポリシー（レベルごとの `riskPolicy`）を伴い、接続時に登録されます。
+
+## 解決
+
+```text
+モデルが "search_tools" を要求
+  → レジストリが native:search_tools を解決
+  → パーミッションガードが宣言リスクを読む
+  → ポリシー判定 auto / notify / confirm / deny
+  → 実行、監査、返却
+```
+
+解決は裸の名前と `native:` 前置きの両方を受け付けるため、モデルは名前空間を知る必要がありません。
+
+## レジストリを調べる
+
+- `GET /api/tools` — 登録済みツール一覧
+- `GET /api/tools/:id` — 単一ツール
+- `POST /api/tools/filter` — ソース/リスクで絞り込み
+- `POST /api/tools/:id/execute` — 直接実行（権限チェックあり）
+- `GET /api/tools/logs` — 最近の呼び出しログ
 
 ## 次のステップ
 
-- [MCPサーバー](/docs/configuration/mcp-servers) — 外部ツールの接続
-- [カスタムツール追加](/docs/guides/add-custom-tool) — 独自のツールを登録
-- [パーミッションガード](/docs/core-concepts/permission-guard) — 安全チェック
+- [MCP サーバー](/docs/configuration/mcp-servers) — 外部ツールの接続
+- [パーミッションガード](/docs/core-concepts/permission-guard) — リスクが決定に変わる仕組み
+- [カスタムツールの追加](/docs/guides/add-custom-tool) — 自分のツールを登録

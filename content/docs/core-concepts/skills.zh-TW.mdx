@@ -1,84 +1,69 @@
 ---
 title: 技能
-description: 擴展 Jarvis 功能的自訂腳本工作流程。
+description: 需要先掙得「無人值守執行權」的程序性知識。
 ---
 
-技能是擴展 Jarvis 功能的可重用工作流程。它們將多個步驟 — 工具呼叫、條件邏輯和結構化輸出 — 結合為 Jarvis 可以自動或應請求調用的命名操作。
+技能是以 `SKILL.md` 形式保存的程序性知識：如何把專案改造成 MCP 伺服器、團隊如何做審查、儲存庫如何發佈。技能按需載入進上下文，而不是常駐。
 
-## 什麼是技能？
+## 信任是掙來的
 
-技能是一個 `SKILL.md` 檔案，定義了一個多步驟工作流程。與單一工具呼叫不同，技能可以：
-
-- 將多個工具串聯在一起
-- 包含條件邏輯
-- 在步驟之間維護狀態
-- 以結構化格式呈現結果
-
-## 使用技能
-
-Jarvis 會自動發現可用的技能，並在適當時候調用它們。你也可以明確請求一個技能：
+累積技能不等於變強。一個技能可能來自一次僥倖成功的執行，可能不適用於目前儲存庫，也可能已經開始失敗。因此 CoreLayer 在技能無人值守執行前會評估：
 
 ```text
-對目前的變更執行 code-review 技能
+請求使用技能
+  → evaluateSkillTrust(manifest)
+      已棄用？                 → 僅建議
+      autonomy: "suggest"？    → 僅建議
+      連續 3 次失敗？          → 降級為僅建議
+      從未成功過？             → 僅建議
+      其餘                     → 可自動執行
 ```
 
-## 技能定義格式
+「僅建議」並不會停用技能。它仍然可用，只是必須被顯式請求。
 
-每個技能是一個 Markdown 檔案（`SKILL.md`），具有結構化區塊。這是一個最小範例：
+## 執行歷史
 
-```markdown
-# My Skill
+每次執行都會把結果（`success`、`error`、`runId`、`executedAt`）追加到技能的 provenance，最多保留 20 筆。信任規則讀取的就是這段歷史，因此一個開始失敗的技能會自行失去自主權，無需人工編輯。
 
-Short description of what this skill does.
-
-## What This Skill Does
-
-Longer explanation for the AI agent executing this skill.
-
-## Steps
-
-### Step 1: Gather context
-Read the current project state and identify relevant files.
-
-### Step 2: Execute action
-Call the appropriate tools with the gathered context.
-
-### Step 3: Report results
-Summarize what was done and any follow-up actions.
-```
-
-技能位於 `skills/` 目錄中。每個技能有自己的資料夾：
+## 格式
 
 ```text
 skills/
-└── corelayer-mcp-adapter/
+└── my-skill/
     └── SKILL.md
 ```
 
-## 技能來源
+```markdown
+# 我的技能
 
-技能可以來自：
+一句話說明這個技能做什麼。
 
-- **內建** — 隨 CoreLayer 附帶（例如 `corelayer-mcp-adapter`）
-- **社群** — 其他使用者分享
-- **自訂** — 你自己編寫
+## 何時使用
 
-### 內建技能
+適用條件。
+
+## 步驟
+
+### 步驟 1：收集上下文
+### 步驟 2：執行
+### 步驟 3：驗證並回報
+```
+
+## 內建技能
 
 | 技能 | 用途 |
-|-------|---------|
-| `corelayer-mcp-adapter` | 指導將任何專案改造成 CoreLayer 相容的 MCP 伺服器 |
+|------|------|
+| `corelayer-mcp-adapter` | 指導把任意專案改造成 CoreLayer 相容的 MCP 伺服器 |
 
-## 編寫自訂技能
+## 撰寫建議
 
-1. 在 `skills/` 下建立資料夾：`skills/my-skill/`
-2. 新增一個 `SKILL.md` 檔案，包含你的工作流程定義
-3. 重新啟動 CoreLayer — Jarvis 會自動發現新技能
-
-`corelayer-mcp-adapter` 技能是一個很好的參考，展示了如何用清晰的指示、檢查清單和範例來結構化多步驟工作流程。
+- 寫清適用條件，而不只是步驟。
+- 包含驗證步驟；沒有可檢驗結果的技能無法掙得信任。
+- 優先使用確定性步驟（指令、檔案），少用散文式指令。
+- 若需要提權，明確說明，而不是籠統索取寬權限。
 
 ## 下一步
 
-- [工具註冊表](/docs/core-concepts/tool-registry) — 技能如何被註冊
-- [新增自訂工具](/docs/guides/add-custom-tool) — 建立你自己的擴展
-- [連接 MCP 應用程式](/docs/guides/connect-mcp-app) — MCP 轉接器技能的實際應用
+- [工具註冊表](/docs/core-concepts/tool-registry) — 工具與技能的區別
+- [新增自訂工具](/docs/guides/add-custom-tool) — 用確定性工具代替技能
+- [連接 MCP 應用](/docs/guides/connect-mcp-app) — MCP 轉接技能的實戰

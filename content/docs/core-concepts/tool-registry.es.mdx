@@ -1,50 +1,86 @@
 ---
 title: Tool Registry
-description: Registro unificado de herramientas, descubrimiento y enrutamiento.
+description: Como las herramientas nativas, MCP y descubiertas llegan al modelo.
 ---
 
-El Tool Registry es un catalogo central de todas las herramientas disponibles para Jarvis. Agrega herramientas de multiples fuentes y las presenta a traves de una interfaz unificada.
+El Tool Registry es el catalogo por el que se resuelve cada llamada a herramienta. Agrega herramientas nativas y las provistas por MCP, y es el lugar donde se declara el nivel de riesgo de una herramienta.
 
-## Fuentes de Herramientas
+## Fuentes
 
-| Fuente | Descripcion |
-|--------|-------------|
-| **Modulos nativos** | Herramientas integradas de CoreLayer (gestion de tareas, lista de lectura, revisiones) |
-| **Servidores MCP** | Herramientas de servidores MCP conectados |
-| **Habilidades** | Flujos de trabajo scriptados personalizados |
-| **Adaptadores REST** | Herramientas de endpoints de API REST |
+| Fuente | Descripcion | Forma de ID |
+|--------|-------------|-------------|
+| **Nativa** | Herramientas implementadas en el runtime tool | `native:<name>` |
+| **MCP** | Herramientas reportadas por un servidor MCP conectado | `mcp:<serverId>:<toolName>` |
 
-## Como Funciona
+## Riesgo declarado, no inferido
 
-```text
-Las fuentes de herramientas registran sus herramientas
-  → Tool Registry cataloga todas las herramientas
-  → Jarvis consulta las herramientas disponibles para una solicitud
-  → Tool Registry devuelve las herramientas coincidentes
-  → Jarvis selecciona y llama a la herramienta apropiada
-  → Permission Guard verifica antes de la ejecucion
+Cada herramienta nativa se registra con un nivel de riesgo explicito:
+
+```ts
+registerTool("dispatch_agent", tool({ ... }), "high");
 ```
 
-## Metadatos de Herramienta
+Es una restriccion deliberada. Inferir el riesgo del nombre alguna vez clasifico `dispatch_agent` y `run_task_graph` como `low` — no contienen palabras de riesgo — aunque ambas lanzan ejecuciones que escriben archivos y ejecutan comandos, y `low` se aprueba automaticamente. Un nombre no es evidencia de un efecto.
 
-Cada herramienta en el registro incluye:
+## Herramientas core y descubrimiento on-demand
 
-- **Nombre** — identificador unico
-- **Descripcion** — que hace la herramienta
-- **Parametros** — esquema de entrada (JSON Schema)
-- **Fuente** — que proveedor posee esta herramienta
-- **Nivel de riesgo** — lectura, escritura, externo, destructivo
+Exponer el esquema de todas las herramientas en cada turno quema contexto y degrada la seleccion. Por eso el router trabaja en dos niveles:
 
-## Consultar Herramientas
+1. **Herramientas core** siempre disponibles.
+2. **El resto** se alcanza con `search_tools`, que busca en el catalogo completo por consulta y devuelve los esquemas de las coincidencias. El modelo planifica con lo que encontro en lugar de cargar todo el catalogo.
 
-Jarvis puede consultar el registro para encontrar herramientas por:
+## Herramientas nativas integradas
 
-- **Capacidad** — "encuentra herramientas que puedan leer archivos"
-- **Fuente** — "muestra todas las herramientas MCP"
-- **Nombre** — "usa la herramienta filesystem:read"
+| Herramienta | Riesgo | Proposito |
+|-------------|--------|-----------|
+| `get_code_skeleton` | `low` | Esqueleto AST-podado de un archivo o simbolo: firmas y tipos intactos, cuerpos colapsados |
+| `search_tools` | `low` | Descubrir herramientas fuera del conjunto core |
+| `listConversations` | `low` | Listar conversaciones |
+| `previewConversationCleanup` | `low` | Dry-run de una consulta de limpieza |
+| `taskflow_create_task` | `medium` | Crear tarea |
+| `taskflow_list_tasks` | `low` | Listar tareas |
+| `deleteConversation` | `high` | Borrar una conversacion |
+| `deleteConversationsByQuery` | `high` | Borrado masivo por consulta |
+| `requestConversationCleanup` | `high` | Limpieza detras de una aprobacion |
+| `dispatch_agent` | `high` | Delegar una ejecucion acotada a un agente hijo |
+| `run_task_graph` | `high` | Ejecutar un DAG de subtareas de codigo |
+| `createTask` / `updateTask` | `medium` | Gestion de tareas |
+| `getTodayTasks` / `queryTasks` | `low` | Consultar tareas |
+| `deleteTask` | `high` | Borrar tarea |
+| `addArticle` / `updateReadingStatus` | `medium` | Lista de lectura |
+| `getReadingList` / `getReadingStats` / `recommendNext` | `low` | Consultas de lectura |
+| `getDailySummary` / `getWeeklyStats` / `getReviewHistory` | `low` | Consultas de revision |
+| `saveReview` | `medium` | Guardar una revision |
+| `memory_store` | `medium` | Escribir memoria (influencia persistente, por eso no `low`) |
+| `memory_search` / `memory_list` | `low` | Leer memorias |
+| `memory_delete` | `high` | Borrar una memoria |
 
-## Siguientes Pasos
+Todas las herramientas nativas declaran el riesgo al registrarse; ninguna depende de inferencia por nombre o argumentos.
+
+Las herramientas MCP llevan la politica de riesgo configurada para su servidor (`riskPolicy` por nivel) y se registran al conectar.
+
+## Resolucion
+
+```text
+El modelo pide "search_tools"
+  → el registro resuelve native:search_tools
+  → el Permission Guard lee el riesgo declarado
+  → la politica decide auto / notify / confirm / deny
+  → ejecutar, auditar, devolver
+```
+
+La resolucion acepta el nombre simple y el prefijo `native:`, asi el modelo no necesita conocer el namespace.
+
+## Inspeccionar el registro
+
+- `GET /api/tools` — listar herramientas registradas
+- `GET /api/tools/:id` — una herramienta
+- `POST /api/tools/filter` — filtrar por fuente o riesgo
+- `POST /api/tools/:id/execute` — ejecutar directamente (con comprobacion de permisos)
+- `GET /api/tools/logs` — log reciente de llamadas
+
+## Siguientes pasos
 
 - [Servidores MCP](/docs/configuration/mcp-servers) — conectar herramientas externas
-- [Aniadir una Herramienta Personalizada](/docs/guides/add-custom-tool) — registrar tus propias herramientas
-- [Permission Guard](/docs/core-concepts/permission-guard) — verificaciones de seguridad
+- [Permission Guard](/docs/core-concepts/permission-guard) — como el riesgo se convierte en decision
+- [Agregar una Herramienta](/docs/guides/add-custom-tool) — registrar las tuyas

@@ -1,98 +1,86 @@
 ---
 title: 存储
-description: "配置数据存储模式：本地 SQLite、Supabase 或 PostgreSQL。"
+description: CoreLayer 把状态存在哪里，以及如何在 SQLite、Supabase 与 PostgreSQL 之间切换。
 ---
 
-CoreLayer 支持三种存储后端，可在运行时热切换。
+CoreLayer 默认把状态存在本地，也可以改为运行在 Supabase 或自托管 PostgreSQL 上。存储模式在启动时确定，不按请求切换。
 
 ## 存储模式
 
-| 模式 | 描述 | 用例 |
+| 模式 | 取值 | 说明 |
 |------|------|------|
-| **SQLite** | 本地文件数据库（默认） | 个人使用，离线优先 |
-| **Supabase** | 带实时同步的云端 PostgreSQL | 多设备同步 |
-| **PostgreSQL** | 自托管 PostgreSQL | 团队/企业使用 |
+| SQLite | `local`（默认） | 零配置的本地文件数据库 |
+| Supabase | `cloud` | 你自己的云 PostgreSQL 项目 |
+| PostgreSQL | `postgres` | 自托管 PostgreSQL |
 
-## SQLite（默认）
-
-SQLite 是默认存储模式。数据存储在本地 `.db` 文件中：
+模式存放在独立文件 `storage.json` 中（与 `config.json` 同在配置分区）：
 
 ```json
 {
-  "storage": {
-    "mode": "sqlite",
-    "path": "~/.corelayer/data.db"
+  "storageMode": "local",
+  "dbConfig": {
+    "supabaseUrl": "https://your-project.supabase.co",
+    "supabaseServiceKey": "…",
+    "postgresUrl": "postgresql://user:pass@host:5432/corelayer"
   }
 }
 ```
 
-无需外部依赖。完全离线运行。
+`dbConfig` 仅在 cloud 与 postgres 模式下需要。PostgreSQL 也支持环境变量 `DATABASE_URL`。
 
-## Supabase
+切换在 **设置 → 存储** 中完成，它会写入该文件。新模式由守护进程**重启后**生效，并非在线热切换。
 
-连接到 Supabase 进行云同步：
+## 磁盘布局
 
-```json
-{
-  "storage": {
-    "mode": "supabase",
-    "url": "https://your-project.supabase.co",
-    "anonKey": "eyJ..."
-  }
-}
+本地状态分布在 CoreLayer 主目录（可用 `JARVIS_HOME` 覆盖；桌面默认 `~/.jarvis`）下的六个分区：
+
+```text
+~/.jarvis/
+├── config/      config.json · routing.json          （无密钥）
+├── security/    credentials.json                     （POSIX 下 0600）
+├── memory/      USER.md · MEMORY.md · journal/ · dreams/
+├── storage/     jarvis.db
+├── worktrees/   active/ · snapshots/
+└── cache/       symbol-graph/ · mcp-schemas/ · delegation-pipes/
 ```
 
-设置 Supabase：
-1. 在 [supabase.com](https://supabase.com) 创建项目
-2. 运行 CoreLayer 迁移脚本
-3. 添加你的项目 URL 和匿名密钥
+凭据从 `security/credentials.json` 读取；当新位置不存在时，仍兼容旧的 `config/credentials.json`。
 
-## PostgreSQL
+在 sidecar 模式下，外壳可通过 `JARVIS_APP_DATA_DIR`、`JARVIS_LOG_DIR` 与 `SQLITE_DB_PATH` 覆盖根目录。
 
-连接到自托管的 PostgreSQL 实例：
+### 已知例外
 
-```json
-{
-  "storage": {
-    "mode": "postgres",
-    "connectionString": "postgresql://user:pass@localhost:5432/corelayer"
-  }
-}
-```
+有两个文件仍然解析到旧位置，而非六分区布局：
 
-## 热切换
+- `mcp-servers.json` 从 `~/.jarvis/config/mcp-servers.json` 读取
+- SQLite 路径沿用 app-paths 的解析结果（除非设置 `SQLITE_DB_PATH`，否则为 `data/jarvis.db`）
 
-你可以在运行时从控制中心切换存储模式：
+这里把两者作为例外写明，而不是悄悄描述成新布局的一部分。
 
-1. 打开**设置 → 存储**
-2. 选择新模式
-3. 输入连接详情
-4. 点击**切换**
+## 数据结构
 
-CoreLayer 会自动在模式之间迁移数据。
+数据库由 Drizzle 迁移管理。
 
-## 数据模式 (Data Schema)
+| 分组 | 表 |
+|------|----|
+| 工作结构 | `workspaces`、`workspace_agents`、`projects`、`agent_profiles`、`tasks`、`artifacts`、`goals`、`plans` |
+| 执行 | `agent_runs`、`agent_run_events`、`executor_runs`、`execution_logs`、`environment_sessions`、`environment_events` |
+| 治理 | `approval_requests`、`permission_memories`、`capability_grants`、`pending_actions`、`tool_call_logs`、`audit_log`、`event_log` |
+| 对话 | `conversations`、`messages` |
+| 知识 | `memories`、`articles`、`reviews` |
+| 配置 | `app_connections`、`model_profiles`、`scheduled_tasks` |
+| 渠道 | `channel_accounts`、`channel_conversations`、`channel_messages` |
 
-CoreLayer 采用本地优先的高完整度数据库表设计，存储以下主要实体：
+## 如何选择
 
-*   **workspaces** — 顶层工作空间，管理用户目标、任务拆解与运行时状态
-*   **projects** — 工作空间内的项目，包含项目规格（spec）、技术栈及本地根路径
-*   **tasks** — 任务节点，形成任务图（Task Graph）并追踪 Agent 执行依赖
-*   **artifacts** — 交付产物，将最终有价值的交付文件/报告与运行日志及噪音分离
-*   **agent_runs** — 单次 Agent 运行记录，追踪状态、耗时、模型路由与事件日志
-*   **approval_requests** — 挂起的高风险操作，记录用户对工具执行的安全审查决策
-*   **permission_memories** — 权限缓存记忆，针对特定项目或会话临时授权以防频繁弹窗
-*   **conversations** / **messages** — 聊天对话历史及单条消息记录
-*   **tool_call_logs** — 审计日志，记录每次工具调用的耗时、参数、风险等级及结果
-*   **app_connections** — 已经配置的本地/远程 MCP 服务器与外部应用连接
-*   **model_profiles** — 模型网关的提供商配置与接口端点
-*   **memories** — Jarvis 的长期记忆（facts、preferences、context、pinned）
-*   **scheduled_tasks** — 定时触发的自动化 Cron 任务与技能
-*   **environment_sessions** / **environment_events** — 隔离的开发沙箱环境会话及事件流
-*   **articles** — 阅读列表条目
-*   **reviews** — 每日/每周回顾摘要
+- **SQLite** — 单机、离线、查询最快。默认。
+- **Supabase** — 多设备，并希望托管备份；项目与策略由你掌控。
+- **PostgreSQL** — 你已运维数据库，不想引入第三方控制面。
+
+后端之间没有后台复制：切换模式即意味着守护进程读写你选定的后端。
 
 ## 下一步
 
-- [权限守卫](/docs/core-concepts/permission-guard) — 数据访问如何被控制
-- [安全模型](/docs/architecture/security-model) — 存储安全细节
+- [安全模型](/docs/architecture/security-model) — 哪些数据敏感、存在哪里
+- [配置文件](/docs/reference/config-file) — 完整配置参考
+- [权限](/docs/configuration/permissions) — 策略配置
