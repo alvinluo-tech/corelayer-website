@@ -1,0 +1,71 @@
+---
+title: 可靠性評測
+description: CoreLayer 如何判斷一次針對 Agent 的變更是否真的讓它變好。
+---
+
+大多數 Agent 變更在單次執行裡看起來都是改進。CoreLayer 提供評測框架，讓這個說法可以被檢驗：`daemon/src/eval` 會針對語料反覆執行編碼 Agent，回報的是**一致性**，而不是最好的一次。
+
+該框架**不**屬於 `pnpm test`——每次嘗試都消耗一次真實的模型呼叫。
+
+## 度量什麼
+
+| 指標 | 為什麼存在 |
+|------|-----------|
+| **pass^k** | 在**每一次**嘗試中都成功的任務比例。嚴格難於 pass@k，是無人值守場景真正該看的數字。 |
+| **假陽性 / 假陰性** | 執行器聲稱成功但檢查失敗（或相反）的嘗試。用於解釋框架與 Agent 為何不一致。 |
+| **執行器狀態** | `succeeded`、`failed`、`cancelled`、`timed-out`。 |
+| **作廢嘗試（Voided）** | 環境故障（配額、連線被拒、供應商 5xx）不計入比率，而不是算成 Agent 失敗。連續三次會終止整輪。 |
+| **成本** | `tokens/attempt` 與 `tokens/success`；成功率提升但開銷翻倍，不算改進。 |
+
+## 執行
+
+```powershell
+cd daemon
+$env:ANTHROPIC_MODEL='<model>'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+```
+
+框架自帶兩套語料：`core`（單檔案寫、改、除錯、刪除、重新命名）與 `holdout`（多步協同、位元組級範圍紀律、克制、拒絕編造事實）。二者分開評分是有意為之。
+
+## 配對比較
+
+`--compare NAME=VALUE` 會把同一語料跑兩遍——變數未設定一次、設定一次——並給出配對結論：
+
+| 結論 | 含義 |
+|------|------|
+| `improved` | 總體超過容差，且沒有任何單一任務退步 |
+| `regressed` | 總體下降 |
+| `mixed` | 均值上升，但有任務失去可靠性 |
+| `unchanged` | 全部落在容差帶內 |
+
+`mixed` 正是聚合門檻看不見的失敗模式：平均「提升可靠性」的同時弄壞了某個原本可用的任務。它不能被回報為改進。
+
+## 准入規則
+
+改變 Agent 行為的變更（反思迴圈、提示詞調整、新閘門）只有在配對執行滿足以下條件時才能成為預設：
+
+1. 結論為 `improved`——不是 `mixed`，也不是 `unchanged`
+2. 沒有任務失去可靠性
+3. `tokens/success` 上升不超過約 20%
+4. 複跑一次仍滿足 (1)–(3)
+
+任一條件不滿足，變更保持預設關閉。反思迴圈遵循此規則，預設**關閉**。
+
+## 基線
+
+截至 2026-10-21 使用 `deepseek-v4.1-flash` 的執行結果：
+
+```text
+core, k = 3        pass^3 = 100.0%   0 假陽性 / 0 假陰性
+holdout, k = 1     pass^1 = 100.0%   0 假陽性 / 0 假陰性
+```
+
+語料是回歸探測器，不是排行榜。它的價值在於下一次變更後出現的那一行紅色。
+
+## 下一步
+
+- [執行可靠性評測](/docs/guides/run-reliability-eval) — 分步說明與 A/B 流程
+- [執行器治理](/docs/architecture/executor-governance) — 評測在度量什麼
+- [疑難排解](/docs/reference/troubleshooting) — 逾時通常意味著閘道抖動

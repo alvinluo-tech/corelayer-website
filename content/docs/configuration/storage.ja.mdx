@@ -1,98 +1,86 @@
 ---
 title: ストレージ
-description: "データストレージモードを設定: ローカルSQLite、Supabase、またはPostgreSQL。"
+description: CoreLayer が状態をどこに置き、SQLite・Supabase・PostgreSQL をどう切り替えるか。
 ---
 
-CoreLayerは、ランタイム中にホットスワップ可能な3つのストレージバックエンドをサポートします。
+CoreLayer は既定で状態をローカルに保存し、Supabase やセルフホスト PostgreSQL 上でも動作できます。ストレージモードは起動時に決まり、リクエスト単位では切り替わりません。
 
 ## ストレージモード
 
-| モード | 説明 | ユースケース |
-|------|-------------|----------|
-| **SQLite** | ローカルファイルデータベース（デフォルト） | 個人利用、オフラインファースト |
-| **Supabase** | リアルタイム同期付きクラウドPostgreSQL | マルチデバイス同期 |
-| **PostgreSQL** | セルフホストPostgreSQL | チーム/エンタープライズ向け |
+| モード | 値 | 説明 |
+|--------|----|------|
+| SQLite | `local`（既定） | 設定不要のローカルファイル DB |
+| Supabase | `cloud` | あなた自身のクラウド PostgreSQL プロジェクト |
+| PostgreSQL | `postgres` | セルフホスト PostgreSQL |
 
-## SQLite（デフォルト）
-
-SQLiteはデフォルトのストレージモードです。データはローカルの`.db`ファイルに保存されます:
+モードは独立したファイル `storage.json`（`config.json` と同じ設定ゾーン）に保存されます：
 
 ```json
 {
-  "storage": {
-    "mode": "sqlite",
-    "path": "~/.corelayer/data.db"
+  "storageMode": "local",
+  "dbConfig": {
+    "supabaseUrl": "https://your-project.supabase.co",
+    "supabaseServiceKey": "…",
+    "postgresUrl": "postgresql://user:pass@host:5432/corelayer"
   }
 }
 ```
 
-外部依存は不要です。完全にオフラインで動作します。
+`dbConfig` は cloud と postgres モードでのみ必要です。PostgreSQL は環境変数 `DATABASE_URL` も受け付けます。
 
-## Supabase
+切り替えは **設定 → ストレージ** で行い、このファイルを書き込みます。新しいモードはデーモン**再起動後**に有効で、ライブなホットスワップではありません。
 
-クラウド同期のためにSupabaseに接続:
+## ディスクレイアウト
 
-```json
-{
-  "storage": {
-    "mode": "supabase",
-    "url": "https://your-project.supabase.co",
-    "anonKey": "eyJ..."
-  }
-}
+ローカル状態は CoreLayer ホーム（`JARVIS_HOME` で上書き可能、デスクトップ既定は `~/.jarvis`）配下の 6 ゾーンに分かれます：
+
+```text
+~/.jarvis/
+├── config/      config.json · routing.json          （秘密なし）
+├── security/    credentials.json                     （POSIX で 0600）
+├── memory/      USER.md · MEMORY.md · journal/ · dreams/
+├── storage/     jarvis.db
+├── worktrees/   active/ · snapshots/
+└── cache/       symbol-graph/ · mcp-schemas/ · delegation-pipes/
 ```
 
-Supabaseのセットアップ:
-1. [supabase.com](https://supabase.com)でプロジェクトを作成
-2. CoreLayerマイグレーションスクリプトを実行
-3. プロジェクトURLとanonキーを追加
+資格情報は `security/credentials.json` から読みます。新しい場所が存在しない場合は旧 `config/credentials.json` も互換読み込みします。
 
-## PostgreSQL
+sidecar モードではシェルが `JARVIS_APP_DATA_DIR`、`JARVIS_LOG_DIR`、`SQLITE_DB_PATH` でルートを上書きできます。
 
-セルフホストのPostgreSQLインスタンスに接続:
+### 既知の例外
 
-```json
-{
-  "storage": {
-    "mode": "postgres",
-    "connectionString": "postgresql://user:pass@localhost:5432/corelayer"
-  }
-}
-```
+6 ゾーン構成ではなく旧位置から解決されるファイルが 2 つあります：
 
-## ホットスイッチング
+- `mcp-servers.json` は `~/.jarvis/config/mcp-servers.json` から読む
+- SQLite のパスは app-paths の解決に従う（`SQLITE_DB_PATH` 未設定なら `data/jarvis.db`）
 
-コントロールセンターからランタイム中にストレージモードを切り替えられます:
+両者は新レイアウトの一部であるかのように黙って書かず、例外として明記します。
 
-1. **設定 → ストレージ**を開く
-2. 新しいモードを選択
-3. 接続詳細を入力
-4. **切り替え**をクリック
+## スキーマ
 
-CoreLayerがモード間のデータ移行を自動的に行います。
+データベースは Drizzle マイグレーションで管理されます。
 
-## データスキーマ (Data Schema)
+| グループ | テーブル |
+|---------|---------|
+| 作業構造 | `workspaces`、`workspace_agents`、`projects`、`agent_profiles`、`tasks`、`artifacts`、`goals`、`plans` |
+| 実行 | `agent_runs`、`agent_run_events`、`executor_runs`、`execution_logs`、`environment_sessions`、`environment_events` |
+| ガバナンス | `approval_requests`、`permission_memories`、`capability_grants`、`pending_actions`、`tool_call_logs`、`audit_log`、`event_log` |
+| 会話 | `conversations`、`messages` |
+| 知識 | `memories`、`articles`、`reviews` |
+| 設定 | `app_connections`、`model_profiles`、`scheduled_tasks` |
+| チャネル | `channel_accounts`、`channel_conversations`、`channel_messages` |
 
-CoreLayerは高度に構造化されたローカルファーストのデータベーススキーマを使用しており、以下の主要エンティティを保存します:
+## 選び方
 
-*   **workspaces** — 目標、タスク分解、および実行状態を管理する最上位のワークスペース
-*   **projects** — 仕様書（specs）、技術スタック、およびローカルのルートパスを含む、ワークスペース内の特定のプロジェクトフォルダー
-*   **tasks** — 実行の依存関係グラフを形成するタスクノード
-*   **artifacts** — 価値のあるファイルやレポートをターミナル出力やログのノイズから分離した最終的な成果物
-*   **agent_runs** — エージェントの個別実行セッション（状態、遅延、ルーティング、およびログを追跡）
-*   **approval_requests** — ユーザーの手動承認の決定を待機する保留中の高リスクアクション
-*   **permission_memories** — 繰り返しの権限確認ポップアップを防ぐための決定の一時的なキャッシュ
-*   **conversations** / **messages** — チャット会話の履歴と個々のメッセージレコード
-*   **tool_call_logs** — 実行時間、引数、リスクレベル、および結果を記録する監査ログ
-*   **app_connections** — 設定されたローカルまたはリモートのMCPサーバーおよびアプリケーション接続
-*   **model_profiles** — モデルゲートウェイのプロバイダー設定とインターフェースエンドポイント
-*   **memories** — Jarvisの長期メモリ（事実、好み、コンテキスト、固定済み）
-*   **scheduled_tasks** — 自動化タスクとスキルをトリガーするCronジョブ
-*   **environment_sessions** / **environment_events** — 隔離されたサンドボックスコンテナとイベントストリーム
-*   **articles** — リーディングリストのエントリ
-*   **reviews** — 日次/週次レビューの要約
+- **SQLite** — 1 台、オフライン、最速。既定。
+- **Supabase** — 複数デバイス、マネージドバックアップ。プロジェクトとポリシーは自分で管理。
+- **PostgreSQL** — すでに DB を運用しており、第三者のコントロールプレーンを増やしたくない。
+
+バックエンド間のバックグラウンド複製はありません。モードを切り替えると、デーモンは選んだバックエンドを読み書きします。
 
 ## 次のステップ
 
-- [パーミッションガード](/docs/core-concepts/permission-guard) — データアクセスの制御方法
-- [セキュリティモデル](/docs/architecture/security-model) — ストレージセキュリティの詳細
+- [セキュリティモデル](/docs/architecture/security-model) — 何が機密で、どこにあるか
+- [設定ファイル](/docs/reference/config-file) — 完全なリファレンス
+- [権限](/docs/configuration/permissions) — ポリシー設定

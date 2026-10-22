@@ -1,0 +1,79 @@
+---
+title: Adaptadores de Ejecutores de Codigo
+description: Conecta Claude Code, Codex u OpenCode y entiende que restringe CoreLayer.
+---
+
+CoreLayer no implementa un agente de codigo. Despacha trabajo a uno en el que ya confias y lo restringe. Hay cuatro adaptadores registrados: `claude-code`, `codex`, `opencode` y `acp`.
+
+## Adaptadores
+
+| ID | Maneja | Notas |
+|----|--------|-------|
+| `claude-code` | CLI de Claude Code | Solo corre modelos DeepSeek (ver abajo) |
+| `codex` | CLI de Codex | |
+| `opencode` | CLI de OpenCode | |
+| `acp` | Cualquier agente ACP via `acpx` | Eventos estructurados, sonda de capacidades, guardia de modelo |
+
+Los adaptadores CLI no pueden interceptar tool calls individuales: un agente CLI decide por si mismo que ejecutar. Por eso se excluyen cuando quien llama exige intercepcion de aprobacion, en lugar de usarse con garantias mas debiles. `acp` es el adaptador que soporta enrutado de permisos por herramienta.
+
+## Seleccion
+
+Un ejecutor se elige por capacidad, no por "lo que este instalado":
+
+- Si quien llama nombra un adaptador preferido, se prueba primero.
+- Si no, un fallback determinista elige el primer adaptador registrado que cumpla los requisitos (`requiresCancellation`, `requiresStructuredEvents`, intercepcion de aprobacion de tool calls).
+- Se registra el motivo de la seleccion, asi una ejecucion explica por que uso ese ejecutor.
+
+## Claude Code esta limitado a DeepSeek
+
+El adaptador ACP lo aplica antes de lanzar:
+
+```text
+ANTHROPIC_MODEL (o el modelo de politica del ejecutor) debe empezar por "deepseek"
+si no, la ejecucion se rechaza — no se reescribe ni se degrada en silencio
+```
+
+La razon es concreta: enrutar una etiqueta de la familia Claude (`opus`, `sonnet`) a un endpoint compatible con DeepSeek falla con `model_not_found`, que parece un error de credenciales y te hace depurar la capa equivocada.
+
+## Que hace el adaptador
+
+- **Aislamiento de `~/.claude`** — la ejecucion recibe un `CLAUDE_CONFIG_DIR` temporal con un `settings.json` vacio, asi tus ajustes personales no pueden sobrescribir el endpoint o el modelo que pasa CoreLayer.
+- **Sin TTY** — `session/request_permission` se responde de forma determinista desde la politica de permisos y las herramientas permitidas; nunca se bloquea esperando entrada de terminal.
+- **Traduccion de eventos** — los mensajes ACP `session/update` se convierten en eventos de codigo normalizados; las tool calls abiertas al salir se vuelcan en lugar de descartarse.
+- **Presupuesto** — el timeout se pasa a `acpx` y ademas lo aplica el daemon.
+
+## Prerrequisitos
+
+`acpx` debe estar instalado (`npm install acpx`). Si falta, la sonda de capacidades reporta `unreachable` con la pista de instalacion en lugar de fallar mas tarde dentro de una ejecucion.
+
+Las credenciales vienen de las variables compatibles con Anthropic que usa el agente:
+
+```powershell
+$env:ANTHROPIC_MODEL='deepseek-v4.1-flash'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+```
+
+## Estados de capacidad
+
+| Estado | Significado | Que hacer |
+|--------|-------------|-----------|
+| `ready` | Handshake correcto | Nada |
+| `needs_auth` | El agente arranco pero no tiene credenciales | Completa su login |
+| `unreachable` | Fallo el lanzamiento o falta `acpx` | Revisa la instalacion y el comando |
+
+La sonda solo hace `initialize` + `session/new`, sin turno de prompt, asi que no consume tokens de modelo. Los resultados se cachean por configuracion de lanzamiento.
+
+## Diagnostico
+
+```text
+GET  /api/runtimes/coding/diagnostics
+GET  /api/runtimes/coding/diagnostics/health
+POST /api/runtimes/coding/:id/dry-run
+```
+
+## Siguientes pasos
+
+- [Gobernanza de Ejecutores](/docs/architecture/executor-governance) — limites, aislamiento y evidencia
+- [Ejecutar una Evaluacion](/docs/guides/run-reliability-eval) — mide el ejecutor que acabas de conectar
+- [Permisos](/docs/configuration/permissions) — como aplican las aprobaciones a los ejecutores

@@ -1,0 +1,79 @@
+---
+title: コーディングエグゼキューターアダプター
+description: Claude Code、Codex、OpenCode を接続し、CoreLayer が何を制約するかを理解する。
+---
+
+CoreLayer はコーディングエージェントを実装しません。すでに信頼しているエージェントへ作業を投げ、制約をかけます。登録済みアダプターは 4 つ：`claude-code`、`codex`、`opencode`、`acp`。
+
+## アダプター
+
+| ID | 駆動対象 | 補足 |
+|----|---------|------|
+| `claude-code` | Claude Code CLI | DeepSeek モデルのみで動作（下記） |
+| `codex` | Codex CLI | |
+| `opencode` | OpenCode CLI | |
+| `acp` | `acpx` 経由で任意の ACP エージェント | 構造化イベント、能力プローブ、モデルガード |
+
+CLI アダプターは個々のツール呼び出しを傍受できません。CLI エージェント自身が何を実行するかを決めます。そのため呼び出し元が「ツール呼び出しを承認で傍受」を要求した場合、より弱い保証で使うのではなく除外されます。`acp` がツール単位の権限ルーティングをサポートするアダプターです。
+
+## 選択
+
+エグゼキューターは「入っているもの」ではなく能力で選ばれます：
+
+- 呼び出し元が優先アダプターを指定した場合はそれを最初に試す。
+- そうでなければ決定論的なフォールバック順で、要求（`requiresCancellation`、`requiresStructuredEvents`、ツール承認傍受）を満たす最初の登録アダプターを選ぶ。
+- 選択理由が記録されるため、実行はなぜそのエグゼキューターを使ったかを説明できる。
+
+## Claude Code は DeepSeek 限定
+
+ACP アダプターは起動前に強制します：
+
+```text
+ANTHROPIC_MODEL（またはエグゼキューターのポリシーモデル）は "deepseek" で始まること
+そうでなければ実行を拒否 — 書き換えも、静かなダウングレードもしない
+```
+
+理由は具体的です。Claude 系のラベル（`opus`、`sonnet`）を DeepSeek 互換エンドポイントへルーティングすると `model_not_found` が返り、資格情報エラーに見えるため、間違った層をデバッグすることになります。
+
+## アダプターが担うこと
+
+- **`~/.claude` からの分離** — 実行は空の `settings.json` だけを持つ一時 `CLAUDE_CONFIG_DIR` を使うため、個人設定が CoreLayer 指定のエンドポイントやモデルを上書きできません。
+- **TTY なし** — `session/request_permission` は設定された権限ポリシーと許可ツールから決定的に応答し、ターミナル入力を待って固まることはありません。
+- **イベント変換** — ACP `session/update` を正規化されたコーディングイベントに変換。終了時に未クローズのツール呼び出しは捨てずにフラッシュします。
+- **予算** — タイムアウトは `acpx` に渡し、デーモン側でも強制します。
+
+## 前提条件
+
+`acpx` が必要です（`npm install acpx`）。無い場合、能力プローブは `unreachable` とインストールのヒントを返し、実行途中で失敗することはありません。
+
+資格情報はエージェントが使う Anthropic 互換変数から取得します：
+
+```powershell
+$env:ANTHROPIC_MODEL='deepseek-v4.1-flash'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+```
+
+## 能力の状態
+
+| 状態 | 意味 | 対処 |
+|------|------|------|
+| `ready` | ハンドシェイク成功 | なし |
+| `needs_auth` | エージェントは起動したが資格情報がない | そのエージェントのログインを完了 |
+| `unreachable` | 起動失敗または `acpx` 不在 | インストールとコマンドを確認 |
+
+プローブは `initialize` + `session/new` のみでプロンプトターンを送らないため、モデルトークンを消費しません。結果は起動構成ごとにキャッシュされます。
+
+## 診断
+
+```text
+GET  /api/runtimes/coding/diagnostics
+GET  /api/runtimes/coding/diagnostics/health
+POST /api/runtimes/coding/:id/dry-run
+```
+
+## 次のステップ
+
+- [エグゼキューターガバナンス](/docs/architecture/executor-governance) — 境界、分離、証拠
+- [信頼性評価の実行](/docs/guides/run-reliability-eval) — 接続した実行器を測る
+- [権限](/docs/configuration/permissions) — ツール承認が実行器にどう作用するか

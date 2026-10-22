@@ -1,168 +1,138 @@
 ---
 title: API Endpoints Reference
-description: Daemon HTTP API reference.
+description: The daemon HTTP API, grouped by resource.
 ---
 
-The CoreLayer daemon exposes an HTTP API on `localhost:3001`. The Tauri frontend uses this API through Tauri's IPC bridge.
+The daemon exposes a loopback HTTP API (`127.0.0.1:3001` by default, `DAEMON_HOST` / `DAEMON_PORT` to override). The Tauri UI reaches it through the shell proxy; tools and scripts can call it directly from the same machine.
 
-## Base URL
+Responses are JSON. Collections are wrapped as `{ "data": [...] }` or `{ "entries": [...], "total": n, "count": n }` depending on the route.
 
-```text
-http://localhost:3001
-```
+## Health and runtime
 
-## Chat
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/health`, `/health` | `{ status, timestamp, storageMode, aiProvider, aiModel }` |
+| GET | `/api/runtime/status` | pid, uptime, memory, storage mode, paths, per-runtime health |
+| GET | `/api/runtime/components` | Registered runtime components and status |
+| POST | `/api/runtime/shutdown` | Stop the daemon (loopback peers only) |
+| GET | `/api/runtime/queue` · `/status` · `/resources` | Queue depth, slot status, resource usage |
+| GET | `/api/runtimes/coding/diagnostics` | Coding executor diagnostics |
+| POST | `/api/runtimes/coding/:id/dry-run` | Dry-run an executor |
 
-### POST `/api/chat`
+## Chat and conversations
 
-Send a message to Jarvis and receive a streaming response.
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/chat` | One-shot chat |
+| POST | `/api/chat/stream` | Streaming chat (SSE) |
+| POST | `/api/chat/debug/context` | Inspect assembled context |
+| GET/POST | `/api/conversations` | List / create |
+| GET/PATCH/DELETE | `/api/conversations/:id` | Read / update / delete |
+| POST | `/api/conversations/:id/messages` | Send a message |
+| POST | `/api/conversations/:id/messages/stream` | Send with SSE streaming |
+| PUT | `/api/conversations/:id/messages/:msgId` | Edit a message |
+| POST | `/api/conversations/:id/messages/:msgId/regenerate` | Regenerate |
+| GET | `/api/conversations/:id/messages/:msgId/branches` | Read branches |
+| GET | `/api/conversations/:id/tree` | Conversation tree |
+| GET | `/api/conversations/messages/search` | Search messages |
+| GET | `/api/conversations/:id/export` | Export |
 
-```json
-{
-  "message": "What tasks do I have?",
-  "conversationId": "conv_123"
-}
-```
+## Runs
 
-Response: Server-Sent Events (SSE) stream.
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/runs?limit=` | Recent runs |
+| GET | `/api/runs/:id` | Run detail |
+| GET | `/api/runs/:id/events` | Run event stream |
+| GET | `/api/runs/:id/artifacts` | Run artifacts |
+| POST | `/api/runs/:id/cancel` | Cancel |
+| POST | `/api/runs/:id/retry` | Retry a failed run |
+| GET | `/api/runs/:id/trajectory` | Trajectory bundle |
+| POST | `/api/runs/:id/message` | **410 Gone** — mid-run message injection was removed with the hand-written loop |
 
-## Tasks
+## Workspaces and projects
 
-### GET `/api/tasks`
-
-List all tasks.
-
-```json
-// Response
-[
-  {
-    "id": "task_abc123",
-    "title": "Review PR #42",
-    "status": "pending",
-    "priority": "high",
-    "dueDate": "2026-06-30T00:00:00Z",
-    "createdAt": "2026-06-28T10:00:00Z"
-  }
-]
-```
-
-### POST `/api/tasks`
-
-Create a new task.
-
-```json
-// Request
-{
-  "title": "Review PR #42",
-  "priority": "high",
-  "dueDate": "2026-06-30"
-}
-
-// Response
-{
-  "id": "task_abc123",
-  "title": "Review PR #42",
-  "status": "pending",
-  "priority": "high",
-  "dueDate": "2026-06-30T00:00:00Z"
-}
-```
-
-### PATCH `/api/tasks/:id`
-
-Update a task. Accepts a partial task object.
-
-### DELETE `/api/tasks/:id`
-
-Delete a task.
-
-## Articles (Reading List)
-
-### GET `/api/articles`
-
-List all articles.
-
-### POST `/api/articles`
-
-Add an article.
-
-### DELETE `/api/articles/:id`
-
-Remove an article.
-
-## Reviews
-
-### GET `/api/reviews`
-
-List reviews.
-
-### POST `/api/reviews/generate`
-
-Generate a new review.
-
-## Models
-
-### GET `/api/models`
-
-List configured model providers.
-
-### POST `/api/models`
-
-Add a model provider.
-
-## MCP
-
-### GET `/api/mcp/servers`
-
-List MCP servers.
-
-### POST `/api/mcp/servers`
-
-Add an MCP server.
-
-### POST `/api/mcp/servers/:id/restart`
-
-Restart an MCP server.
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET/POST | `/api/workspaces` | List / create |
+| GET | `/api/workspaces/default` | Default workspace |
+| POST | `/api/workspaces/from-goal` | Create a workspace from a goal |
+| GET/PATCH/DELETE | `/api/workspaces/:id` | Read / update / delete |
+| GET | `/api/workspaces/:id/detail` | Workspace with agents and runs |
+| POST/DELETE | `/api/workspaces/:id/agents[/:agentId]` | Attach / detach an agent |
+| GET | `/api/workspaces/:id/artifacts` | Artifacts |
+| GET | `/api/workspaces/:id/deliveries` | Delivery branches |
+| POST | `/api/workspaces/:id/deliveries/merge` | Merge a delivery branch |
+| — | `/api/projects` | Project CRUD |
 
 ## Tools
 
-### GET `/api/tools`
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/tools` | List registered tools |
+| GET | `/api/tools/:id` | One tool |
+| POST | `/api/tools/filter` | Filter by source / risk |
+| POST | `/api/tools/:id/execute` | Execute (permission-checked) |
+| GET | `/api/tools/logs` | Recent call log |
+| GET | `/api/tools/pending-confirmations` | Inline confirmations awaiting a decision |
+| POST | `/api/tools/confirm/:id` | Resolve an inline confirmation |
 
-List all registered tools.
+## Approvals
 
-## Permissions
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/approvals` | Pending and recent |
+| GET | `/api/approvals/:id` | One request |
+| POST | `/api/approvals/:id/approve` | Approve and resume |
+| POST | `/api/approvals/:id/deny` | Deny and fail the run |
+| POST | `/api/approvals/:id/remember` | Approve and store a permission memory |
+| POST | `/api/approvals/batch/approve` · `/batch/deny` | Batch decisions |
+| POST | `/api/approvals/expire-stale` | Close unanswered requests |
 
-### GET `/api/permissions/audit`
+There is no `/api/permissions/*` group. Approvals and audit are separate resources.
 
-Get audit log entries.
+## Audit and events
 
-### POST `/api/permissions/approve`
+| Method | Path | Query |
+|--------|------|-------|
+| GET | `/api/audit` | `actor`, `action`, `riskLevel`, `since`, `limit`, `offset` |
+| GET | `/api/events` | `type`, `projectId`, `workspaceId`, `agentRunId`, `runtimeId`, `since`, `limit`, `offset` |
 
-Approve a pending tool call.
+## Memory
 
-### POST `/api/permissions/deny`
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/memories` | List; filters `type`, `scopeType` + `scopeId` |
+| GET | `/api/memories/search?q=&limit=` | Scored search (default limit 20) |
+| PATCH/DELETE | `/api/memories/:id` | Update (`key`, `value`, `type`) / delete |
 
-Deny a pending tool call.
+## Tasks, reading, reviews, scheduling
 
-## Health
+| Method | Path | Purpose |
+|--------|------|---------|
+| — | `/api/tasks` | Task CRUD |
+| — | `/api/tasks/scheduled` | Scheduled tasks |
+| — | `/api/articles` | Reading list |
+| — | `/api/reviews` | Daily / weekly reviews |
 
-### GET `/api/health`
+These route groups still exist and back the native task, reading, and review tools.
 
-Check daemon health.
+## MCP, settings, voice, profiles
 
-```json
-{
-  "status": "healthy",
-  "uptime": 3600,
-  "version": "<current-version>"
-}
-```
+| Method | Path | Purpose |
+|--------|------|---------|
+| — | `/api/mcp` | MCP server CRUD, restart, auth |
+| — | `/api/settings` | Models, providers, storage, tick, usage |
+| — | `/api/voice` | Voice session control |
+| — | `/api/agent-profiles` | Agent profiles |
+| — | `/api/agent-broker` | Agent broker |
 
 ## Authentication
 
-The daemon API is only accessible from localhost. No authentication is required for local access.
+No token is required: the API is bound to loopback and is not exposed to the network. `/api/runtime/shutdown` additionally checks that the peer address is loopback.
 
 ## Next Steps
 
 - [Config File](/docs/reference/config-file) — configuration reference
-- [CLI Commands](/docs/reference/cli-commands) — command-line interface
+- [CLI Commands](/docs/reference/cli-commands) — repository scripts
+- [Troubleshooting](/docs/reference/troubleshooting) — common failures

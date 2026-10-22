@@ -1,56 +1,81 @@
 ---
 title: CLI 指令
-description: CoreLayer 的命令列介面。
+description: CoreLayer 儲存庫中的套件腳本與輔助指令。
 ---
 
-CoreLayer 提供常用操作的 CLI 指令。
+CoreLayer 由 pnpm workspace 腳本驅動。除特別說明外，指令均在儲存庫根目錄執行。
 
-## 開發指令
-
-| 指令 | 說明 |
-|---------|-------------|
-| `pnpm dev` | 以開發模式啟動守護程式 + Tauri 前端 |
-| `pnpm dev:web` | 僅以網頁模式啟動前端（無 Tauri） |
-| `pnpm dev:daemon` | 僅啟動守護程式 |
-| `pnpm dev:frontend` | 僅啟動 Tauri 前端 |
-
-## 建置指令
+## 開發
 
 | 指令 | 說明 |
-|---------|-------------|
-| `pnpm build` | 完整生產建置（sidecar + Tauri） |
-| `pnpm build:daemon` | 僅建置守護程式 |
-| `pnpm build:daemon:sidecar` | 將守護程式建置為 sidecar 二進位檔 |
+|------|------|
+| `pnpm dev` | 守護行程 + Tauri 應用同時啟動（concurrently） |
+| `pnpm dev:daemon` | 僅守護行程，`tsx watch` 熱重載 |
+| `pnpm dev:frontend` | 僅 Tauri 應用 |
+| `pnpm dev:web` | 瀏覽器模式前端，不帶 Tauri 外殼 |
 
-## 品質指令
-
-| 指令 | 說明 |
-|---------|-------------|
-| `pnpm lint` | 對原始碼執行 ESLint |
-| `pnpm lint:fix` | 自動修復 ESLint 問題 |
-| `pnpm format` | 使用 Prettier 格式化程式碼 |
-| `pnpm format:check` | 檢查格式但不寫入 |
-| `pnpm test` | 執行所有測試 |
-| `pnpm typecheck` | 執行 TypeScript 型別檢查 |
-
-## 清理指令
+## 建置
 
 | 指令 | 說明 |
-|---------|-------------|
-| `pnpm clean` | 清理所有建置輸出 |
-| `pnpm clean:app` | 終止運行中的 CoreLayer 應用程式 |
-| `pnpm clean:daemon` | 終止連接埠 3001 上的守護程式程序 |
-| `pnpm clean:all` | 清理應用程式 + 守護程式 |
+|------|------|
+| `pnpm build` | 先建置 sidecar，再建置 Tauri 應用 |
+| `pnpm build:daemon` | 守護行程 TypeScript 建置 |
+| `pnpm build:daemon:sidecar` | 將守護行程打包為 sidecar 可執行檔 |
 
-## 發布指令
+## 品質
 
 | 指令 | 說明 |
-|---------|-------------|
-| `pnpm release` | 建立新發布（補丁） |
-| `pnpm release:minor` | 建立次要發布 |
-| `pnpm release:major` | 建立主要發布 |
+|------|------|
+| `pnpm lint` / `pnpm lint:fix` | 覆蓋前端、守護行程與套件的 ESLint |
+| `pnpm format` / `pnpm format:check` | Prettier |
+| `pnpm test` | 所有套件的 Vitest |
+| `pnpm typecheck` | 所有套件的 TypeScript 檢查 |
+
+`pnpm test` 不包含可靠性評測——那會消耗真實模型呼叫，需要顯式執行（見下文）。
+
+## 驗證與打包
+
+| 指令 | 說明 |
+|------|------|
+| `pnpm test:smoke:sidecar` | 對建置好的 sidecar 做冒煙測試 |
+| `pnpm clean` | 清理各套件建置產物 |
+| `pnpm clean:app` | 結束正在執行的應用行程 |
+| `pnpm clean:daemon` | 結束佔用 3001 連接埠的行程 |
+| `pnpm clean:all` | 以上兩者 |
+| `pnpm clean:sea` | 刪除單可執行檔建置的暫存目錄 |
+
+## 發佈
+
+| 指令 | 說明 |
+|------|------|
+| `pnpm release` | standard-version patch 發佈 |
+| `pnpm release:minor` | minor 發佈 |
+| `pnpm release:major` | major 發佈 |
+| `pnpm commitlint` | 校驗最近一筆提交訊息 |
+
+## 可靠性評測
+
+在 `daemon/` 下執行：
+
+```powershell
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/holdout.json --k 3 --compare JARVIS_REFLECTION=1
+```
+
+需要 `ANTHROPIC_MODEL`、`ANTHROPIC_BASE_URL` 與 `ANTHROPIC_AUTH_TOKEN` 指向健康的閘道。詳見 [執行可靠性評測](/docs/guides/run-reliability-eval)。
+
+## 資料庫
+
+在 `daemon/` 下執行：
+
+| 指令 | 說明 |
+|------|------|
+| `pnpm db:generate` | 產生遷移並編譯 |
+| `pnpm db:migrate` | 套用遷移 |
+| `pnpm db:studio` | 開啟 Drizzle Studio |
 
 ## 下一步
 
 - [從原始碼建置](/docs/guides/build-from-source) — 完整建置指南
-- [API 端點](/docs/reference/api-endpoints) — 守護程式 HTTP API
+- [API 端點](/docs/reference/api-endpoints) — 守護行程 HTTP API
+- [疑難排解](/docs/reference/troubleshooting) — 指令失敗時

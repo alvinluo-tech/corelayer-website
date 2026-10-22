@@ -42,11 +42,13 @@ CoreLayer 是一个本地优先的桌面端 **Agent OS（AI 操作系统运行�
 ## 核心架构要素 (Core Pillars)
 
 - **MCP 优先集成** — 原生支持 stdio、HTTP 与 SSE 协议，直接连接个人的本地应用和外部服务，并将工具标准化为 `mcp:{serverId}:{toolName}` 格式。
-- **权限优先运行时** — 按低、中、高、极高四大风险级别分类所有工具调用，提供决策记忆（Permission Memories）以防频繁弹窗，并保留完整的审计日志。
-- **统一工具注册中心 (Tool Registry)** — 将原生 Rust 模块、MCP 工具、本地技能（Skills）和 REST 适配器统一收拢。
-- **模型网关与智能路由** — 跨 MiMo、Groq、DeepSeek、OpenAI、Gemini、Qwen 以及本地 Ollama 路由请求，为低延迟、工具调用或长推理匹配最合适的端点。
+- **权限优先运行时** — 按低、中、高、极高四大风险级别分类所有工具调用，风险在注册时声明而非由名称推断；审批可跨重启保留，决策记忆（Permission Memories）防止频繁弹窗，并保留完整审计日志。
+- **统一工具注册中心 (Tool Registry)** — 将原生工具、MCP 工具与技能统一收拢，并按需动态发现，避免一次性把全部工具 schema 塞进上下文。
+- **模型网关与智能路由** — 跨 MiMo、Groq、DeepSeek、OpenAI、Gemini、Qwen 以及本地 Ollama 路由请求，供应商连续失败时进入冷却被跳过。
 - **语音原生管线** — 集成唤醒词检测、ASR 语音转文字、流式 TTS 句级播报，并支持中途打断续听（Barge-in）。
-- **本地优先三模存储** — 默认采用零配置的本地 SQLite 数据库，同时在控制中心支持云端 Supabase 实时同步以及自托管 PostgreSQL 之间的热切换。
+- **本地优先多模存储** — 默认零配置的本地 SQLite；可切换至云端 Supabase 或自托管 PostgreSQL，切换在守护进程重启后生效。
+
+> Computer control 运行时目前**未启用**：执行路径尚未接入真实操作系统能力，因此不会出现在可用运行时列表中。
 
 ---
 

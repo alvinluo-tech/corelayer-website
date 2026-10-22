@@ -1,0 +1,71 @@
+---
+title: Reliability Evaluation
+description: How CoreLayer decides whether a change to an agent actually improves it.
+---
+
+Most agent changes look like improvements in a single run. CoreLayer ships an eval harness so that claim can be checked: `daemon/src/eval` runs a coding agent against a corpus, repeatedly, and reports consistency rather than a lucky best case.
+
+The harness is **not** part of `pnpm test` — every attempt costs a real model turn.
+
+## What it measures
+
+| Metric | Why it exists |
+|--------|---------------|
+| **pass^k** | The fraction of tasks that succeeded on *every* attempt. Strictly harder than pass@k, and the number that matters for unattended use. |
+| **False positives / negatives** | Attempts where the executor claimed success and a check failed (or the reverse). These tell you *why* the harness and the agent disagree. |
+| **Executor status** | `succeeded`, `failed`, `cancelled`, `timed-out`. |
+| **Voided attempts** | Environment faults (quota, refused connection, provider 5xx) are excluded from rates instead of being counted as agent failures. Three in a row stop the run. |
+| **Cost** | `tokens/attempt` and `tokens/success`; a pass-rate gain that doubles spend is not an improvement. |
+
+## Running it
+
+```powershell
+cd daemon
+$env:ANTHROPIC_MODEL='<model>'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+```
+
+Two corpora ship with the harness: `core` (single-file write, edit, debug, delete, rename) and `holdout` (multi-step coordination, byte-exact scope discipline, restraint, refusing to invent a fact). They are graded separately on purpose.
+
+## Paired comparison
+
+`--compare NAME=VALUE` runs the same corpus twice — once with the variable unset, once set — and reports a paired verdict:
+
+| Verdict | Meaning |
+|---------|---------|
+| `improved` | The aggregate clears tolerance **and** no individual task fell |
+| `regressed` | The aggregate fell |
+| `mixed` | The mean rose but a task lost reliability |
+| `unchanged` | Everything stayed in the band |
+
+A `mixed` result is the failure mode an aggregate gate cannot see: a change that "improves reliability" on average while breaking one task that used to work. It must not be reported as an improvement.
+
+## Admission rule
+
+A change that alters agent behaviour (a reflection loop, a prompt tweak, a new gate) may only become a default when a paired run shows:
+
+1. `improved` — not `mixed`, not `unchanged`
+2. no task lost reliability
+3. `tokens/success` did not rise by more than ~20%
+4. the run repeats and still clears (1)–(3)
+
+Failing any clause leaves the change off by default. The reflection loop follows this rule and ships **off**.
+
+## Baseline
+
+As of the 2026-10-21 run with `deepseek-v4.1-flash`:
+
+```text
+core, k = 3        pass^3 = 100.0%   0 false positives / 0 false negatives
+holdout, k = 1     pass^1 = 100.0%   0 false positives / 0 false negatives
+```
+
+The corpus is a regression detector, not a scoreboard. Its value is the red row after the next change.
+
+## Next Steps
+
+- [Run a Reliability Eval](/docs/guides/run-reliability-eval) — step-by-step, including the A/B workflow
+- [Executor Governance](/docs/architecture/executor-governance) — what the eval is measuring
+- [Troubleshooting](/docs/reference/troubleshooting) — a timeout usually means a flapping gateway

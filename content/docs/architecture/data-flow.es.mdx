@@ -1,92 +1,98 @@
 ---
-title: Flujo de Solicitudes y Datos
-description: Como las solicitudes fluyen a traves de CoreLayer desde la entrada del usuario hasta la respuesta.
+title: Flujo de Datos y Control
+description: Como viaja un mensaje, una llamada a herramienta y una ejecucion de agente de larga duracion.
 ---
 
-Esta pagina rastrea el flujo completo de datos para las operaciones comunes en CoreLayer.
+Esta pagina traza los tres flujos que importan: un turno de chat, una llamada a herramienta dentro de ese turno y una ejecucion despachada que sobrevive al turno.
 
-## Flujo de Mensajes de Chat
-
-```text
-1. El usuario escribe un mensaje en el panel de chat
-2. El frontend envia via Tauri IPC
-3. El backend Rust hace proxy al HTTP API del daemon
-4. El daemon recibe en /api/chat
-5. Jarvis ensambla el contexto:
-   - Historial de conversacion
-   - Memoria del usuario
-   - Herramientas disponibles
-6. Model Gateway selecciona el proveedor
-7. La solicitud se envia al proveedor de IA (streaming)
-8. La respuesta se transmite de vuelta:
-   - Fragmentos de texto → frontend
-   - Llamadas a herramientas → Permission Guard
-9. Si es una llamada a herramienta:
-   a. Permission Guard verifica el riesgo
-   b. Si se necesita aprobacion → pausa, muestra panel
-   c. El usuario aprueba → ejecuta la herramienta
-   d. El resultado se envia de vuelta al modelo
-   e. El modelo continua la respuesta
-10. La respuesta final se renderiza en el chat
-```
-
-## Flujo de Ejecucion de Herramientas
+## Turno de chat
 
 ```text
-Solicitud de llamada a herramienta
-  → Tool Registry resuelve la herramienta
-  → Permission Guard clasifica el riesgo
-  → Verificacion de politica:
-    - allow → ejecutar inmediatamente
-    - confirm → pausar para aprobacion
-    - deny → bloquear y registrar
-  → Ejecutar herramienta (MCP/nativa/REST)
-  → Devolver resultado al modelo
-  → Registrar en el registro de auditoria
+1. El usuario envia un mensaje desde el panel de chat
+2. Frontend → IPC de Tauri → HTTP del daemon
+     POST /api/conversations/:id/messages/stream   (o POST /api/chat/stream)
+3. El runtime agent ensambla el contexto:
+     - historial de conversacion (por conversacion, con ramas)
+     - memoria de largo plazo recuperada del runtime memory
+     - el conjunto de herramientas core, mas herramientas on-demand elegidas por el router
+4. El Model Gateway resuelve proveedor/modelo activo y abre una llamada en streaming
+     (Vercel AI SDK v6; el control de pasos ocurre en prepareStep)
+5. Cada paso puede:
+     - emitir texto → streameado a la UI
+     - pedir una tool call → flujo de abajo
+6. Los loop breakers y el presupuesto de pasos deciden si el turno continua
+7. La politica de completion y los quality gates deciden si el resultado es aceptable
+8. El mensaje final se persiste y el stream SSE se cierra
 ```
 
-## Flujo de Conexion MCP
+## Llamada a herramienta
 
 ```text
-1. El daemon lee la configuracion del servidor MCP
-2. Genera un proceso hijo (stdio) o se conecta via SSE
-3. Handshake MCP (initialize)
-4. El servidor reporta las herramientas disponibles
-5. Tool Registry registra las herramientas
-6. Las herramientas estan disponibles para Jarvis
-7. Al desconectar → intentar reconectar
+El modelo pide una herramienta
+  → el Tool Registry la resuelve (native / MCP / skill)
+  → el Permission Guard lee el riesgo declarado (no inferido)
+  → decision de politica:
+      auto    → ejecutar
+      notify  → ejecutar y notificar
+      confirm → crear solicitud de aprobacion, suspender la ejecucion, reanudar al decidir
+      deny    → bloquear y registrar
+  → ejecutar
+  → escribir entrada de auditoria (actor, accion, riesgo, decision, resultado)
+  → devolver el resultado al modelo
 ```
 
-## Flujo de Almacenamiento de Datos
+Las aprobaciones se persisten, no viven en memoria: una solicitud pendiente sobrevive a un reinicio del daemon y el servicio de reanudacion la continua cuando el usuario decide.
+
+## Ejecucion despachada
 
 ```text
-Operacion de escritura:
-  → La capa de almacenamiento recibe la solicitud de escritura
-  → Valida el esquema de datos
-  → Escribe en el backend activo (SQLite/Supabase/PostgreSQL)
-  → Devuelve confirmacion
-
-Operacion de lectura:
-  → La capa de almacenamiento recibe la solicitud de lectura
-  → Consulta el backend activo
-  → Devuelve resultados
+Objetivo del usuario / tarea delegada
+  → el run dispatcher valida los limites (delegar solo puede estrechar)
+  → una entrada de cola toma un slot (la concurrencia esta acotada por clase de recurso)
+  → el runtime coding crea un worktree git
+  → el adaptador de ejecutor lanza el agente hijo (ACP)
+  → sonda de capacidades: ready / needs_auth / unreachable
+  → el hijo emite eventos en streaming → event mapper → event log
+  → diff y artefactos se guardan en el registro de la ejecucion
+  → quality gates / juez adversarial (si estan activos)
+  → politica de completion: pasa → rama entregable; falla → fallo con motivo
 ```
 
-## Flujo de la Pipeline de Voz
+Cada transicion escribe un evento de `agent_run`, por eso `GET /api/runs/:id/events` puede reconstruir una ejecucion a posteriori y por eso una ejecucion se puede cancelar o reintentar por id.
+
+## Conexion MCP
 
 ```text
-Palabra de activacion detectada (Picovoice)
-  → Iniciar escucha
-  → Transmision de audio al proveedor ASR
-  → Transcripcion devuelta
-  → Texto enviado al pipeline de chat (igual que la entrada escrita)
-  → Respuesta generada
-  → TTS transmite el audio de vuelta
-  → El audio se reproduce por la salida del sistema
-  → Interrupcion: si el usuario habla durante la reproduccion → reiniciar desde ASR
+1. El daemon carga las definiciones desde mcp-servers.json
+2. Lanza el subproceso (stdio) o conecta por HTTP/SSE
+3. Handshake initialize de MCP
+4. Lee la lista de herramientas y registra cada una con su politica de riesgo
+5. Las herramientas quedan disponibles para el router y el modelo
+6. Al desconectarse se marca disconnected y se puede reiniciar
 ```
 
-## Siguientes Pasos
+## Escrituras de almacenamiento
 
-- [Vista General del Sistema](/docs/architecture/system-overview) — resumen de la arquitectura
-- [Modelo de Seguridad](/docs/architecture/security-model) — como se protegen los datos
+```text
+Ruta o runtime → repositorio (SQLite / Supabase / PostgreSQL)
+  → validacion de esquema
+  → escritura
+  → (si es evento) tambien se agrega al event log
+```
+
+El modo de almacenamiento se lee al arrancar desde `storage.json` (`local`, `cloud`, `postgres`). Ver [Almacenamiento](/docs/configuration/storage).
+
+## Turno de voz
+
+```text
+Wake word → se abre el microfono → ASR streamea transcripciones parciales y finales
+  → la transcripcion final entra al pipeline de chat igual que texto escrito
+  → la respuesta se streamea; TTS lee oraciones completas
+  → barge-in: hablar durante la reproduccion interrumpe el audio y vuelve al ASR
+```
+
+## Siguientes pasos
+
+- [Vista General del Sistema](/docs/architecture/system-overview) — topologia
+- [Gobernanza de Ejecutores](/docs/architecture/executor-governance) — que ocurre dentro de una ejecucion despachada
+- [Evaluacion de Fiabilidad](/docs/architecture/reliability-eval) — como se mide la calidad de una ejecucion

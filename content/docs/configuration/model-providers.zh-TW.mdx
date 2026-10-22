@@ -1,33 +1,36 @@
 ---
 title: 模型供應商
-description: 為 Jarvis 路由設定 AI 模型供應商。
+description: 設定模型閘道可路由的供應商。
 ---
 
-CoreLayer 的模型閘道跨多個 AI 供應商路由請求。你可以設定一個或多個供應商，讓 Jarvis 為每個任務選擇最佳模型。
+所有模型呼叫都經由同一個 OpenAI 相容轉接器。因此一個供應商就是 `baseURL` 加一把密鑰，而不是一套廠商 SDK；新增一個支援 OpenAI 線格式的供應商屬於設定，而不是寫程式碼。
 
-## 支援的供應商
+## 支援的供應商 ID
 
-模型閘道透過內建預設原生支援以下大模型供應商：
+以下 ID 由供應商解析器識別，包含各自的環境變數與預設 base URL：
 
-| 供應商 | ID | 類型 | 常用模型 |
-|--------|----|------|----------|
-| **MiMo (小米)** | `mimo` | `openai_compatible` | `mimo-v2.5-pro`, `mimo-v2.5` |
-| **Groq** | `groq` | `openai_compatible` | `llama-4-scout`, `llama-4-maverick`, `llama-3.3-70b-versatile` |
-| **DeepSeek** | `deepseek` | `openai_compatible` | `deepseek-v4-pro`, `deepseek-v4-flash` |
-| **Anthropic** | `anthropic` | `openai_compatible` | `claude-sonnet-5`, `claude-fable-5`, `claude-opus-4.8` |
-| **Google Gemini** | `google` | `openai_compatible` | `gemini-3.5-flash`, `gemini-3.1-flash`, `gemini-3.1-pro` |
-| **OpenAI** | `openai` | `openai_compatible` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.5`, `gpt-5.4` |
-| **通義千問 (Qwen)** | `qwen` | `openai_compatible` | `qwen-3.7-max-preview`, `qwen-3.7-plus-preview`, `qwen-3.6` |
-| **OpenRouter** | `openrouter` | `openai_compatible` | `anthropic/claude-sonnet-5`, `google/gemini-3.5-flash` |
-| **Ollama** | `ollama` | `ollama` | `llama4`, `qwen3.5`, `deepseek-v4` |
+| 供應商 | ID | 預設 base URL |
+|--------|----|---------------|
+| DeepSeek | `deepseek` | `https://api.deepseek.com/v1` |
+| OpenAI | `openai` | `https://api.openai.com/v1` |
+| Anthropic | `anthropic` | `https://api.anthropic.com/v1` |
+| Google Gemini | `gemini` | `https://generativelanguage.googleapis.com/v1beta/openai` |
+| Groq | `groq` | `https://api.groq.com/openai/v1` |
+| OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` |
+| MiMo（小米） | `mimo` | `https://token-plan-ams.xiaomimimo.com/v1` |
+| Qwen（阿里） | `qwen` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| Ollama | `ollama` | `http://localhost:11434/v1` |
 
-## 設定檔
+Gemini 的 ID 是 `gemini`，不是 `google`——後者只出現在環境變數名 `GOOGLE_API_KEY` 中。
 
-CoreLayer 採用**設定與金鑰分離**的安全設計。設定檔保存在 `~/.jarvis/config/` 目錄下。
+## 設定放在哪裡
 
-### 1. 基礎設定 (`config.json`)
+| 檔案 | 內容 |
+|------|------|
+| `~/.jarvis/config/config.json` | `providers[]`、`activeProvider`、`activeModel`、路由規則、預設值 |
+| `~/.jarvis/security/credentials.json` | API Key，按供應商 id 索引 |
 
-定義啟用的供應商、預設模型和各個供應商的端點，此檔案**不包含任何 API 金鑰**：
+API Key 永遠不會寫進 `config.json`。
 
 ```json
 {
@@ -36,76 +39,49 @@ CoreLayer 採用**設定與金鑰分離**的安全設計。設定檔保存在 `~
   "activeModel": "mimo-v2.5-pro",
   "providers": [
     {
-      "id": "mimo",
-      "name": "MiMo",
+      "id": "deepseek",
+      "name": "DeepSeek",
       "type": "openai_compatible",
-      "baseURL": "https://token-plan-ams.xiaomimimo.com/v1",
-      "enabled": true
-    },
-    {
-      "id": "groq",
-      "name": "Groq",
-      "type": "openai_compatible",
-      "baseURL": "https://api.groq.com/openai/v1",
-      "enabled": true
-    },
-    {
-      "id": "openrouter",
-      "name": "OpenRouter",
-      "type": "openai_compatible",
-      "baseURL": "https://openrouter.ai/api/v1",
-      "enabled": true
-    },
-    {
-      "id": "ollama",
-      "name": "Ollama",
-      "type": "ollama",
-      "baseURL": "http://localhost:11434/v1",
+      "baseURL": "https://api.deepseek.com/v1",
       "enabled": true
     }
   ]
 }
 ```
 
-### 2. 金鑰設定 (`credentials.json`)
+`type` 對遠端供應商都是 `openai_compatible`，本機服務為 `ollama`。
 
-獨立保存金鑰，與 `config.json` 中的 `id` 一一對應。
+## 密鑰與 base URL 的解析順序
 
-```json
-{
-  "mimo": "your_mimo_api_key_here",
-  "groq": "your_groq_api_key_here",
-  "openrouter": "your_openrouter_api_key_here"
-}
-```
+對一個供應商，解析器依次檢查：
 
-## 模型路由
+1. `security/credentials.json` 與 `config.json` 中的供應商條目
+2. 供應商對應的環境變數（例如 `DEEPSEEK_API_KEY`、`ANTHROPIC_AUTH_TOKEN`）
+3. 內建預設 base URL
 
-當設定多個供應商時，模型閘道根據以下條件選擇：
+如果 URL 不能被識別為供應商名，解析器會嘗試從主機名推斷（例如 `api.deepseek.com` → `deepseek`）。
 
-- **任務複雜度** — 複雜推理路由到更強大的模型
-- **延遲需求** — 時間敏感的請求偏好 Groq 或本地模型
-- **成本最佳化** — 日常任務使用較便宜的供應商
-- **可用性** — 當供應商故障時的備用方案
+完整環境變數表見 [設定檔](/docs/reference/config-file#environment-variables)。
 
-## 環境變數
+## 路由與降級
 
-你可以使用環境變數而不是硬編碼 API 金鑰：
+- `activeProvider` / `activeModel` 定義預設目標。
+- `routingRules[]` 把 `taskType` 映射到 `modelId`，支援可選 `conditions`。
+- 當某供應商連續失敗，它會被標記為「死亡」並進入冷卻（連續兩次失敗，之後指數退避），後續呼叫會跳過它，而不是再付出同樣的逾時。一次成功即重置。
 
-```bash
-GROQ_API_KEY=your_groq_api_key_here
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-```
+## 模型族差異
 
-在設定中引用它們：
+轉接器按模型族做少量調整，而不把它們暴露成設定項：
 
-```json
-{
-  "apiKey": "${GROQ_API_KEY}"
-}
-```
+- 推理模型（`o1`…`o4` 及預覽版）使用這些端點接受的參數，而非聊天預設值。
+- Anthropic 模型經 OpenAI 相容端點呼叫，因此工具呼叫與串流行為與其他供應商一致。
+
+## 關於「目前模型」
+
+本頁刻意不列出模型名稱。模型 ID 的變更速度快於文件：請使用 **設定 → 模型**（在供應商提供模型清單時會讀取它），或參考供應商官方文件。在這裡寫死模型名，一個版本內就會過時。
 
 ## 下一步
 
-- [模型閘道](/docs/core-concepts/model-gateway) — 了解路由邏輯
-- [設定本地模型](/docs/guides/configure-local-models) — 設定 Ollama
+- [模型閘道](/docs/core-concepts/model-gateway) — 路由與串流行為
+- [設定本機模型](/docs/guides/configure-local-models) — Ollama 設定
+- [設定檔](/docs/reference/config-file) — 完整參考

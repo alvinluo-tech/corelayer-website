@@ -1,56 +1,81 @@
 ---
 title: Comandos CLI
-description: Interfaz de linea de comandos para CoreLayer.
+description: Scripts de paquete y comandos auxiliares del repositorio CoreLayer.
 ---
 
-CoreLayer proporciona comandos CLI para operaciones comunes.
+CoreLayer se maneja con scripts del workspace de pnpm. Todos los comandos se ejecutan desde la raiz del repositorio salvo que se indique otra cosa.
 
-## Comandos de Desarrollo
-
-| Comando | Descripcion |
-|---------|-------------|
-| `pnpm dev` | Iniciar daemon + frontend Tauri en modo de desarrollo |
-| `pnpm dev:web` | Iniciar frontend en modo web (sin Tauri) |
-| `pnpm dev:daemon` | Iniciar solo el daemon |
-| `pnpm dev:frontend` | Iniciar solo el frontend Tauri |
-
-## Comandos de Compilacion
+## Desarrollo
 
 | Comando | Descripcion |
 |---------|-------------|
-| `pnpm build` | Compilacion completa de produccion (sidecar + Tauri) |
-| `pnpm build:daemon` | Compilar solo el daemon |
-| `pnpm build:daemon:sidecar` | Compilar el daemon como binario sidecar |
+| `pnpm dev` | Daemon + app Tauri a la vez (concurrently) |
+| `pnpm dev:daemon` | Solo el daemon, con `tsx watch` |
+| `pnpm dev:frontend` | Solo la app Tauri |
+| `pnpm dev:web` | Frontend en navegador, sin shell de Tauri |
 
-## Comandos de Calidad
-
-| Comando | Descripcion |
-|---------|-------------|
-| `pnpm lint` | Ejecutar ESLint en los archivos fuente |
-| `pnpm lint:fix` | Corregir automaticamente problemas de ESLint |
-| `pnpm format` | Formatear codigo con Prettier |
-| `pnpm format:check` | Verificar formato sin escribir |
-| `pnpm test` | Ejecutar todas las pruebas |
-| `pnpm typecheck` | Ejecutar verificacion de tipos TypeScript |
-
-## Comandos de Limpieza
+## Compilacion
 
 | Comando | Descripcion |
 |---------|-------------|
-| `pnpm clean` | Limpiar todas las salidas de compilacion |
-| `pnpm clean:app` | Cerrar la aplicacion CoreLayer en ejecucion |
-| `pnpm clean:daemon` | Cerrar el proceso del daemon en el puerto 3001 |
-| `pnpm clean:all` | Limpiar aplicacion + daemon |
+| `pnpm build` | Sidecar, luego la app Tauri |
+| `pnpm build:daemon` | Build TypeScript del daemon |
+| `pnpm build:daemon:sidecar` | Empaquetar el daemon como ejecutable sidecar |
 
-## Comandos de Publicacion
+## Calidad
 
 | Comando | Descripcion |
 |---------|-------------|
-| `pnpm release` | Crear una nueva publicacion (parche) |
-| `pnpm release:minor` | Crear una publicacion menor |
-| `pnpm release:major` | Crear una publicacion mayor |
+| `pnpm lint` / `pnpm lint:fix` | ESLint en frontend, daemon y paquetes |
+| `pnpm format` / `pnpm format:check` | Prettier |
+| `pnpm test` | Vitest en todos los paquetes |
+| `pnpm typecheck` | TypeScript en todos los paquetes |
 
-## Siguientes Pasos
+`pnpm test` no ejecuta la evaluacion de fiabilidad: cuesta turnos reales de modelo y se invoca explicitamente (ver abajo).
 
-- [Compilar desde Fuente](/docs/guides/build-from-source) — guia completa de compilacion
-- [Endpoints API](/docs/reference/api-endpoints) — HTTP API del daemon
+## Verificacion y empaquetado
+
+| Comando | Descripcion |
+|---------|-------------|
+| `pnpm test:smoke:sidecar` | Smoke test del sidecar compilado |
+| `pnpm clean` | Limpiar salidas de build de todos los paquetes |
+| `pnpm clean:app` | Matar un proceso de la app en ejecucion |
+| `pnpm clean:daemon` | Matar lo que ocupa el puerto 3001 |
+| `pnpm clean:all` | Ambos |
+| `pnpm clean:sea` | Borrar el directorio temporal del build ejecutable unico |
+
+## Release
+
+| Comando | Descripcion |
+|---------|-------------|
+| `pnpm release` | Release patch con standard-version |
+| `pnpm release:minor` | Release minor |
+| `pnpm release:major` | Release major |
+| `pnpm commitlint` | Validar el ultimo mensaje de commit |
+
+## Evaluacion de fiabilidad
+
+Ejecutar desde `daemon/`:
+
+```powershell
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/holdout.json --k 3 --compare JARVIS_REFLECTION=1
+```
+
+Requiere `ANTHROPIC_MODEL`, `ANTHROPIC_BASE_URL` y `ANTHROPIC_AUTH_TOKEN` apuntando a un gateway sano. Ver [Ejecutar una Evaluacion](/docs/guides/run-reliability-eval).
+
+## Base de datos
+
+Ejecutar desde `daemon/`:
+
+| Comando | Descripcion |
+|---------|-------------|
+| `pnpm db:generate` | Generar una migracion y compilarla |
+| `pnpm db:migrate` | Aplicar migraciones |
+| `pnpm db:studio` | Abrir Drizzle Studio |
+
+## Siguientes pasos
+
+- [Compilar desde Fuente](/docs/guides/build-from-source) — guia completa
+- [Endpoints API](/docs/reference/api-endpoints) — API HTTP del daemon
+- [Solucion de Problemas](/docs/reference/troubleshooting) — cuando un comando falla

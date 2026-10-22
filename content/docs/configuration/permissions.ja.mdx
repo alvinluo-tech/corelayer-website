@@ -1,81 +1,104 @@
 ---
 title: 権限
-description: ツール実行用のパーミッションガードを設定します。
+description: パーミッションガードのリスクポリシーとアプリ単位の上書きを設定します。
 ---
 
-パーミッションガードは、どのツール呼び出しに承認が必要か、哪些が自動許可され、哪些がブロックされるかを制御します。
+パーミッションガードはツール呼び出しごとに、実行する・通知する・尋ねる・拒否するのいずれかを決めます。決定はツールの宣言リスクとポリシーの純粋な関数です。
 
-## 権限レベル
+## リスク → アクション
 
-| レベル | 動作 |
-|-------|----------|
-| **Read** | 自動許可（ファイル読み取り、データ一覧表示） |
-| **Write** | 承認が必要（ファイル書き込み、データ変更） |
-| **External** | 承認が必要（API呼び出し、ネットワークリクエスト） |
-| **Destructive** | 警告付きで承認が必要（データ削除） |
-| **Credential-sensitive** | 明示的に許可されない限り常にブロック |
+| リスク | 既定アクション |
+|--------|----------------|
+| `low` | `auto` — 静かに実行 |
+| `medium` | `notify` — 実行して通知 |
+| `high` | `confirm` — 決定まで停止 |
+| `critical` | `deny` — 拒否 |
 
-## 設定
+## 既定ポリシー
 
-```json
-{
-  "permissions": {
-    "defaultPolicy": "confirm",
-    "rules": [
-      {
-        "tool": "filesystem:read",
-        "policy": "allow"
-      },
-      {
-        "tool": "filesystem:write",
-        "policy": "confirm"
-      },
-      {
-        "tool": "github:*",
-        "policy": "confirm"
-      },
-      {
-        "tool": "shell:execute",
-        "policy": "deny"
-      }
-    ]
-  }
+```ts
+defaultPolicy: {
+  low: "auto",
+  medium: "notify",
+  high: "confirm",
+  critical: "deny",
 }
 ```
 
-## ポリシー
+これがデーモンが実際に使うポリシーで、マッピングは `@jarvis/permission-guard` に定義され、すべてのツール呼び出しに適用されます。
 
-| ポリシー | 効果 |
-|--------|--------|
-| `allow` | 確認なしで実行 |
-| `confirm` | 一時停止してユーザー承認を求める |
-| `deny` | 実行を完全にブロック |
+**まだユーザー設定できません。** ガードは既定値で構築され、`config.json` に権限セクションはありません。本ファイルの過去版が説明していた `permissions.rules` 配列は存在せず、書いても効果がありません。
 
-## 承認フロー
+## アプリ単位の上書き
 
-ツール呼び出しに確認が必要な場合:
+ガードの設定構造はアプリ単位の上書きをサポートします：
 
-1. Jarvisが実行内容を説明
-2. 承認パネルにツール名、パラメータ、リスクレベルが表示
-3. **承認**、**拒否**、または**常に承認**（このツール）を選択可能
-4. すべての決定が監査証跡にログ記録
-
-## 監査ログ
-
-すべてのツール実行がログに記録されます:
-
-```text
-[2026-06-15 14:32:01] filesystem:write /workspace/README.md
-  Risk: write
-  Policy: confirm
-  Decision: approved
-  User: manual approval
+```ts
+appPermissions: {
+  "filesystem": { write: true,  execute: false },
+  "untrusted-mcp": { write: false, execute: false },
+}
 ```
 
-**コントロールセンター → 権限 → 監査ログ**で監査ログを表示できます。
+各フラグの対応：
+
+| リスク | `write: true` | `write: false` |
+|--------|---------------|----------------|
+| `medium` | `notify` | `confirm` |
+| `high` | `confirm` | `deny` |
+
+| リスク | `execute: true` | `execute: false` |
+|--------|-----------------|------------------|
+| `critical` | `confirm` | `deny` |
+
+`low` は常に `auto`。
+
+上書きは存在すれば評価されますが、デーモンには現在それをディスクから読むコードがないため、上書き付きでガードを構築する呼び出し元にのみ作用します。
+
+## 音声モード
+
+音声実行はリスクに関係なく厳格です：読み取り専用は自動承認、それ以外は確認が必要。音声での要求はタイプ入力より誤発火しやすいためです。
+
+## 承認リクエスト
+
+アクションが `confirm` のとき、ガードは決定をメモリに置きません：
+
+1. `approval_request` を永続化（アクションダイジェスト、リスク、範囲、期限）
+2. 実行を停止
+3. UI がリクエストを表示 — 承認、拒否、記憶
+4. 決定後に実行を再開または失敗させる
+
+エンドポイント：
+
+```text
+GET  /api/approvals
+GET  /api/approvals/:id
+POST /api/approvals/:id/approve
+POST /api/approvals/:id/deny
+POST /api/approvals/:id/remember
+POST /api/approvals/batch/approve
+POST /api/approvals/batch/deny
+POST /api/approvals/expire-stale
+```
+
+「期限切れ」は実在する状態です。無人キューには誰も答えないリクエストが溜まり、`expire-stale` が実行を永久に停止させずに閉じます。
+
+## 権限メモリ
+
+「記憶」は決定をアクションダイジェストに対して保存します。ツール名ではなく具体的なアクションです。同じアクションは二度尋ねず、異なるパス・コマンド・パラメータ集合は別ダイジェストとして再度尋ねます。
+
+## 監査
+
+決定はすべて `audit_log` に書かれ、照会できます：
+
+```text
+GET /api/audit?actor=jarvis&action=tool.execute&riskLevel=high&since=2026-10-01T00:00:00Z&limit=50
+```
+
+エントリには `actor`、`action`、`resource`、`riskLevel`、`permissionDecision`、`confirmedByUser`、`result`、`metadata`、`createdAt` が含まれます。
 
 ## 次のステップ
 
-- [パーミッションガード](/docs/core-concepts/permission-guard) — 安全モデルの詳細
-- [監査ログの確認](/docs/guides/review-audit-logs) — 監査証跡の操作
-- [セキュリティモデル](/docs/architecture/security-model) — アーキテクチャの詳細
+- [パーミッションガード](/docs/core-concepts/permission-guard) — ポリシーの背後にあるモデル
+- [セキュリティモデル](/docs/architecture/security-model) — 強制レイヤー
+- [監査ログの確認](/docs/guides/review-audit-logs) — ログの実務的な使い方

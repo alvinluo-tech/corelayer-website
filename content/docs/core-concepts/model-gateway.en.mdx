@@ -1,52 +1,54 @@
 ---
 title: Model Gateway
-description: Multi-provider model routing and selection.
+description: How CoreLayer turns a provider id into a streaming model call.
 ---
 
-The Model Gateway manages connections to AI model providers and routes requests to the best available model.
+The Model Gateway is the only path from an agent turn to a model. It resolves the active provider, adapts the request to the model family, streams the response, and degrades when a provider is unhealthy.
 
-## Architecture
+## Path
 
 ```text
-Jarvis request
-  → Model Gateway
-  → Provider selection logic
-  → Vercel AI SDK
-  → Provider API (Groq / OpenRouter / Ollama / OpenAI-compatible)
-  → Response streaming back to Jarvis
+Agent turn
+  → activeProvider / activeModel (or a routing rule match)
+  → resolveProvider(id): config → credentials → environment → default base URL
+  → OpenAI-compatible client (Vercel AI SDK v6)
+  → model-family adaptation (reasoning models, Anthropic)
+  → streaming call
+  → text deltas + tool calls back to the loop
 ```
 
-## Built on Vercel AI SDK
+## One adapter, many providers
 
-The Model Gateway uses [Vercel AI SDK v6+](https://sdk.vercel.ai) for:
+Every remote provider is called through the same OpenAI-compatible adapter. This is what makes providers interchangeable: a provider is a base URL and a key, and its model list is data rather than a code path.
 
-- Unified interface across providers
-- Streaming responses
-- Tool calling support
-- Structured output
+## Loop control
 
-## Routing Logic
+The agent loop is the Vercel AI SDK core loop, not a hand-written `while`:
 
-The gateway selects models based on:
+- `prepareStep` decides per step which tools exist and whether the turn may continue
+- loop breakers (repeated identical calls, no-progress detection) and the step budget (`defaults.maxSteps`, capped at 100) bound the turn
+- timeouts: `streamTimeout` per call, `turnTimeout` per turn
 
-1. **Task type** — reasoning, code generation, summarization, classification
-2. **Latency requirements** — real-time voice needs fast models
-3. **Cost** — routine tasks use cheaper models
-4. **Fallback** — if primary provider is unavailable
-
-## Provider Configuration
-
-See [Model Providers](/docs/configuration/model-providers) for configuration details.
+Mid-run message injection into a hand-written loop no longer exists; `POST /api/runs/:id/message` returns `410`.
 
 ## Streaming
 
-All model responses are streamed by default. This means:
+Responses stream by default:
 
-- Text appears as it's generated
-- TTS can speak sentences as they complete (sentence-level streaming)
-- Tool calls are executed as soon as they're identified
+- Text appears as it is generated
+- TTS can speak sentence-by-sentence
+- Tool calls are executed as soon as a step yields them
+
+## Health and fallback
+
+A provider that fails twice in a row is put into a 20-second cooldown with exponential backoff on repeat failures. While cooling down, calls skip it instead of waiting for the same timeout. The first success resets the counter.
+
+## Counting cost
+
+Token usage is recorded when the provider reports it. Executors driven over ACP cannot be metered (the protocol has no usage update), so cost figures for those runs are explicitly estimates rather than provider counts.
 
 ## Next Steps
 
 - [Model Providers](/docs/configuration/model-providers) — configure providers
-- [Configure Local Models](/docs/guides/configure-local-models) — set up Ollama
+- [Configure Local Models](/docs/guides/configure-local-models) — Ollama
+- [Reliability Evaluation](/docs/architecture/reliability-eval) — why pass rate alone is not enough

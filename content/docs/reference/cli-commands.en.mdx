@@ -1,56 +1,81 @@
 ---
 title: CLI Commands
-description: Command-line interface for CoreLayer.
+description: Package scripts and helper commands in the CoreLayer repository.
 ---
 
-CoreLayer provides CLI commands for common operations.
+CoreLayer is driven by pnpm workspace scripts. All commands run from the repository root unless noted.
 
-## Development Commands
-
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start daemon + Tauri frontend in development mode |
-| `pnpm dev:web` | Start frontend in web-only mode (no Tauri) |
-| `pnpm dev:daemon` | Start daemon only |
-| `pnpm dev:frontend` | Start Tauri frontend only |
-
-## Build Commands
+## Development
 
 | Command | Description |
 |---------|-------------|
-| `pnpm build` | Full production build (sidecar + Tauri) |
-| `pnpm build:daemon` | Build daemon only |
-| `pnpm build:daemon:sidecar` | Build daemon as sidecar binary |
+| `pnpm dev` | Daemon + Tauri app together (concurrently) |
+| `pnpm dev:daemon` | Daemon only, with `tsx watch` hot reload |
+| `pnpm dev:frontend` | Tauri app only |
+| `pnpm dev:web` | Frontend in browser mode, no Tauri shell |
 
-## Quality Commands
-
-| Command | Description |
-|---------|-------------|
-| `pnpm lint` | Run ESLint on source files |
-| `pnpm lint:fix` | Auto-fix ESLint issues |
-| `pnpm format` | Format code with Prettier |
-| `pnpm format:check` | Check formatting without writing |
-| `pnpm test` | Run all tests |
-| `pnpm typecheck` | Run TypeScript type checking |
-
-## Cleanup Commands
+## Build
 
 | Command | Description |
 |---------|-------------|
-| `pnpm clean` | Clean all build outputs |
-| `pnpm clean:app` | Kill running CoreLayer app |
-| `pnpm clean:daemon` | Kill daemon process on port 3001 |
-| `pnpm clean:all` | Clean app + daemon |
+| `pnpm build` | Sidecar binary, then the Tauri app |
+| `pnpm build:daemon` | TypeScript build of the daemon |
+| `pnpm build:daemon:sidecar` | Package the daemon as a sidecar executable |
 
-## Release Commands
+## Quality
 
 | Command | Description |
 |---------|-------------|
-| `pnpm release` | Create a new release (patch) |
-| `pnpm release:minor` | Create a minor release |
-| `pnpm release:major` | Create a major release |
+| `pnpm lint` / `pnpm lint:fix` | ESLint across frontend, daemon, and packages |
+| `pnpm format` / `pnpm format:check` | Prettier |
+| `pnpm test` | Vitest across all packages |
+| `pnpm typecheck` | TypeScript across all packages |
+
+`pnpm test` does not run the reliability eval — that costs real model turns and is invoked explicitly (see below).
+
+## Verification and packaging
+
+| Command | Description |
+|---------|-------------|
+| `pnpm test:smoke:sidecar` | Smoke-test the built sidecar |
+| `pnpm clean` | Clean build outputs in all packages |
+| `pnpm clean:app` | Kill a running app process |
+| `pnpm clean:daemon` | Kill whatever holds port 3001 |
+| `pnpm clean:all` | Both of the above |
+| `pnpm clean:sea` | Remove the single-executable build temp directory |
+
+## Release
+
+| Command | Description |
+|---------|-------------|
+| `pnpm release` | Standard-version patch release |
+| `pnpm release:minor` | Minor release |
+| `pnpm release:major` | Major release |
+| `pnpm commitlint` | Validate the last commit message |
+
+## Reliability eval
+
+Run from `daemon/`:
+
+```powershell
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/holdout.json --k 3 --compare JARVIS_REFLECTION=1
+```
+
+Requires `ANTHROPIC_MODEL`, `ANTHROPIC_BASE_URL`, and `ANTHROPIC_AUTH_TOKEN` to point at a healthy gateway. See [Run a Reliability Eval](/docs/guides/run-reliability-eval).
+
+## Database
+
+Run from `daemon/`:
+
+| Command | Description |
+|---------|-------------|
+| `pnpm db:generate` | Generate a migration and compile it |
+| `pnpm db:migrate` | Apply migrations |
+| `pnpm db:studio` | Open Drizzle Studio |
 
 ## Next Steps
 
 - [Build From Source](/docs/guides/build-from-source) — full build guide
 - [API Endpoints](/docs/reference/api-endpoints) — daemon HTTP API
+- [Troubleshooting](/docs/reference/troubleshooting) — when a command fails

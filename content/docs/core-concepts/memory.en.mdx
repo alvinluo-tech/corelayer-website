@@ -1,0 +1,48 @@
+---
+title: Memory
+description: How CoreLayer stores what Jarvis remembers, and why mid-turn writes cannot corrupt a turn.
+---
+
+CoreLayer's memory is explicit. There is no hidden state: what the model remembers is what was written to disk or to the database, and you can read and edit the most important parts by hand.
+
+## Layers
+
+| Layer | Where | What it holds |
+|-------|-------|---------------|
+| **Profile** | `memory/USER.md` | Who you are and hard constraints |
+| **Long-term facts** | `memory/MEMORY.md` | Durable facts and preferences |
+| **Structured memories** | `memories` table | Keyed `fact` / `preference` / `context` entries, searchable and scored |
+| **Journal** | `memory/journal/` | Directory reserved for append-only daily notes (created at startup; no writer ships yet) |
+| **Reflections** | `memory/dreams/` | Directory reserved for reflection output (created at startup; the reflection loop is off by default) |
+
+## Frozen snapshots
+
+At the start of a turn, `USER.md` and `MEMORY.md` are read into an immutable snapshot and placed in the prompt prefix. A mid-turn write — an agent saving a fact, or you editing the file — updates disk and the memory index immediately, but **does not mutate the active turn's prefix**.
+
+That is a correctness rule and a cost rule at the same time: a prompt prefix that changes mid-turn invalidates the provider's prompt cache on every step. Freezing the prefix keeps the cache warm and makes a turn's context reproducible.
+
+## Retrieval
+
+Structured memories are retrieved by score, with a configurable floor (`defaults.memoryMinScore`, default `0.3`). Below the floor a memory is not injected; injecting weak matches costs context and distracts the model.
+
+Injection is tracked: each memory records when it was last injected, so a frequently retrieved entry does not crowd out everything else turn after turn.
+
+## Writing memory
+
+| Tool | Risk | Note |
+|------|------|------|
+| `memory_store` | `medium` | A stored memory is re-injected into every later prompt — it is persistent influence, not an inert record |
+| `memory_search` / `memory_list` | `low` | Read paths |
+| `memory_delete` | `high` | Destructive; requires confirmation |
+
+The `medium` rating on `memory_store` is deliberate: a poisoned entry outlives the conversation that created it.
+
+## Content addressing
+
+Memories are addressed by `key` (short, stable, e.g. `coding_style`). Re-storing the same key updates the entry instead of creating a duplicate, which is what makes `memory_store` idempotent across runs.
+
+## Next Steps
+
+- [Jarvis](/docs/core-concepts/jarvis) — how memory is used in a turn
+- [Storage](/docs/configuration/storage) — where memory files and tables live
+- [Reliability Evaluation](/docs/architecture/reliability-eval) — measuring whether memory changes help

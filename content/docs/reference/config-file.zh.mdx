@@ -1,91 +1,134 @@
 ---
 title: 配置文件
-description: CoreLayer 配置文件参考。
+description: CoreLayer 启动时实际读取哪些文件的参考。
 ---
 
-CoreLayer 使用 JSON 配置文件进行系统级设置。
+CoreLayer 并不使用单一的大配置文件。设置按敏感性拆分，使得不含密钥的配置可以被同步或共享，而凭据受到保护。
 
-## 位置
+## 文件一览
 
-| 平台 | 路径 |
-|------|------|
-| Windows | `%APPDATA%/corelayer/config.json` |
-| macOS | `~/Library/Application Support/corelayer/config.json` |
-| Linux | `~/.config/corelayer/config.json` |
+| 文件 | 位置 | 内容 |
+|------|------|------|
+| `config.json` | `~/.jarvis/config/` | 供应商列表、当前模型、路由规则、默认值、仲裁、tick |
+| `routing.json` | `~/.jarvis/config/` | 预留路径；路由规则目前在 `config.json` 的 `routingRules` 中，尚无读取方 |
+| `credentials.json` | `~/.jarvis/security/` | 各供应商的 API Key（POSIX 下 `0600`；仍读取旧的 `config/credentials.json`） |
+| `mcp-servers.json` | `~/.jarvis/config/` | MCP 服务器定义 |
+| `storage.json` | `~/.jarvis/config/` | 存储模式与数据库凭据 |
 
-## 完整参考
+`JARVIS_HOME` 可迁移整棵目录树。sidecar 模式下外壳可能设置 `JARVIS_APP_DATA_DIR`、`JARVIS_LOG_DIR` 与 `SQLITE_DB_PATH`。
+
+## `config.json`
 
 ```json
 {
-  "models": {
-    "providers": [
-      {
-        "name": "groq",
-        "type": "groq",
-        "apiKey": "${GROQ_API_KEY}",
-        "defaultModel": "llama-3.3-70b-versatile"
-      }
-    ]
-  },
-  "mcp": {
-    "servers": [
-      {
-        "name": "filesystem",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-        "env": {}
-      }
-    ]
-  },
-  "storage": {
-    "mode": "sqlite",
-    "path": "~/.corelayer/data.db"
-  },
-  "voice": {
-    "enabled": true,
-    "wakeWord": {
-      "enabled": true,
-      "keyword": "jarvis"
-    },
-    "asr": {
-      "provider": "web-speech",
-      "language": "en-US"
-    },
-    "tts": {
-      "provider": "mimo",
-      "streaming": true,
-      "sentenceLevel": true
-    }
-  },
-  "permissions": {
-    "defaultPolicy": "confirm",
-    "rules": [
-      {
-        "tool": "filesystem:read",
-        "policy": "allow"
-      }
-    ]
-  },
-  "daemon": {
-    "port": 3001
-  },
-  "runtime": {
-    "skills": {
+  "version": 1,
+  "activeProvider": "mimo",
+  "activeModel": "mimo-v2.5-pro",
+  "providers": [
+    {
+      "id": "mimo",
+      "name": "MiMo",
+      "type": "openai_compatible",
+      "baseURL": "https://token-plan-ams.xiaomimimo.com/v1",
       "enabled": true
     }
+  ],
+  "routingRules": [],
+  "defaults": {
+    "temperature": 0.7,
+    "maxTokens": 4096,
+    "maxSteps": 20,
+    "streamTimeout": 120000,
+    "turnTimeout": 180000,
+    "memoryMinScore": 0.3
+  },
+  "adjudication": {
+    "enabled": false,
+    "maxRetries": 1
+  },
+  "tick": {
+    "enabled": true,
+    "intervalMinutes": 30
   }
 }
 ```
 
+| 字段 | 含义 |
+|------|------|
+| `version` | 必须为 `1` |
+| `activeProvider` / `activeModel` | 默认路由目标 |
+| `providers[]` | `id`、`name`、`type`（`openai_compatible` 或 `ollama`）、`baseURL`、`enabled` |
+| `routingRules[]` | `taskType` → `modelId`，可选 `conditions` |
+| `defaults` | 采样、步数预算、超时、记忆评分下限 |
+| `adjudication` | 对抗式仲裁：`enabled`（默认 `false`）、`maxRetries`（0–5） |
+| `tick` | 周期自治 tick：`enabled`、`intervalMinutes`（5–240），可选模型/供应商 |
+
+约束：`maxSteps` 上限 100，`turnTimeout` 是无论模型如何都会生效的轮次上限。
+
+## `storage.json`
+
+```json
+{
+  "storageMode": "local",
+  "dbConfig": {
+    "supabaseUrl": "https://your-project.supabase.co",
+    "supabaseServiceKey": "…",
+    "postgresUrl": "postgresql://user:pass@host:5432/corelayer"
+  }
+}
+```
+
+详见 [存储](/docs/configuration/storage)。
+
+## `mcp-servers.json`
+
+```json
+{
+  "version": 1,
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "enabled": true,
+      "permissions": { "read": true, "write": true, "delete": false, "bulkWrite": false },
+      "riskPolicy": { "low": "auto", "medium": "notify", "high": "confirm", "critical": "deny" }
+    }
+  ]
+}
+```
+
+详见 [MCP 服务器](/docs/configuration/mcp-servers)。
+
 ## 环境变量
 
-使用 `${ENV_VAR_NAME}` 语法在配置文件中引用环境变量。
+供应商密钥的解析顺序是：环境变量 → `credentials.json` → 无。各供应商识别的名称：
 
-## 验证
+| 供应商 | API Key | Base URL |
+|--------|---------|----------|
+| `deepseek` | `DEEPSEEK_API_KEY` | `DEEPSEEK_BASE_URL`、`DEEPSEEK_API_BASE` |
+| `openai` | `OPENAI_API_KEY` | `OPENAI_BASE_URL`、`OPENAI_API_BASE_URL` |
+| `anthropic` | `ANTHROPIC_API_KEY`、`ANTHROPIC_AUTH_TOKEN` | `ANTHROPIC_BASE_URL` |
+| `gemini` | `GEMINI_API_KEY`、`GOOGLE_API_KEY` | `GEMINI_BASE_URL` |
+| `groq` | `GROQ_API_KEY` | `GROQ_BASE_URL` |
+| `mimo` | `MIMO_API_KEY`、`XIAOMI_API_KEY` | `MIMO_API_URL`、`XIAOMI_API_URL` |
+| `qwen` | `DASHSCOPE_API_KEY`、`QWEN_API_KEY` | — |
+| `ollama` | —（本地） | `OLLAMA_BASE_URL`、`OLLAMA_HOST` |
 
-CoreLayer 在启动时验证配置文件。无效配置将在控制中心显示错误。
+其他环境变量：`DATABASE_URL`、`STORAGE_MODE`、`JARVIS_HOME`、`JARVIS_RUNTIME_MODE`、`DAEMON_PORT`。
+
+## 校验
+
+`config.json` 在读取时校验。非法值回退为默认值并记录警告，文件不会被覆盖。
+
+## 已移除的字段
+
+旧文档描述过 `config.json` 中的 `models`、`mcp`、`storage`、`voice`、`permissions`、`daemon`、`runtime` 段落，以及 `${ENV_VAR}` 替换。这些都不再被读取。供应商凭据来自上面的解析链，存储模式来自 `storage.json`，MCP 服务器来自 `mcp-servers.json`，权限目前不可配置。
 
 ## 下一步
 
-- [CLI 命令](/docs/reference/cli-commands) — 命令行接口
-- [API 端点](/docs/reference/api-endpoints) — 守护进程 HTTP API
+- [模型供应商](/docs/configuration/model-providers) — 供应商设置
+- [存储](/docs/configuration/storage) — 存储后端
+- [API 端点](/docs/reference/api-endpoints) — HTTP 接口

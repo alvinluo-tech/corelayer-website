@@ -1,66 +1,55 @@
 ---
 title: デーモン
-description: CoreLayerのAIオーケストレーションを支えるNode.jsバックエンド。
+description: すべてのランタイム、ツール呼び出し、状態を所有する Node.js プロセス。
 ---
 
-デーモンはバックグラウンドで実行されるNode.jsプロセスで、すべてのAIオーケストレーション、ツール実行、データ管理を処理します。
+デーモンはバックグラウンドで動く Node.js プロセス（TypeScript + Hono HTTP）で、すべての権限を持ちます。Tauri シェルが監督し、それ以外の何もプロバイダー、データベース、エグゼキューターへ直接接続してはなりません。
 
-## アーキテクチャ
+## 構成
 
 ```text
-Tauriデスクトップアプリ（Rust）
-  └─ デーモンスーパーバイザー（Rust）
-     └─ Node.jsデーモン（Hono HTTPサーバー）
-        ├─ モデルゲートウェイ
-        ├─ ツールレジストリ
-        ├─ パーミッションガード
-        ├─ MCPクライアントマネージャー
-        └─ データベース（SQLite / Supabase / PostgreSQL）
+Tauri デスクトップシェル（Rust）
+  └─ デーモン監督（起動 · ヘルス · 再起動 · 停止）
+     └─ Node.js デーモン（Hono、ループバック HTTP）
+        ├─ ランタイムホスト        agent · tool · coding · memory · voice · scheduler
+        ├─ ワークフロー面          dispatcher · queue · slots · delegation · DAG · judge
+        ├─ パーミッションガード    リスク → ポリシー → 承認 → 監査
+        ├─ MCP クライアント        stdio / HTTP / SSE サーバー
+        └─ 永続化                SQLite（既定）· Supabase · PostgreSQL
 ```
 
-## デーモンスーパーバイザー
+## 監督プロセス
 
-TauriアプリにはRustベースのデーモンスーパーバイザーが含まれており、以下を行います:
+Rust 側が行うこと：
 
-- アプリ起動時にデーモンプロセスを**開始**
-- デーモンのヘルスを**監視**
-- デーモンがクラッシュした場合に**再起動**
-- アプリ終了時にデーモンを**停止**
+- アプリ起動時にデーモン sidecar を起動
+- ヘルスチェックとクラッシュ時の再起動
+- 環境変数でパスとポートを渡す
+- 終了時にデーモンを停止
 
-## HTTP API
+実行状態は `GET /api/runtime/status`（pid、稼働時間、メモリ、ストレージモード、パス、ランタイム別の健康）と `GET /api/runtime/components` で UI に公開されます。
 
-デーモンは`localhost:3001`でHTTP APIを公開します（`config.json`の`daemon.port`フィールドで設定可能）。TauriフロントエンドはTauriのIPCブリッジを通じてこのAPIと通信します。
+## HTTP 面
 
-## 開発モード
+デーモンはループバック、既定ポート `3001` で待ち受けます。ルートグループは `daemon/src/bootstrap/register-routes.ts` でマウントされます：
 
-開発中、デーモンはホットリロードで実行されます:
+`/api/chat` · `/api/conversations` · `/api/tasks` · `/api/articles` · `/api/reviews` · `/api/settings` · `/api/voice` · `/api/mcp` · `/api/tools` · `/api/tasks/scheduled` · `/api/approvals` · `/api/workspaces` · `/api/projects` · `/api/runs` · `/api/runtimes` · `/api/runtime/queue` · `/api/memories` · `/api/agent-profiles` · `/api/events` · `/api/audit` · `/api/runtime` · `/api/agent-broker`
 
-```bash
-pnpm dev:daemon
-```
+主要エンドポイントは [API リファレンス](/docs/reference/api-endpoints) を参照。
 
-`tsx watch`を使用してファイル変更時に再起動します。
+## 開発と本番
 
-## プロダクションモード
+| モード | 実行方法 |
+|--------|---------|
+| 開発 | `pnpm dev:daemon` — `tsx watch` で変更時に再起動 |
+| 本番 | `pnpm build:daemon:sidecar` — SEA バイナリに固めてシェルが起動 |
 
-プロダクションビルドでは、デーモンはサイドカーバイナリとしてパッケージされます:
+## 状態
 
-```bash
-pnpm build:daemon:sidecar
-```
-
-サイドカーはTauriアプリにバンドルされ、別プロセスとして実行されます。
-
-## ヘルス監視
-
-コントロールセンターにデーモンステータスが表示されます:
-
-- **Healthy** — デーモンが稼働中で応答あり
-- **Starting** — デーモンが初期化中
-- **Unhealthy** — デーモンが応答なし
-- **Stopped** — デーモンが意図的に停止された
+永続化された内容を除き、デーモンは再起動間で無状態です。長時間作業は実行レコードとキュー項目として永続化され、保留中の承認も保存されるため、再起動は「忘れる」ではなく「続きから」です。
 
 ## 次のステップ
 
-- [システム概要](/docs/architecture/system-overview) — 完全なアーキテクチャ
+- [システム概要](/docs/architecture/system-overview) — 全体トポロジー
+- [ストレージ](/docs/configuration/storage) — 状態のディスク上の位置
 - [ソースからビルド](/docs/guides/build-from-source) — デーモンのビルド

@@ -60,9 +60,42 @@ description: Problemas comunes y soluciones.
 **Sintoma:** Todas las llamadas a herramientas requieren aprobacion.
 
 **Soluciones:**
-- Revisa las politicas de permisos en Ajustes → Permisos
-- Aniade reglas `allow` para herramientas de confianza
-- Usa "Aprobar Siempre" para herramientas en las que confies
+- `high` siempre requiere confirmacion y `critical` se deniega: es la politica por defecto, no un bug
+- Usa "Recordar" en la aprobacion para no volver a preguntar por esa accion exacta
+- Cierra solicitudes obsoletas con `POST /api/approvals/expire-stale`
+- La politica aun no es configurable por el usuario; ver [Permisos](/docs/configuration/permissions)
+
+## Una Aprobacion Parece Colgada
+
+**Sintoma:** Una ejecucion nunca termina y no aparece ningun dialogo de aprobacion.
+
+**Soluciones:**
+- Consulta `GET /api/approvals` por una solicitud pendiente de esa ejecucion
+- Las aprobaciones se persisten, asi que reiniciar el daemon no las pierde; tampoco las decide automaticamente
+- Las confirmaciones inline de herramientas estan en `GET /api/tools/pending-confirmations`
+
+## El Ejecutor de Codigo Falla de Inmediato
+
+**Sintoma:** Una ejecucion de codigo falla antes de producir salida.
+
+**Soluciones:**
+- `GET /api/runtimes/coding/diagnostics` — revisa el estado de la sonda del agente
+- `needs_auth` significa que el agente arranco pero no tiene credenciales; completa su login
+- `unreachable` suele significar que `acpx` no esta instalado (`npm install acpx`) o que el comando de lanzamiento es incorrecto
+- Claude Code solo corre modelos DeepSeek; un `ANTHROPIC_MODEL` que no sea DeepSeek se rechaza a proposito
+
+## Los Intentos de Evaluacion Agotan el Tiempo
+
+**Sintoma:** `pass^k` se desploma con muchos `timed-out`.
+
+**Soluciones:**
+- Revisa primero el gateway: un endpoint inestable hace que `acpx` se cuelgue hasta agotar el presupuesto en lugar de fallar rapido
+- Los intentos `VOID` son fallos de entorno (cuota, conexion rechazada, 5xx) y se excluyen de las tasas
+- Tres fallos de entorno seguidos detienen la evaluacion por diseno
+
+## `POST /api/runs/:id/message` devuelve 410
+
+Este endpoint se elimino con el bucle de agente escrito a mano. Usa la API estandar de envio de conversacion (`POST /api/conversations/:id/messages/stream`).
 
 ## Fallos de Compilacion
 
@@ -79,10 +112,10 @@ description: Problemas comunes y soluciones.
 **Sintoma:** Los datos no se guardan o errores de carga.
 
 **Soluciones:**
-- Verifica la configuracion de almacenamiento en Ajustes → Almacenamiento
-- Confirma que el archivo de base de datos exista y sea escribible
-- Intenta cambiar a un modo de almacenamiento diferente
-- Para Supabase: verifica la URL y la clave anon
+- Revisa el modo en `storage.json` (Ajustes → Almacenamiento lo escribe)
+- Confirma que el archivo de base de datos exista y sea escribible bajo `storage/`
+- Cambiar de modo requiere reiniciar el daemon; no es un hot-swap en vivo
+- Para Supabase: verifica la URL del proyecto y la service key
 
 ## Sigues Atascado?
 

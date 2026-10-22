@@ -5,6 +5,8 @@
     "runtime-boundaries",
     "data-flow",
     "security-model",
+    "executor-governance",
+    "reliability-eval",
     "multi-runtime-direction"
   ],
   "defaultOpen": true,

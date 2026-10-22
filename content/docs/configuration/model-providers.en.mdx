@@ -1,33 +1,36 @@
 ---
 title: Model Providers
-description: Configure AI model providers for Jarvis routing.
+description: Configure the providers the Model Gateway can route to.
 ---
 
-CoreLayer's Model Gateway routes requests across multiple AI providers. You can configure one or more providers and let Jarvis select the best model for each task.
+Every model call goes through one OpenAI-compatible adapter. A provider is therefore a `baseURL` plus a key — not a per-vendor SDK — and adding a provider that speaks the OpenAI wire format is configuration, not code.
 
-## Supported Providers
+## Supported provider IDs
 
-The Model Gateway natively supports the following providers through built-in presets:
+These IDs are recognized by the provider resolver, including their environment variables and default base URLs:
 
-| Provider | ID | Type | Popular Models |
-|----------|----|------|----------------|
-| **MiMo (Xiaomi)** | `mimo` | `openai_compatible` | `mimo-v2.5-pro`, `mimo-v2.5` |
-| **Groq** | `groq` | `openai_compatible` | `llama-4-scout`, `llama-4-maverick`, `llama-3.3-70b-versatile` |
-| **DeepSeek** | `deepseek` | `openai_compatible` | `deepseek-v4-pro`, `deepseek-v4-flash` |
-| **Anthropic** | `anthropic` | `openai_compatible` | `claude-sonnet-5`, `claude-fable-5`, `claude-opus-4.8` |
-| **Google Gemini** | `google` | `openai_compatible` | `gemini-3.5-flash`, `gemini-3.1-flash`, `gemini-3.1-pro` |
-| **OpenAI** | `openai` | `openai_compatible` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.5`, `gpt-5.4` |
-| **Qwen (Alibaba)** | `qwen` | `openai_compatible` | `qwen-3.7-max-preview`, `qwen-3.7-plus-preview`, `qwen-3.6` |
-| **OpenRouter** | `openrouter` | `openai_compatible` | `anthropic/claude-sonnet-5`, `google/gemini-3.5-flash` |
-| **Ollama** | `ollama` | `ollama` | `llama4`, `qwen3.5`, `deepseek-v4` |
+| Provider | ID | Default base URL |
+|----------|----|------------------|
+| DeepSeek | `deepseek` | `https://api.deepseek.com/v1` |
+| OpenAI | `openai` | `https://api.openai.com/v1` |
+| Anthropic | `anthropic` | `https://api.anthropic.com/v1` |
+| Google Gemini | `gemini` | `https://generativelanguage.googleapis.com/v1beta/openai` |
+| Groq | `groq` | `https://api.groq.com/openai/v1` |
+| OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` |
+| MiMo (Xiaomi) | `mimo` | `https://token-plan-ams.xiaomimimo.com/v1` |
+| Qwen (Alibaba) | `qwen` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| Ollama | `ollama` | `http://localhost:11434/v1` |
 
-## Configuration Files
+Gemini's ID is `gemini`, not `google` — the latter only appears in the environment variable name `GOOGLE_API_KEY`.
 
-CoreLayer separates configuration from secrets. Configuration files are stored in the `~/.jarvis/config/` directory.
+## Where configuration lives
 
-### 1. Main Config (`config.json`)
+| File | Contents |
+|------|----------|
+| `~/.jarvis/config/config.json` | `providers[]`, `activeProvider`, `activeModel`, routing rules, defaults |
+| `~/.jarvis/security/credentials.json` | API keys, keyed by provider id |
 
-Defines active providers, model routing rules, and provider endpoints. **This file does not contain any API keys**:
+No API key is ever written to `config.json`.
 
 ```json
 {
@@ -36,76 +39,49 @@ Defines active providers, model routing rules, and provider endpoints. **This fi
   "activeModel": "mimo-v2.5-pro",
   "providers": [
     {
-      "id": "mimo",
-      "name": "MiMo",
+      "id": "deepseek",
+      "name": "DeepSeek",
       "type": "openai_compatible",
-      "baseURL": "https://token-plan-ams.xiaomimimo.com/v1",
-      "enabled": true
-    },
-    {
-      "id": "groq",
-      "name": "Groq",
-      "type": "openai_compatible",
-      "baseURL": "https://api.groq.com/openai/v1",
-      "enabled": true
-    },
-    {
-      "id": "openrouter",
-      "name": "OpenRouter",
-      "type": "openai_compatible",
-      "baseURL": "https://openrouter.ai/api/v1",
-      "enabled": true
-    },
-    {
-      "id": "ollama",
-      "name": "Ollama",
-      "type": "ollama",
-      "baseURL": "http://localhost:11434/v1",
+      "baseURL": "https://api.deepseek.com/v1",
       "enabled": true
     }
   ]
 }
 ```
 
-### 2. Credentials Config (`credentials.json`)
+`type` is `openai_compatible` for every remote provider and `ollama` for a local server.
 
-Stores API keys securely, mapping key values to the corresponding provider `id`:
+## Key and base URL resolution
 
-```json
-{
-  "mimo": "your_mimo_api_key_here",
-  "groq": "your_groq_api_key_here",
-  "openrouter": "your_openrouter_api_key_here"
-}
-```
+For a provider, the resolver checks in order:
 
-## Model Routing
+1. `security/credentials.json` and the provider entry in `config.json`
+2. The provider's environment variables (for example `DEEPSEEK_API_KEY`, `ANTHROPIC_AUTH_TOKEN`)
+3. The built-in default base URL
 
-When multiple providers are configured, the Model Gateway selects based on:
+If a URL is not recognized as a provider name, the resolver tries to infer the provider from its hostname (for example `api.deepseek.com` → `deepseek`).
 
-- **Task complexity** — complex reasoning routes to more capable models
-- **Latency requirements** — time-sensitive requests prefer Groq or local models
-- **Cost optimization** — routine tasks use cheaper providers
-- **Availability** — fallback if a provider is down
+The full environment variable table is in [Config File](/docs/reference/config-file#environment-variables).
 
-## Environment Variables
+## Routing and fallback
 
-You can use environment variables instead of hardcoding API keys:
+- `activeProvider` / `activeModel` define the default target.
+- `routingRules[]` map a `taskType` to a `modelId`, with optional `conditions`.
+- When a provider fails repeatedly it is marked dead for a cooldown (two consecutive failures, then exponential backoff), so subsequent calls skip it instead of paying the same timeout again. A success resets it.
 
-```bash
-GROQ_API_KEY=your_groq_api_key_here
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-```
+## Model families
 
-Reference them in config:
+The adapter applies small per-family adaptations rather than exposing them as configuration:
 
-```json
-{
-  "apiKey": "${GROQ_API_KEY}"
-}
-```
+- Reasoning models (`o1`…`o4`, previews) get the parameters those endpoints accept, not the chat defaults.
+- Anthropic models are called through the OpenAI-compatible endpoint, so tool-calling and streaming behave like the other providers.
+
+## Which models are current
+
+This page deliberately does not list model names. Model IDs change faster than documentation: use **Settings → Models**, which reads the provider's model list where the provider exposes one, or the provider's own documentation. Pinning a name here would go stale within a release.
 
 ## Next Steps
 
-- [Model Gateway](/docs/core-concepts/model-gateway) — understand routing logic
-- [Configure Local Models](/docs/guides/configure-local-models) — set up Ollama
+- [Model Gateway](/docs/core-concepts/model-gateway) — routing and streaming behavior
+- [Configure Local Models](/docs/guides/configure-local-models) — Ollama setup
+- [Config File](/docs/reference/config-file) — the complete reference

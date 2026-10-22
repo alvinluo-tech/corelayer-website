@@ -1,73 +1,74 @@
 ---
 title: Permission Guard
-description: Risk-based execution control with approval workflows and audit logs.
+description: Risk-based execution control with persisted approvals and a complete audit trail.
 ---
 
-The Permission Guard is CoreLayer's safety system. It classifies tool calls by risk level, pauses risky operations for user approval, and maintains a complete audit trail.
+The Permission Guard sits between the model and every side effect. It classifies a call by the risk declared on the tool, applies policy, and — when the answer is "ask" — suspends the work instead of guessing.
 
-## Why It Exists
+## Risk model
 
-AI agents that can call tools need boundaries. Without a permission system, an agent could:
+Four levels, each mapping to an action:
 
-- Delete files without asking
-- Make external API calls with your credentials
-- Modify data you didn't intend to change
+| Risk | Default action | Typical tools |
+|------|----------------|---------------|
+| `low` | `auto` | Read, query, discover, code skeleton |
+| `medium` | `notify` | Create or update a task, add an article, save a review |
+| `high` | `confirm` | Delete, dispatch an agent, run a task graph |
+| `critical` | `deny` | Blocked unless an explicit grant exists |
 
-The Permission Guard makes tool execution **visible, controllable, and auditable**.
+Per-app overrides tighten or loosen a single level (evaluated when a guard is constructed with them; the daemon currently runs with the defaults):
 
-## Risk Classification
-
-Every tool call is classified:
-
-| Risk Level | Examples | Default Policy |
-|------------|----------|----------------|
-| **Read** | List files, read data, search | Auto-allow |
-| **Write** | Create/modify files, update records | Confirm |
-| **External** | API calls, web requests | Confirm |
-| **Destructive** | Delete files, drop tables | Confirm + warning |
-| **Credential-sensitive** | Access tokens, passwords | Block unless explicit |
-
-## Approval Flow
-
-```text
-Tool call requested
-  → Risk classification
-  → Policy check (allow / confirm / deny)
-  → If confirm: pause, show approval panel
-  → User approves or denies
-  → Execute or skip
-  → Log decision to audit trail
+```ts
+appPermissions: {
+  "some-app": { write: false, execute: false }
+}
+// medium → confirm (write: false)
+// high   → deny    (write: false)
+// critical → deny  (execute: false)
 ```
 
-## Approval Panel
+Voice execution is stricter: only read-only actions are auto-allowed, everything else requires confirmation.
 
-When approval is needed, the Control Center shows:
+## Why risk is declared, not inferred
 
-- **Tool name** and source
-- **Parameters** being passed
-- **Risk level** indicator
-- **Explanation** of what will happen
-- **Approve** / **Deny** / **Approve Always** buttons
+Inference from tool names and arguments has failed in a predictable direction. `dispatch_agent` and `run_task_graph` contain no risky-sounding word but spawn runs that write files and execute commands; name inference rated them `low`, which the default policy auto-approves. The registry therefore requires an explicit risk level for every native tool.
 
-## Audit Logs
+## Approval flow
 
-Every tool execution is logged with:
+```text
+Tool call or executor permission request
+  → risk read from the tool definition
+  → policy: auto / notify / confirm / deny
+  → confirm: persist an approval request
+      - action digest (what exactly will run)
+      - risk, scope, expiry
+  → suspend the run
+  → UI decision: approve / deny / remember
+  → resume service continues or fails the run
+  → audit entry written either way
+```
 
-- Timestamp
-- Tool name and source
-- Parameters (sanitized)
-- Risk level
-- User decision (approved/denied/auto-allowed)
-- Execution result
+Because approvals are persisted, a pending decision is not lost when the daemon restarts. `POST /api/approvals/expire-stale` closes requests that nobody answered, and batch endpoints exist for queues that accumulated during unattended work.
 
-View logs in **Control Center → Permissions → Audit Log**.
+## Permission memories
 
-## Configuration
+"Remember" records a decision against the action digest, so the identical action is not asked again. It is scoped: a different path, command, or parameter set is a different digest and is asked again.
 
-See [Permissions configuration](/docs/configuration/permissions) for policy rules.
+## Audit trail
+
+Every decision is written with actor, action, risk, decision, and result. Entries are queryable through `GET /api/audit` with `actor`, `action`, `riskLevel`, `since`, `limit`, and `offset` filters.
+
+The audit log is separate from the event log: the audit log answers "what was allowed or denied", the event log answers "what happened during this run" (`GET /api/events`).
+
+## Inspecting state
+
+- `GET /api/approvals` — pending and recent approvals
+- `GET /api/approvals/:id` — one request
+- `POST /api/approvals/:id/approve` / `deny` / `remember`
+- `GET /api/audit?riskLevel=high` — high-risk decisions
 
 ## Next Steps
 
-- [Permissions](/docs/configuration/permissions) — configure policies
-- [Review Audit Logs](/docs/guides/review-audit-logs) — working with the audit trail
-- [Security Model](/docs/architecture/security-model) — architecture details
+- [Permissions](/docs/configuration/permissions) — configure policy and app overrides
+- [Security Model](/docs/architecture/security-model) — the surrounding layers
+- [Review the Audit Trail](/docs/guides/review-audit-logs) — working with logs

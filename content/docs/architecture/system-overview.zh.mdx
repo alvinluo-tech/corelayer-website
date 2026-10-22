@@ -1,94 +1,100 @@
 ---
 title: 系统概览
-description: "CoreLayer 架构：三层代理模型。"
+description: "CoreLayer 的整体结构：Tauri 外壳、Node.js 守护进程、已注册的运行时与执行流水线。"
 ---
 
-CoreLayer 使用三层代理模型，将用户界面、业务逻辑和数据访问分离。
+CoreLayer 是一个本地优先的桌面 **Agent OS**。Tauri 外壳承载界面并监管 Node.js 守护进程；守护进程拥有全部运行时、全部工具调用以及全部持久化状态。
 
-## 架构图
+本页描述的是**当前实际运行的系统**。长期方向请见 [多运行时演进方向](/docs/architecture/multi-runtime-direction)。
+
+## 拓扑
 
 ```text
-┌─────────────────────────────────────────────┐
-│              Tauri 桌面应用                  │
-│  ┌───────────────────────────────────────┐  │
-│  │     React 19 + Vite + Tailwind 4     │  │
-│  │           （前端 UI 层）               │  │
-│  └──────────────┬────────────────────────┘  │
-│                 │ Tauri IPC                  │
-│  ┌──────────────┴────────────────────────┐  │
-│  │      Rust 后端（lib.rs）               │  │
-│  │   守护进程管理器 + HTTP 代理            │  │
-│  └──────────────┬────────────────────────┘  │
-└─────────────────┼───────────────────────────┘
-                  │ HTTP
-┌─────────────────┴───────────────────────────┐
-│          Node.js 守护进程（Hono）            │
-│  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
-│  │  模型    │ │   工具    │ │   权限      │ │
-│  │  网关    │ │   注册    │ │   守卫      │ │
-│  └──────────┘ └──────────┘ └─────────────┘ │
-│  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
-│  │   MCP    │ │  运行时   │ │   存储      │ │
-│  │   客户端 │ │   核心    │ │   层        │ │
-│  └──────────┘ └──────────┘ └─────────────┘ │
-└─────────────────────────────────────────────┘
-         │              │              │
-    MCP 服务器     AI 提供商       数据库
+┌──────────────────────────────────────────────────────────────┐
+│ Tauri 桌面外壳（Rust）                                        │
+│   ├─ Webview UI（React 19 + Vite + Tailwind）                │
+│   ├─ 守护进程监管：spawn / 健康检查 / 重启 / 关闭              │
+│   └─ HTTP 代理 → 本机守护进程                                 │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ HTTP（仅回环，默认 3001）
+┌───────────────────────────┴──────────────────────────────────┐
+│ Node.js 守护进程（TypeScript + Hono）                         │
+│                                                              │
+│  运行时宿主（注册 · 生命周期 · 状态）                          │
+│   ├─ agent        — 会话循环与工具调用                        │
+│   ├─ tool         — 注册中心、路由、原生工具                  │
+│   ├─ coding       — 执行器适配器、worktree、质量门禁          │
+│   ├─ memory       — 长期记忆与快照                            │
+│   ├─ voice        — 唤醒词、ASR、TTS、打断续听                │
+│   └─ scheduler    — 定时触发的自治任务                        │
+│                                                              │
+│  工作流平面                                                   │
+│   ├─ run dispatcher / queue / slot manager                   │
+│   ├─ delegation（单调收窄）                                   │
+│   ├─ task graph DAG 执行器                                    │
+│   └─ adjudication（对抗式仲裁）                               │
+│                                                              │
+│  横切能力                                                     │
+│   ├─ 权限守卫 + 审批（HITL）                                  │
+│   ├─ 审计日志 + 事件日志                                      │
+│   └─ 持久化（默认 SQLite；可选 Supabase / PostgreSQL）        │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-## 各层职责
+## 分层职责
 
 ### 前端（React）
 
-- 用户界面渲染
-- 状态管理（Zustand）
-- 用户输入处理
-- 显示 AI 响应和工具结果
+渲染会话、工作空间、运行实例、审批与设置。只通过 Tauri 桥接访问守护进程，自身不打开数据库，也不直连模型供应商。
 
 ### Tauri 桥接层（Rust）
 
-- 前端与守护进程之间的 IPC
-- 守护进程生命周期管理（启动、停止、重启）
-- 原生系统集成（文件系统、通知）
-- 到守护进程的 HTTP 代理
+负责启动与监管守护进程 sidecar、转发 HTTP 调用、提供原生能力（路径、窗口、托盘）。所有 IPC 命令都显式注册。
 
 ### 守护进程（Node.js）
 
-- AI 编排和模型路由
-- 工具注册和执行
-- 权限检查和审计日志
-- MCP 服务器管理
-- 数据持久化
+唯一拥有权限的组件。它持有运行时注册表、组装上下文、经模型网关调用模型、在权限守卫之后执行工具，并通过仓储层持久化。
 
-## 通信流程
+### 共享包
 
-```text
-用户输入消息
-  → React 前端捕获输入
-  → Tauri IPC 发送到 Rust 后端
-  → Rust 通过 HTTP 代理到守护进程
-  → 守护进程通过 Jarvis 处理
-  → 响应通过相同路径流式返回
-  → 前端渲染响应
-```
+守护进程组合八个 workspace 包，而不是复制其逻辑：
 
-## 包架构
-
-守护进程使用来自 monorepo 的共享包：
-
-| 包 | 角色 |
+| 包 | 职责 |
 |----|------|
 | `@jarvis/types` | 共享 TypeScript 类型 |
-| `@jarvis/model-gateway` | 多提供商模型路由 |
-| `@jarvis/mcp-client` | MCP 服务器连接 |
-| `@jarvis/tool-registry` | 工具管理 |
-| `@jarvis/permission-guard` | 安全系统 |
-| `@jarvis/runtime-core` | 运行时管理 |
-| `@jarvis/runtime-protocol` | 协议定义 |
-| `@jarvis/execution-environment` | 执行抽象 |
+| `@jarvis/model-gateway` | 供应商解析与模型路由 |
+| `@jarvis/mcp-client` | MCP 连接（stdio、HTTP、SSE） |
+| `@jarvis/tool-registry` | 工具目录与解析 |
+| `@jarvis/permission-guard` | 风险分类、策略、审计 |
+| `@jarvis/runtime-core` | 运行时生命周期原语 |
+| `@jarvis/runtime-protocol` | 运行时协议定义 |
+| `@jarvis/execution-environment` | 执行抽象（基于 worktree） |
+
+## 实际注册了哪些运行时
+
+注册代码位于 `daemon/src/runtimes/index.ts`。已注册到运行时宿主、并通过 `GET /api/runtime/components` 上报状态的共有六个：
+
+`agent`、`tool`、`coding`、`memory`、`voice`、`scheduler`。
+
+**computer-control 未注册。** 它的风险、权限、审计层都已存在，工具也已定义，但执行路径仍直接返回成功而未真正操作操作系统，也没有 Rust 侧能力支撑。注册它会让系统对外宣称一个“运行中却什么都不做”的运行时，因此在真实实现落地前保持不注册。任何文档（包括本文件的历史版本）若把它列为可用运行时，都是错误的。
+
+## 通信
+
+```text
+用户输入
+  → React 前端
+  → Tauri IPC
+  → Rust 守护进程监管（HTTP 代理）
+  → Hono 路由（/api/conversations/:id/messages/stream、/api/chat/stream 等）
+  → agent 运行时：上下文组装 → 模型 → 工具调用 → 完成策略
+  → 沿同一路径以 SSE / JSON 返回
+```
+
+长任务不会阻塞一次对话：run dispatcher 会持久化 `agent_run`，队列为其占用槽位，进度写入事件日志。客户端通过 `GET /api/events` 与 `GET /api/runs/:id/events` 读取。
 
 ## 下一步
 
-- [运行时边界](/docs/architecture/runtime-boundaries) — 组件如何隔离
-- [数据流](/docs/architecture/data-flow) — 详细的请求/响应流程
-- [安全模型](/docs/architecture/security-model) — 安全架构
+- [运行时边界](/docs/architecture/runtime-boundaries) — 每个边界能做什么
+- [数据与控制流](/docs/architecture/data-flow) — 完整的请求与运行生命周期
+- [安全模型](/docs/architecture/security-model) — 各层强制机制
+- [执行器治理](/docs/architecture/executor-governance) — 编码 Agent 如何被约束

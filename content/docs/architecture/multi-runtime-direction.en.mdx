@@ -1,80 +1,65 @@
 ---
-title: Multi-Runtime Roadmap
-description: The long-term architecture vision for CoreLayer.
+title: Multi-Runtime Direction
+description: The long-term architecture target, and what is true today.
 ---
 
-The current single TypeScript daemon is a transition stage. The long-term target is a multi-runtime architecture supervised by the Tauri/Rust core.
+CoreLayer runs as one Node.js daemon that hosts six registered runtimes in-process. The long-term target is a Rust/Tauri core supervising multiple managed runtimes through explicit permission, audit, update, and runtime protocols.
 
-## Current Architecture
+This page separates what exists from what is planned, because the two have been mixed up in earlier versions of the docs.
+
+## Today
 
 ```text
-Tauri Desktop App
-  └─ Single Node.js Daemon
-     └─ All services in one process
+Tauri Desktop Shell (Rust)
+  └─ Node.js daemon (Hono)
+       ├─ agent       (registered)
+       ├─ tool        (registered)
+       ├─ coding      (registered)
+       ├─ memory      (registered)
+       ├─ voice       (registered)
+       └─ scheduler   (registered)
+
+       computer-control   (implemented modules, NOT registered)
 ```
 
-This works well for the current scope but has limitations:
+The runtime host already provides registry, lifecycle, and status, and `GET /api/runtime/components` reports the health of each registered runtime. That is in-process supervision, not process isolation.
 
-- Single point of failure
-- All services share the same process
-- TypeScript has inherent performance limits for some workloads
-
-## Target Architecture
+## Target
 
 ```text
 Tauri/Rust Core
-  ├─ Agent Runtime (TypeScript)
-  ├─ Tool Runtime (TypeScript)
-  ├─ Coding Runtime (TypeScript)
-  ├─ Voice Runtime (TypeScript)
-  ├─ Memory Runtime (TypeScript)
-  ├─ Scheduler Runtime (TypeScript)
-  └─ Computer Control Runtime (Rust)
+  ├─ Runtime supervisor (spawn, restart, resource limits)
+  ├─ Runtime Protocol over IPC
+  ├─ agent / tool / coding / memory / voice / scheduler as managed processes
+  └─ Computer control (Rust, native OS capability)
 ```
 
-Each runtime:
+Each managed runtime would:
 
-- Runs as a managed subprocess
-- Communicates through the Runtime Protocol
-- Can be restarted independently
-- Has its own resource limits
+- run as its own process, restartable independently
+- communicate only through `@jarvis/runtime-protocol`
+- have its own resource envelope
+- be granted capabilities explicitly, never implicitly
 
-## Runtime Protocol
+## Migration path
 
-The `@jarvis/runtime-protocol` package defines the communication contract between the Tauri core and managed runtimes:
+1. **Current** — single daemon, module boundaries enforced by import tests and per-runtime `public-api.ts` facades
+2. **Next** — extract runtimes whose failure domains already diverge (coding, voice)
+3. **Then** — move the supervisor from the Node daemon into the Rust core
+4. **Finally** — computer control behind a real native capability, not a stub
 
-- **Lifecycle** — start, stop, restart, health check
-- **Messaging** — typed request/response
-- **Events** — runtime-to-core notifications
-- **Resource limits** — memory, CPU, time constraints
+Each step keeps the HTTP contract stable, so the frontend does not change.
 
-## Packages Already in Place
+## Why not a full Rust rewrite
 
-| Package | Status | Purpose |
-|---------|--------|---------|
-| `@jarvis/runtime-core` | Active | Runtime management core |
-| `@jarvis/runtime-protocol` | Active | Protocol definitions |
-| `@jarvis/execution-environment` | New | Execution abstraction |
+The daemon's authority is not CPU-bound: it is orchestration, policy, and persistence. Rewriting it in Rust would buy little throughput and cost the iteration speed that matters while the governance model is still evolving. The places where Rust earns its keep are the supervisor and native capabilities — which is where the target puts it.
 
-## Migration Path
+## What would make this page wrong
 
-The migration is incremental:
-
-1. **Phase 1** (current) — single daemon with package boundaries
-2. **Phase 2** — extract voice pipeline into its own runtime
-3. **Phase 3** — extract tool execution into its own runtime
-4. **Phase 4** — full multi-runtime with Rust core supervision
-
-Each phase is backward-compatible. The frontend doesn't change — it still talks to the same HTTP API.
-
-## Why Multi-Runtime?
-
-- **Reliability** — a crash in one runtime doesn't affect others
-- **Performance** — Rust for performance-critical paths
-- **Scalability** — runtimes can be scaled independently
-- **Flexibility** — mix TypeScript and Rust as appropriate
+If computer control is registered and backed by a real capability, or if a runtime starts running as a separate process with its own lifecycle, update this page in the same change. Documentation that describes the target as current is the failure mode this page exists to prevent.
 
 ## Next Steps
 
-- [System Overview](/docs/architecture/system-overview) — current architecture
-- [Runtime Boundaries](/docs/architecture/runtime-boundaries) — current isolation model
+- [System Overview](/docs/architecture/system-overview) — what runs today
+- [Runtime Boundaries](/docs/architecture/runtime-boundaries) — the current isolation model
+- [Executor Governance](/docs/architecture/executor-governance) — the closest thing to runtime supervision that exists now

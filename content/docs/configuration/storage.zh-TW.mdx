@@ -1,98 +1,86 @@
 ---
 title: 儲存
-description: "設定資料儲存模式：本地 SQLite、Supabase 或 PostgreSQL。"
+description: CoreLayer 把狀態存在哪裡，以及如何在 SQLite、Supabase 與 PostgreSQL 之間切換。
 ---
 
-CoreLayer 支援三種儲存後端，可在執行階段進行熱切換。
+CoreLayer 預設把狀態存在本機，也可以改為執行在 Supabase 或自架 PostgreSQL 上。儲存模式在啟動時確定，不按請求切換。
 
 ## 儲存模式
 
-| 模式 | 說明 | 使用情境 |
-|------|-------------|----------|
-| **SQLite** | 本地檔案資料庫（預設） | 個人使用、離線優先 |
-| **Supabase** | 具有即時同步的雲端 PostgreSQL | 多裝置同步 |
-| **PostgreSQL** | 自架 PostgreSQL | 團隊/企業使用 |
+| 模式 | 取值 | 說明 |
+|------|------|------|
+| SQLite | `local`（預設） | 零設定的本機檔案資料庫 |
+| Supabase | `cloud` | 你自己的雲端 PostgreSQL 專案 |
+| PostgreSQL | `postgres` | 自架 PostgreSQL |
 
-## SQLite（預設）
-
-SQLite 是預設的儲存模式。資料儲存在本地 `.db` 檔案中：
+模式存放在獨立檔案 `storage.json` 中（與 `config.json` 同在設定分區）：
 
 ```json
 {
-  "storage": {
-    "mode": "sqlite",
-    "path": "~/.corelayer/data.db"
+  "storageMode": "local",
+  "dbConfig": {
+    "supabaseUrl": "https://your-project.supabase.co",
+    "supabaseServiceKey": "…",
+    "postgresUrl": "postgresql://user:pass@host:5432/corelayer"
   }
 }
 ```
 
-無需外部依賴。完全離線運作。
+`dbConfig` 僅在 cloud 與 postgres 模式下需要。PostgreSQL 也支援環境變數 `DATABASE_URL`。
 
-## Supabase
+切換在 **設定 → 儲存** 中完成，它會寫入該檔案。新模式由守護行程**重啟後**生效，並非線上熱切換。
 
-連接到 Supabase 以進行雲端同步：
+## 磁碟配置
 
-```json
-{
-  "storage": {
-    "mode": "supabase",
-    "url": "https://your-project.supabase.co",
-    "anonKey": "eyJ..."
-  }
-}
+本機狀態分布在 CoreLayer 主目錄（可用 `JARVIS_HOME` 覆寫；桌面預設 `~/.jarvis`）下的六個分區：
+
+```text
+~/.jarvis/
+├── config/      config.json · routing.json          （無密鑰）
+├── security/    credentials.json                     （POSIX 下 0600）
+├── memory/      USER.md · MEMORY.md · journal/ · dreams/
+├── storage/     jarvis.db
+├── worktrees/   active/ · snapshots/
+└── cache/       symbol-graph/ · mcp-schemas/ · delegation-pipes/
 ```
 
-設定 Supabase：
-1. 在 [supabase.com](https://supabase.com) 建立專案
-2. 執行 CoreLayer 遷移腳本
-3. 新增你的專案 URL 和匿名金鑰
+憑證從 `security/credentials.json` 讀取；當新位置不存在時，仍相容舊的 `config/credentials.json`。
 
-## PostgreSQL
+在 sidecar 模式下，外殼可透過 `JARVIS_APP_DATA_DIR`、`JARVIS_LOG_DIR` 與 `SQLITE_DB_PATH` 覆寫根目錄。
 
-連接到自架的 PostgreSQL 實例：
+### 已知例外
 
-```json
-{
-  "storage": {
-    "mode": "postgres",
-    "connectionString": "postgresql://user:pass@localhost:5432/corelayer"
-  }
-}
-```
+有兩個檔案仍然解析到舊位置，而非六分區配置：
 
-## 熱切換
+- `mcp-servers.json` 從 `~/.jarvis/config/mcp-servers.json` 讀取
+- SQLite 路徑沿用 app-paths 的解析結果（除非設定 `SQLITE_DB_PATH`，否則為 `data/jarvis.db`）
 
-你可以從控制中心在執行階段切換儲存模式：
+這裡把兩者作為例外寫明，而不是悄悄描述成新配置的一部分。
 
-1. 開啟 **設定 → 儲存**
-2. 選擇新模式
-3. 輸入連接詳情
-4. 按一下 **切換**
+## 資料結構
 
-CoreLayer 會自動在模式之間遷移資料。
+資料庫由 Drizzle 遷移管理。
 
-## 資料模式 (Data Schema)
+| 分組 | 表 |
+|------|----|
+| 工作結構 | `workspaces`、`workspace_agents`、`projects`、`agent_profiles`、`tasks`、`artifacts`、`goals`、`plans` |
+| 執行 | `agent_runs`、`agent_run_events`、`executor_runs`、`execution_logs`、`environment_sessions`、`environment_events` |
+| 治理 | `approval_requests`、`permission_memories`、`capability_grants`、`pending_actions`、`tool_call_logs`、`audit_log`、`event_log` |
+| 對話 | `conversations`、`messages` |
+| 知識 | `memories`、`articles`、`reviews` |
+| 設定 | `app_connections`、`model_profiles`、`scheduled_tasks` |
+| 頻道 | `channel_accounts`、`channel_conversations`、`channel_messages` |
 
-CoreLayer 採用本地優先的高完整度資料庫表設計，儲存以下主要實體：
+## 如何選擇
 
-*   **workspaces** — 頂層工作空間，管理用戶目標、任務拆解與執行階段狀態
-*   **projects** — 工作空間內的項目，包含項目規格（spec）、技術棧及本地根路徑
-*   **tasks** — 任務節點，形成任務圖（Task Graph）並追蹤 Agent 執行依賴
-*   **artifacts** — 交付產物，將最終有價值的交付檔案/報告與執行過程中的日誌及噪音分離
-*   **agent_runs** — 單次 Agent 運行記錄，追蹤狀態、耗時、模型路由與事件日誌
-*   **approval_requests** — 掛起的高風險操作，記錄用戶對工具執行的安全審查決策
-*   **permission_memories** — 權限快取記憶，針對特定項目或會話臨時授權以防頻繁彈窗
-*   **conversations** / **messages** — 聊天對話歷史及單條訊息記錄
-*   **tool_call_logs** — 稽核日誌，記錄每次工具呼叫的耗時、參數、風險等級及結果
-*   **app_connections** — 已經設定的本地/遠端 MCP 伺服器與外部應用程式連接
-*   **model_profiles** — 模型閘道的供應商設定與介面端點
-*   **memories** — Jarvis 的長期記憶（facts、preferences、context、pinned）
-*   **scheduled_tasks** — 定時觸發的自動化 Cron 任務與技能
-*   **environment_sessions** / **environment_events** — 隔離的開發沙箱環境會話及事件流
-*   **articles** — 閱讀清單條目
-*   **reviews** — 每日/每週回顧摘要
+- **SQLite** — 單機、離線、查詢最快。預設。
+- **Supabase** — 多裝置，並希望託管備份；專案與策略由你掌控。
+- **PostgreSQL** — 你已維運資料庫，不想引入第三方控制面。
+
+後端之間沒有背景複寫：切換模式即意味著守護行程讀寫你選定的後端。
 
 ## 下一步
 
-- [權限守護](/docs/core-concepts/permission-guard) — 資料存取如何被控制
-- [安全模型](/docs/architecture/security-model) — 儲存安全細節
+- [安全模型](/docs/architecture/security-model) — 哪些資料敏感、存在哪裡
+- [設定檔](/docs/reference/config-file) — 完整設定參考
+- [權限](/docs/configuration/permissions) — 策略設定

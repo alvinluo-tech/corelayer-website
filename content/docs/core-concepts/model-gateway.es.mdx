@@ -1,52 +1,54 @@
 ---
 title: Model Gateway
-description: Enrutamiento y seleccion de modelos multi-proveedor.
+description: Como CoreLayer convierte un id de proveedor en una llamada de modelo en streaming.
 ---
 
-El Model Gateway gestiona las conexiones a proveedores de modelos de IA y enruta las solicitudes al mejor modelo disponible.
+El Model Gateway es el unico camino de un turno de agente hacia un modelo. Resuelve el proveedor activo, adapta la peticion a la familia de modelo, hace streaming y degrada cuando un proveedor no esta sano.
 
-## Arquitectura
+## Camino
 
 ```text
-Solicitud de Jarvis
-  → Model Gateway
-  → Logica de seleccion de proveedor
-  → Vercel AI SDK
-  → API del Proveedor (Groq / OpenRouter / Ollama / OpenAI-compatible)
-  → Streaming de respuesta de vuelta a Jarvis
+Turno del agente
+  → activeProvider / activeModel (o coincidencia de una regla de enrutado)
+  → resolveProvider(id): configuracion → credenciales → entorno → base URL por defecto
+  → cliente compatible con OpenAI (Vercel AI SDK v6)
+  → adaptacion por familia (modelos de razonamiento, Anthropic)
+  → llamada en streaming
+  → deltas de texto y tool calls de vuelta al bucle
 ```
 
-## Construido sobre Vercel AI SDK
+## Un adaptador, muchos proveedores
 
-El Model Gateway usa [Vercel AI SDK v6+](https://sdk.vercel.ai) para:
+Todos los proveedores remotos se llaman por el mismo adaptador compatible con OpenAI. Eso es lo que hace a los proveedores intercambiables: un proveedor es una base URL y una clave, y su lista de modelos es dato en lugar de una rama de codigo.
 
-- Interfaz unificada entre proveedores
-- Respuestas en streaming
-- Soporte de llamadas a herramientas
-- Salida estructurada
+## Control del bucle
 
-## Logica de Enrutamiento
+El bucle del agente es el bucle core de Vercel AI SDK, no un `while` escrito a mano:
 
-El gateway selecciona modelos basandose en:
+- `prepareStep` decide por paso que herramientas existen y si el turno puede continuar
+- los loop breakers (llamadas identicas repetidas, deteccion de falta de progreso) y el presupuesto de pasos (`defaults.maxSteps`, maximo 100) acotan el turno
+- timeouts: `streamTimeout` por llamada, `turnTimeout` por turno
 
-1. **Tipo de tarea** — razonamiento, generacion de codigo, resumen, clasificacion
-2. **Requisitos de latencia** — la voz en tiempo real necesita modelos rapidos
-3. **Coste** — las tareas rutinarias usan modelos mas economicos
-4. **Respaldo** — si el proveedor principal no esta disponible
-
-## Configuracion de Proveedores
-
-Consulta [Proveedores de Modelos](/docs/configuration/model-providers) para detalles de configuracion.
+La inyeccion de mensajes a mitad de ejecucion en un bucle escrito a mano ya no existe; `POST /api/runs/:id/message` devuelve `410`.
 
 ## Streaming
 
-Todas las respuestas de modelo se transmiten en streaming por defecto. Esto significa:
+Las respuestas se hacen streaming por defecto:
 
-- El texto aparece a medida que se genera
-- TTS puede hablar frases a medida que se completan (streaming a nivel de frase)
-- Las llamadas a herramientas se ejecutan tan pronto como se identifican
+- El texto aparece segun se genera
+- TTS puede leer oracion por oracion
+- Las tool calls se ejecutan en cuanto un paso las produce
 
-## Siguientes Pasos
+## Salud y fallback
+
+Un proveedor que falla dos veces seguidas entra en un cooldown de 20 segundos con backoff exponencial en fallos repetidos. Mientras esta en cooldown, las llamadas lo saltan en lugar de esperar el mismo timeout. El primer exito resetea el contador.
+
+## Medir coste
+
+El uso de tokens se registra cuando el proveedor lo reporta. Los ejecutores manejados por ACP no se pueden medir (el protocolo no tiene actualizacion de uso), asi que sus cifras de coste son explicitamente estimaciones y no recuentos del proveedor.
+
+## Siguientes pasos
 
 - [Proveedores de Modelos](/docs/configuration/model-providers) — configurar proveedores
-- [Configurar Modelos Locales](/docs/guides/configure-local-models) — configurar Ollama
+- [Configurar Modelos Locales](/docs/guides/configure-local-models) — Ollama
+- [Evaluacion de Fiabilidad](/docs/architecture/reliability-eval) — por que la tasa de exito no basta

@@ -1,0 +1,69 @@
+---
+title: Executor Governance
+description: How CoreLayer turns an unmanaged coding agent into a supervised executor.
+---
+
+Claude Code, Codex, and OpenCode are capable agents, but run directly against a shell they are an unbounded process: they can write anywhere, run anything, and report whatever they like. CoreLayer does not reimplement them. It wraps them in a governance layer and keeps the parts that decide whether their work is acceptable.
+
+## The pipeline
+
+```text
+Dispatch request
+  → validate delegation bounds (reject early, before any process exists)
+  → allocate a queue slot
+  → create an isolated git worktree
+  → probe capability (acpx <agent> sessions ensure)
+      ready        → proceed
+      needs_auth   → tell the user which login is missing
+      unreachable  → report the launch error, do not spin
+  → spawn the executor with pinned executor + model
+  → map its stream events into run events
+  → capture diff and artifacts
+  → quality gates → adversarial judge (if enabled)
+  → completion policy: deliver, retry, or fail with a reason
+```
+
+## Delegation bounds
+
+A run that delegates work to a child may only **narrow** what it itself could do. The rules are:
+
+| Bound | Narrowing rule |
+|-------|----------------|
+| `allowedPaths` | Glob intersection with the parent's scope; a request outside the repository is rejected outright |
+| `testCommands` | Additive — a child cannot drop a check its parent requires |
+| `requiredArtifactTypes` | Additive |
+| `timeoutMs` | `min(child, parent, 30 min)`, floored at 30 s |
+| `allowedTools` | Intersection — a child may hold fewer tools, never one the parent lacks |
+| `executor` / `executorModel` | Pinned; a child cannot switch to a different executor or model |
+
+Two consequences worth stating: an empty parent scope means "never confined yet", so the child's request becomes the first confinement; and a delegation prompt over 8,000 characters is rejected — a delegation names one job, it is not a document transfer.
+
+## Isolation
+
+- Every coding run gets its own git worktree under `worktrees/active`; archived snapshots go to `worktrees/snapshots`.
+- The path policy judges the paths it is handed after normalization, so Windows separators and `git status` prefixes cannot make a legitimate path look like an escape.
+- Delivery is a reviewable branch, not a write into your working tree.
+
+## Evidence, not claims
+
+An executor saying "done" is not evidence. CoreLayer treats completion as a checkable claim:
+
+- **Completion policy** — `test: <command>`, `artifact: <type>`, `path: <glob>` criteria from the task are compiled into checks; free-form criteria stay manual and are not pretended to be verified.
+- **Quality gates** — task-type gates (for example coding) must pass before delivery when marked required.
+- **Adversarial judge** — an independent review of the diff against the task, off by default (`adjudication.enabled = false`). It costs one model call per attempt and only has evidence to judge when a diff exists and a test command actually ran.
+
+## Capability negotiation
+
+An executor is not assumed to support something. The capability probe performs the full ACP handshake (`initialize` + `session/new`) with no prompt turn, so it costs no tokens, and caches the result per launch configuration. The distinction matters: "installed" does not tell you whether an agent is ready, needs a login, or has a broken launch command.
+
+## What is deliberately not done
+
+- No attempt to re-prompt a hung executor forever: the run budget applies twice (executor-side and harness-side), and environment faults are classified rather than blamed on the agent.
+- No silent widening: if a child asks for a model or path it was not granted, the run is rejected before it starts.
+- No claiming computer control: that runtime is not registered.
+
+## Next Steps
+
+- [Coding Executor Adapters](/docs/guides/coding-executors) — configure Claude Code, Codex, or OpenCode
+- [Reliability Evaluation](/docs/architecture/reliability-eval) — measure whether a change actually helps
+- [Security Model](/docs/architecture/security-model) — the surrounding enforcement layers

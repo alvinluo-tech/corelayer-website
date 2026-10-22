@@ -1,94 +1,100 @@
 ---
 title: Vista General del Sistema
-description: "Arquitectura de CoreLayer: modelo de proxy de tres capas."
+description: "Como encaja CoreLayer: el shell de Tauri, el daemon de Node.js, los runtimes registrados y la tuberia de ejecucion."
 ---
 
-CoreLayer utiliza un modelo de proxy de tres capas que separa la interfaz de usuario, la logica de negocio y el acceso a datos.
+CoreLayer es un **Agent OS** de escritorio local-first. Un shell de Tauri aloja la UI y supervisa un daemon de Node.js; el daemon posee todos los runtimes, todas las llamadas a herramientas y todo el estado persistido.
 
-## Diagrama de Arquitectura
+Esta pagina describe lo que realmente contiene el sistema en ejecucion. Para la direccion a largo plazo, consulta [Direccion Multi-Runtime](/docs/architecture/multi-runtime-direction).
+
+## Topologia
 
 ```text
-┌─────────────────────────────────────────────┐
-│           Aplicacion Escritorio Tauri       │
-│  ┌───────────────────────────────────────┐  │
-│  │     React 19 + Vite + Tailwind 4     │  │
-│  │         (Capa UI Frontend)            │  │
-│  └──────────────┬────────────────────────┘  │
-│                 │ Tauri IPC                  │
-│  ┌──────────────┴────────────────────────┐  │
-│  │      Backend Rust (lib.rs)            │  │
-│  │   Supervisor Daemon + Proxy HTTP      │  │
-│  └──────────────┬────────────────────────┘  │
-└─────────────────┼───────────────────────────┘
-                  │ HTTP
-┌─────────────────┴───────────────────────────┐
-│          Daemon Node.js (Hono)              │
-│  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
-│  │  Model   │ │   Tool   │ │ Permission  │ │
-│  │ Gateway  │ │ Registry │ │   Guard     │ │
-│  └──────────┘ └──────────┘ └─────────────┘ │
-│  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
-│  │   MCP    │ │ Runtime  │ │  Storage    │ │
-│  │  Client  │ │  Core    │ │   Layer     │ │
-│  └──────────┘ └──────────┘ └─────────────┘ │
-└─────────────────────────────────────────────┘
-         │              │              │
-    Servidores MCP  Proveedores IA  Base de datos
+┌──────────────────────────────────────────────────────────────┐
+│ Shell de escritorio Tauri (Rust)                             │
+│   ├─ UI Webview (React 19 + Vite + Tailwind)                 │
+│   ├─ Supervisor del daemon: arranque / salud / reinicio      │
+│   └─ Proxy HTTP → daemon local                               │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ HTTP (solo loopback, puerto 3001)
+┌───────────────────────────┴──────────────────────────────────┐
+│ Daemon Node.js (TypeScript + Hono)                           │
+│                                                              │
+│  Host de runtimes (registro · ciclo de vida · estado)        │
+│   ├─ agent        — bucle de conversacion y tool calling      │
+│   ├─ tool         — registro, enrutado, herramientas nativas  │
+│   ├─ coding       — adaptadores de ejecutor, worktrees, gates │
+│   ├─ memory       — memoria de largo plazo y snapshots        │
+│   ├─ voice        — wake word, ASR, TTS, barge-in             │
+│   └─ scheduler    — trabajo autonomo por cron                 │
+│                                                              │
+│  Plano de workflow                                           │
+│   ├─ run dispatcher / queue / slot manager                   │
+│   ├─ delegation (narrowing monotono)                         │
+│   ├─ ejecutor de DAG de task graph                           │
+│   └─ adjudication (juez adversarial)                         │
+│                                                              │
+│  Transversal                                                 │
+│   ├─ Permission guard + aprobaciones (HITL)                  │
+│   ├─ Audit log + event log                                   │
+│   └─ Persistencia (SQLite por defecto; Supabase/PostgreSQL)   │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-## Responsabilidades de Capa
+## Capas
 
 ### Frontend (React)
 
-- Renderizado de la interfaz de usuario
-- Gestion de estado (Zustand)
-- Manejo de entrada del usuario
-- Presentacion de respuestas de IA y resultados de herramientas
+Renderiza conversaciones, workspaces, ejecuciones, aprobaciones y ajustes. Habla con el daemon solo a traves del puente de Tauri; nunca abre una base de datos ni una conexion a un proveedor por si mismo.
 
-### Puente Tauri (Rust)
+### Puente de Tauri (Rust)
 
-- IPC entre frontend y daemon
-- Gestion del ciclo de vida del daemon (inicio, parada, reinicio)
-- Integracion nativa del sistema (sistema de archivos, notificaciones)
-- Proxy HTTP al daemon
+Arranca y supervisa el sidecar del daemon, reenvia llamadas HTTP y provee capacidades nativas (rutas, ventana, bandeja). Todos los comandos IPC estan registrados explicitamente.
 
 ### Daemon (Node.js)
 
-- Orquestacion de IA y enrutamiento de modelos
-- Registro y ejecucion de herramientas
-- Verificacion de permisos y registro de auditoria
-- Gestion de servidores MCP
-- Persistencia de datos
+El unico componente con autoridad. Mantiene el registro de runtimes, ensambla el contexto, llama a modelos por el Model Gateway, ejecuta herramientas detras del Permission Guard y persiste todo a traves de la capa de repositorios.
 
-## Flujo de Comunicacion
+### Paquetes compartidos
 
-```text
-El usuario escribe un mensaje
-  → El frontend React captura la entrada
-  → Tauri IPC envia al backend Rust
-  → Rust hace proxy HTTP al daemon
-  → El daemon procesa con Jarvis
-  → La respuesta se transmite de vuelta por la misma ruta
-  → El frontend renderiza la respuesta
-```
-
-## Arquitectura de Paquetes
-
-El daemon consume paquetes compartidos del monorepo:
+El daemon compone ocho paquetes del workspace en lugar de duplicar su logica:
 
 | Paquete | Rol |
-|---------|------|
+|---------|-----|
 | `@jarvis/types` | Tipos TypeScript compartidos |
-| `@jarvis/model-gateway` | Enrutamiento multi-proveedor de modelos |
-| `@jarvis/mcp-client` | Conexiones a servidores MCP |
-| `@jarvis/tool-registry` | Gestion de herramientas |
-| `@jarvis/permission-guard` | Sistema de seguridad |
-| `@jarvis/runtime-core` | Gestion de runtime |
-| `@jarvis/runtime-protocol` | Definiciones de protocolo |
-| `@jarvis/execution-environment` | Abstraccion de ejecucion |
+| `@jarvis/model-gateway` | Resolucion de proveedor y enrutado de modelos |
+| `@jarvis/mcp-client` | Conexiones MCP (stdio, HTTP, SSE) |
+| `@jarvis/tool-registry` | Catalogo y resolucion de herramientas |
+| `@jarvis/permission-guard` | Clasificacion de riesgo, politica, auditoria |
+| `@jarvis/runtime-core` | Primitivas de ciclo de vida de runtime |
+| `@jarvis/runtime-protocol` | Definiciones del contrato de runtime |
+| `@jarvis/execution-environment` | Abstraccion de ejecucion (basada en worktree) |
 
-## Siguientes Pasos
+## Que esta registrado
 
-- [Limites de Runtime](/docs/architecture/runtime-boundaries) — como se aíslan los componentes
-- [Flujo de Datos](/docs/architecture/data-flow) — flujo detallado de solicitud/respuesta
-- [Modelo de Seguridad](/docs/architecture/security-model) — arquitectura de seguridad
+El registro de runtimes vive en `daemon/src/runtimes/index.ts`. Seis runtimes estan registrados en el host y reportan estado por `GET /api/runtime/components`:
+
+`agent`, `tool`, `coding`, `memory`, `voice`, `scheduler`.
+
+**Computer control no esta registrado.** Sus capas de riesgo, permisos y auditoria existen y sus herramientas estan definidas, pero la ruta de ejecucion aun no toca el sistema operativo y no hay capacidad del lado de Rust que lo respalde. Registrarlo anunciaria un runtime que no hace nada, asi que se mantiene fuera hasta que exista una implementacion real. Cualquier documentacion (incluidas versiones anteriores de estas paginas) que lo liste como runtime activo es incorrecta.
+
+## Comunicacion
+
+```text
+Entrada del usuario
+  → frontend React
+  → IPC de Tauri
+  → supervisor Rust del daemon (proxy HTTP)
+  → ruta Hono (/api/conversations/:id/messages/stream, /api/chat/stream, …)
+  → runtime agent: ensamblado de contexto → modelo → tool calls → politica de completion
+  → respuesta SSE / JSON por el mismo camino
+```
+
+El trabajo de larga duracion no bloquea un turno de chat: el dispatcher persiste un `agent_run`, la cola reserva un slot y los eventos se escriben en el event log mientras avanza. Los clientes los leen con `GET /api/events` y `GET /api/runs/:id/events`.
+
+## Siguientes pasos
+
+- [Limites de Runtime](/docs/architecture/runtime-boundaries) — que puede hacer cada limite
+- [Flujo de Datos y Control](/docs/architecture/data-flow) — el ciclo completo de peticion y ejecucion
+- [Modelo de Seguridad](/docs/architecture/security-model) — las capas de aplicacion
+- [Gobernanza de Ejecutores](/docs/architecture/executor-governance) — como se contiene a los agentes de codigo

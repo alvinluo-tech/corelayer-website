@@ -1,0 +1,79 @@
+---
+title: Coding Executor Adapters
+description: Connect Claude Code, Codex, or OpenCode and understand what CoreLayer constrains.
+---
+
+CoreLayer does not implement a coding agent. It dispatches work to one you already trust and constrains it. Four adapters are registered: `claude-code`, `codex`, `opencode`, and `acp`.
+
+## Adapters
+
+| ID | Drives | Notes |
+|----|--------|-------|
+| `claude-code` | Claude Code CLI | Runs on a DeepSeek model only (see below) |
+| `codex` | Codex CLI | |
+| `opencode` | OpenCode CLI | |
+| `acp` | Any ACP agent through `acpx` | Structured events, capability probe, model guard |
+
+The CLI adapters cannot intercept individual tool calls — a CLI agent decides for itself what to run. They are therefore excluded when a caller requires approval interception rather than being used with weaker guarantees. `acp` is the adapter that supports per-tool permission routing.
+
+## Selection
+
+An executor is chosen by capability, not by "whatever is installed":
+
+- If a caller names a preferred adapter, it is tried first.
+- Otherwise a deterministic fallback picks the first registered adapter that satisfies the requested requirements (`requiresCancellation`, `requiresStructuredEvents`, tool-call approval interception).
+- The selection reason is recorded, so a run explains why it used the executor it did.
+
+## Claude Code is restricted to DeepSeek
+
+The ACP adapter enforces this before spawning:
+
+```text
+ANTHROPIC_MODEL (or the executor policy model) must begin with "deepseek"
+otherwise the run is rejected — not rewritten, not silently downgraded
+```
+
+The reason is concrete: routing a Claude-family label (`opus`, `sonnet`) to a DeepSeek-compatible endpoint fails with `model_not_found`, which reads like a credential error and sends you debugging the wrong layer.
+
+## What the adapter handles
+
+- **Isolation from `~/.claude`** — the run gets a temporary `CLAUDE_CONFIG_DIR` containing an empty `settings.json`, so your personal settings cannot override the endpoint or model CoreLayer passes in.
+- **No TTY** — `session/request_permission` is answered deterministically from the configured permission policy and allowed tools; it never blocks waiting for a terminal.
+- **Event translation** — ACP `session/update` messages become normalized coding events; open tool calls at exit are flushed rather than dropped.
+- **Budget** — the timeout is passed to `acpx` and enforced by the daemon as well.
+
+## Prerequisites
+
+`acpx` must be installed (`npm install acpx`). If it is missing, the capability probe reports `unreachable` with the install hint rather than failing later inside a run.
+
+Credentials come from the Anthropic-compatible variables used by the agent:
+
+```powershell
+$env:ANTHROPIC_MODEL='deepseek-v4.1-flash'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+```
+
+## Capability states
+
+| State | Meaning | What to do |
+|-------|---------|-----------|
+| `ready` | Handshake succeeded | Nothing |
+| `needs_auth` | The agent started but lacks credentials | Complete the agent's login |
+| `unreachable` | Launch failed or `acpx` missing | Check the install and command |
+
+The probe performs `initialize` + `session/new` only — no prompt turn — so it costs no model tokens. Results are cached per launch configuration.
+
+## Diagnosing
+
+```text
+GET  /api/runtimes/coding/diagnostics
+GET  /api/runtimes/coding/diagnostics/health
+POST /api/runtimes/coding/:id/dry-run
+```
+
+## Next Steps
+
+- [Executor Governance](/docs/architecture/executor-governance) — bounds, isolation, and evidence
+- [Run a Reliability Eval](/docs/guides/run-reliability-eval) — measure the executor you just connected
+- [Permissions](/docs/configuration/permissions) — how tool approvals apply to executors

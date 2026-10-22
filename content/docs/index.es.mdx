@@ -32,9 +32,9 @@ CoreLayer se interpone entre tu ecosistema de aplicaciones personales. En lugar 
 
 - **Voz nativa** — palabra de activacion, ASR/TTS en streaming, interrupcion por voz
 - **MCP primero** — conecta servidores de herramientas externos a traves del Model Context Protocol
-- **Conciencia de herramientas** — registro unificado para modulos nativos, herramientas MCP, habilidades y adaptadores REST
-- **Protegido por permisos** — las acciones riesgosas se clasifican, pausan para aprobacion y se registran
-- **Local primero** — SQLite en tu maquina, sincronizacion opcional en la nube con Supabase
+- **Conciencia de herramientas** — registro unificado de herramientas nativas, MCP y habilidades, con descubrimiento bajo demanda
+- **Protegido por permisos** — el riesgo se declara al registrar, nunca se infiere del nombre; las aprobaciones sobreviven reinicios y todo queda auditado
+- **Local primero** — layout en disco de seis zonas, SQLite por defecto y Supabase / PostgreSQL opcionales
 
 ## Secciones de Documentacion
 
@@ -42,7 +42,7 @@ CoreLayer se interpone entre tu ecosistema de aplicaciones personales. En lugar 
 |---------|-----------------|
 | [Primeros Pasos](/docs/getting-started/what-is-corelayer) | Instalacion, inicio rapido, primera conexion MCP |
 | [Configuracion](/docs/configuration/model-providers) | Proveedores de modelos, servidores MCP, almacenamiento, voz, permisos |
-| [Conceptos Clave](/docs/core-concepts/jarvis) | Jarvis, Centro de Control, Model Gateway, Tool Registry, Permission Guard |
-| [Guias](/docs/guides/connect-mcp-app) | Guias paso a paso para flujos de trabajo comunes |
-| [Referencia](/docs/reference/config-file) | Archivo de configuracion, comandos CLI, endpoints API |
-| [Arquitectura](/docs/architecture/system-overview) | Diseno del sistema, limites de runtime, flujo de datos |
+| [Conceptos Clave](/docs/core-concepts/jarvis) | Jarvis, Centro de Control, Model Gateway, Tool Registry, Permission Guard, Memoria, Habilidades |
+| [Guias](/docs/guides/connect-mcp-app) | Guias paso a paso, incluidos ejecutores de codigo y evaluacion de fiabilidad |
+| [Referencia](/docs/reference/config-file) | Archivo de configuracion, comandos CLI, endpoints API, solucion de problemas |
+| [Arquitectura](/docs/architecture/system-overview) | Diseno del sistema, limites de runtime, flujo de datos, gobernanza de ejecutores |

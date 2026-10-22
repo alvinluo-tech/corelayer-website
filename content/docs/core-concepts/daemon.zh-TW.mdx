@@ -1,66 +1,55 @@
 ---
 title: 守護程式
-description: 驅動 CoreLayer AI 編排的 Node.js 後端。
+description: 擁有全部執行階段、工具呼叫與狀態的 Node.js 行程。
 ---
 
-守護程式是一個在背景運行的 Node.js 程序，處理所有 AI 編排、工具執行和資料管理。
+守護行程是一個在背景執行的 Node.js 行程（TypeScript + Hono HTTP），擁有全部權限。Tauri 外殼監管它；除此之外任何元件都不得直連模型供應商、資料庫或執行器。
 
-## 架構
+## 結構
 
 ```text
-Tauri 桌面應用程式（Rust）
-  └─ 守護程式監督器（Rust）
-     └─ Node.js 守護程式（Hono HTTP 伺服器）
-        ├─ 模型閘道
-        ├─ 工具註冊表
-        ├─ 權限守護
-        ├─ MCP 用戶端管理器
-        └─ 資料庫（SQLite / Supabase / PostgreSQL）
+Tauri 桌面外殼（Rust）
+  └─ 守護行程監管（啟動 · 健康 · 重啟 · 終止）
+     └─ Node.js 守護行程（Hono，回環 HTTP）
+        ├─ 執行階段宿主        agent · tool · coding · memory · voice · scheduler
+        ├─ 工作流平面        dispatcher · queue · slots · delegation · DAG · judge
+        ├─ 權限守護          風險 → 策略 → 核准 → 稽核
+        ├─ MCP 用戶端        stdio / HTTP / SSE 伺服器
+        └─ 持久化            SQLite（預設）· Supabase · PostgreSQL
 ```
 
-## 守護程式監督器
+## 監管行程
 
-Tauri 應用程式包含一個基於 Rust 的守護程式監督器，它會：
+Rust 側負責：
 
-- 在應用程式啟動時**啟動**守護程式程序
-- **監控**守護程式健康狀態
-- 如果守護程式崩潰，**重新啟動**它
-- 在應用程式關閉時**停止**守護程式
+- 應用啟動時拉起守護行程 sidecar
+- 健康檢查並在崩潰時重啟
+- 透過環境變數傳入路徑與連接埠
+- 結束時終止守護行程
 
-## HTTP API
+執行狀態透過 `GET /api/runtime/status`（pid、執行時長、記憶體、儲存模式、路徑、各執行階段健康）與 `GET /api/runtime/components` 暴露給介面。
 
-守護程式在 `localhost:3001` 上公開 HTTP API（可透過 `config.json` 中的 `daemon.port` 欄位設定）。Tauri 前端透過 Tauri 的 IPC 橋接與此 API 通訊。
+## HTTP 介面
 
-## 開發模式
+守護行程監聽回環，預設連接埠 `3001`。路由群組在 `daemon/src/bootstrap/register-routes.ts` 中掛載：
 
-在開發中，守護程式使用熱重載運行：
+`/api/chat` · `/api/conversations` · `/api/tasks` · `/api/articles` · `/api/reviews` · `/api/settings` · `/api/voice` · `/api/mcp` · `/api/tools` · `/api/tasks/scheduled` · `/api/approvals` · `/api/workspaces` · `/api/projects` · `/api/runs` · `/api/runtimes` · `/api/runtime/queue` · `/api/memories` · `/api/agent-profiles` · `/api/events` · `/api/audit` · `/api/runtime` · `/api/agent-broker`
 
-```bash
-pnpm dev:daemon
-```
+重要端點見 [API 參考](/docs/reference/api-endpoints)。
 
-這使用 `tsx watch` 在檔案變更時重新啟動。
+## 開發與生產
 
-## 生產模式
+| 模式 | 執行方式 |
+|------|----------|
+| 開發 | `pnpm dev:daemon` — `tsx watch` 變更即重啟 |
+| 生產 | `pnpm build:daemon:sidecar` — 打包為 SEA 二進位，由外殼拉起 |
 
-在生產版本中，守護程式作為 sidecar 二進位檔打包：
+## 狀態
 
-```bash
-pnpm build:daemon:sidecar
-```
-
-sidecar 與 Tauri 應用程式捆綁在一起，作為獨立程序運行。
-
-## 健康監控
-
-控制中心顯示守護程式狀態：
-
-- **健康** — 守護程式正在運行且回應正常
-- **啟動中** — 守護程式正在初始化
-- **不健康** — 守護程式沒有回應
-- **已停止** — 守護程式已被有意停止
+除持久化的內容外，守護行程在重啟之間是無狀態的。長任務以執行記錄與佇列項目持久化，待定核准也會落庫，因此重啟是「續上」而不是「遺忘」。
 
 ## 下一步
 
-- [系統概覽](/docs/architecture/system-overview) — 完整架構
-- [從原始碼建置](/docs/guides/build-from-source) — 建置守護程式
+- [系統概覽](/docs/architecture/system-overview) — 完整拓撲
+- [儲存](/docs/configuration/storage) — 狀態在磁碟上的位置
+- [從原始碼建置](/docs/guides/build-from-source) — 建置守護行程

@@ -1,0 +1,79 @@
+---
+title: 编码执行器适配器
+description: 连接 Claude Code、Codex 或 OpenCode，并弄清 CoreLayer 对它们施加了什么约束。
+---
+
+CoreLayer 不实现编码 Agent。它把工作派发给你已经信任的 Agent，并对其施加约束。系统注册了四个适配器：`claude-code`、`codex`、`opencode`、`acp`。
+
+## 适配器
+
+| ID | 驱动对象 | 说明 |
+|----|----------|------|
+| `claude-code` | Claude Code CLI | 只能运行 DeepSeek 模型（见下） |
+| `codex` | Codex CLI | |
+| `opencode` | OpenCode CLI | |
+| `acp` | 通过 `acpx` 驱动任意 ACP Agent | 结构化事件、能力探测、模型守卫 |
+
+CLI 适配器无法逐个拦截工具调用——CLI Agent 自己决定执行什么。因此当调用方要求“工具调用需经审批拦截”时，它们会被排除，而不是以更弱的保证被使用。`acp` 是支持逐工具权限路由的适配器。
+
+## 选择
+
+执行器按能力选择，而不是“装了哪个用哪个”：
+
+- 调用方指定了首选适配器时，优先尝试它。
+- 否则按确定性回退顺序，选择第一个满足要求（`requiresCancellation`、`requiresStructuredEvents`、工具调用审批拦截）的已注册适配器。
+- 选择原因会被记录，因此一次运行能解释自己为何使用该执行器。
+
+## Claude Code 只允许 DeepSeek
+
+ACP 适配器在启动前强制检查：
+
+```text
+ANTHROPIC_MODEL（或执行器策略模型）必须以 "deepseek" 开头
+否则直接拒绝运行——不改写、不静默降级
+```
+
+原因很具体：把 Claude 家族标签（`opus`、`sonnet`）路由到 DeepSeek 兼容端点会返回 `model_not_found`，读起来像凭据错误，会让你去排查错误的层。
+
+## 适配器负责什么
+
+- **与 `~/.claude` 隔离** — 运行使用临时 `CLAUDE_CONFIG_DIR`，其中只有一个空 `settings.json`，你的个人设置无法覆盖 CoreLayer 传入的端点或模型。
+- **没有 TTY** — `session/request_permission` 依据配置的权限策略与允许工具确定性应答，绝不会阻塞等待终端输入。
+- **事件翻译** — ACP `session/update` 转换为规范化编码事件；退出时未闭合的工具调用会被冲刷上报而不是丢弃。
+- **预算** — 超时既传给 `acpx`，也由守护进程自身强制。
+
+## 前置条件
+
+必须安装 `acpx`（`npm install acpx`）。若缺失，能力探测会以 `unreachable` 加上安装提示返回，而不是等到运行中途再失败。
+
+凭据来自 Agent 使用的 Anthropic 兼容变量：
+
+```powershell
+$env:ANTHROPIC_MODEL='deepseek-v4.1-flash'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+```
+
+## 能力状态
+
+| 状态 | 含义 | 处理 |
+|------|------|------|
+| `ready` | 握手成功 | 无需处理 |
+| `needs_auth` | Agent 已启动但缺少凭据 | 完成该 Agent 的登录 |
+| `unreachable` | 启动失败或 `acpx` 缺失 | 检查安装与命令 |
+
+探测只执行 `initialize` + `session/new`，不发提示轮次，因此不消耗模型 token。结果按启动配置缓存。
+
+## 诊断
+
+```text
+GET  /api/runtimes/coding/diagnostics
+GET  /api/runtimes/coding/diagnostics/health
+POST /api/runtimes/coding/:id/dry-run
+```
+
+## 下一步
+
+- [执行器治理](/docs/architecture/executor-governance) — 边界、隔离与证据
+- [运行可靠性评测](/docs/guides/run-reliability-eval) — 度量你刚接好的执行器
+- [权限](/docs/configuration/permissions) — 工具审批如何作用于执行器

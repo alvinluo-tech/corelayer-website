@@ -1,0 +1,76 @@
+---
+title: 信頼性評価の実行
+description: コーディングエージェントへの変更が本当に改善かを測る。
+---
+
+1 回の成功では何も証明できません。本ガイドでは評価ハーネスを実行し、プロンプト・ポリシー・アダプターの変更を複数試行の一貫性で判断します。
+
+## 前提条件
+
+- 健全なモデルゲートウェイ。実行器は ACP 経由で動くため、その変数がそのまま適用されます：
+  - `ANTHROPIC_MODEL` — DeepSeek モデルであること
+  - `ANTHROPIC_BASE_URL`
+  - `ANTHROPIC_AUTH_TOKEN`
+- `acpx` がインストール済み
+- `daemon/` ディレクトリで実行
+
+## ベースライン実行
+
+```powershell
+cd daemon
+$env:ANTHROPIC_MODEL='deepseek-v4.1-flash'
+$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8791'
+$env:ANTHROPIC_AUTH_TOKEN='sk-...'
+
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+```
+
+各試行はタスクのファイルと空コミット 1 つで播種された新しい一時 git リポジトリを得るため、タスク同士が汚染し合わず、「何も変えない」タスクも意味を持ちます。
+
+平均ではなく `pass^k` を読んでください。`pass^3` はすべての試行で成功したタスクの割合です。
+
+## 挙動変更の A/B
+
+```powershell
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/holdout.json --k 3 --compare JARVIS_REFLECTION=1
+```
+
+同じコーパスを 2 回（変数なし、あり）実行し、ペア比較の判定を出します：
+
+| 判定 | 解釈 |
+|------|------|
+| `improved` | 全体が許容差を超え、かつ個別タスクが一切退歩していない |
+| `regressed` | 全体が下降 |
+| `mixed` | 平均は上がったがタスクが信頼性を失った — **改善ではない** |
+| `unchanged` | すべて許容帯の中 |
+
+## 判断
+
+次の 4 つすべてを満たす場合のみ既定に昇格します：
+
+1. 判定が `improved`
+2. `lostReliability` が空
+3. `tokensPerSuccess` の上昇が約 20% 以内
+4. 再実行しても 1–3 を満たす
+
+満たさなければ既定はオフのまま。
+
+## 失敗の読み方
+
+| 症状 | 想定原因 |
+|------|---------|
+| `timed-out` が連続 | ゲートウェイが不安定。ACP は素早く失敗せず予算まで待つ |
+| `VOID` 試行 | 環境障害（クォータ、接続拒否、5xx）。設計上比率から除外 |
+| 偽陽性 | 実行器が成功と主張したがチェックが失敗。そのタスクの完了証拠が弱い |
+| 偽陰性 | チェックは失敗したがエージェントは失敗を報告。タスク定義を確認 |
+| `--compare` で `mixed` | 平均は改善したが 1 タスクが退歩。集約ゲートが見落とすケース |
+
+## タスクの追加
+
+決定的なスクリプトで判定できるチェックを優先します。内容比較が難しい場合（整形、順序、散文）は `check.js` を播種し `command` チェックで採点します。チェックは `file-exists`、`file-missing`、`file-contains`、`file-unchanged`、`command`。`file-unchanged` はダイジェスト比較で、「他を変えない」ことを検証する唯一の方法です。
+
+## 次のステップ
+
+- [信頼性評価](/docs/architecture/reliability-eval) — 指標の詳細
+- [コーディングエグゼキューターアダプター](/docs/guides/coding-executors) — テスト対象の実行器を設定
+- [トラブルシューティング](/docs/reference/troubleshooting) — ゲートウェイとタイムアウトの症状

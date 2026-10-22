@@ -1,56 +1,81 @@
 ---
 title: CLIコマンド
-description: CoreLayerのコマンドラインインターフェース。
+description: CoreLayer リポジトリのパッケージスクリプトと補助コマンド。
 ---
 
-CoreLayerは一般的な操作用のCLIコマンドを提供します。
+CoreLayer は pnpm ワークスペースのスクリプトで動きます。特に断りのない限り、リポジトリルートで実行します。
 
-## 開発コマンド
-
-| コマンド | 説明 |
-|---------|-------------|
-| `pnpm dev` | 開発モードでデーモン＋Tauriフロントエンドを起動 |
-| `pnpm dev:web` | Web専用モードでフロントエンドを起動（Tauriなし） |
-| `pnpm dev:daemon` | デーモンのみ起動 |
-| `pnpm dev:frontend` | Tauriフロントエンドのみ起動 |
-
-## ビルドコマンド
+## 開発
 
 | コマンド | 説明 |
-|---------|-------------|
-| `pnpm build` | フルプロダクションビルド（サイドカー＋Tauri） |
-| `pnpm build:daemon` | デーモンのみビルド |
-| `pnpm build:daemon:sidecar` | デーモンをサイドカーバイナリとしてビルド |
+|----------|------|
+| `pnpm dev` | デーモン + Tauri アプリを同時起動（concurrently） |
+| `pnpm dev:daemon` | デーモンのみ。`tsx watch` でホットリロード |
+| `pnpm dev:frontend` | Tauri アプリのみ |
+| `pnpm dev:web` | ブラウザモードのフロントエンド（Tauri シェルなし） |
 
-## 品質コマンド
-
-| コマンド | 説明 |
-|---------|-------------|
-| `pnpm lint` | ソースファイルにESLintを実行 |
-| `pnpm lint:fix` | ESLintの問題を自動修正 |
-| `pnpm format` | Prettierでコードをフォーマット |
-| `pnpm format:check` | 書き込みなしでフォーマットをチェック |
-| `pnpm test` | すべてのテストを実行 |
-| `pnpm typecheck` | TypeScriptの型チェックを実行 |
-
-## クリーンアップコマンド
+## ビルド
 
 | コマンド | 説明 |
-|---------|-------------|
-| `pnpm clean` | すべてのビルド出力をクリーン |
-| `pnpm clean:app` | 実行中のCoreLayerアプリを終了 |
-| `pnpm clean:daemon` | ポート3001のデーモンプロセスを終了 |
-| `pnpm clean:all` | アプリ＋デーモンをクリーン |
+|----------|------|
+| `pnpm build` | sidecar をビルドしてから Tauri アプリ |
+| `pnpm build:daemon` | デーモンの TypeScript ビルド |
+| `pnpm build:daemon:sidecar` | デーモンを sidecar 実行ファイル化 |
 
-## リリースコマンド
+## 品質
 
 | コマンド | 説明 |
-|---------|-------------|
-| `pnpm release` | 新しいリリースを作成（パッチ） |
-| `pnpm release:minor` | マイナーリリースを作成 |
-| `pnpm release:major` | メジャーリリースを作成 |
+|----------|------|
+| `pnpm lint` / `pnpm lint:fix` | フロントエンド・デーモン・パッケージの ESLint |
+| `pnpm format` / `pnpm format:check` | Prettier |
+| `pnpm test` | 全パッケージの Vitest |
+| `pnpm typecheck` | 全パッケージの TypeScript チェック |
+
+`pnpm test` は信頼性評価を含みません。実際のモデル呼び出しを消費するため明示的に実行します（下記）。
+
+## 検証とパッケージング
+
+| コマンド | 説明 |
+|----------|------|
+| `pnpm test:smoke:sidecar` | ビルド済み sidecar のスモークテスト |
+| `pnpm clean` | 全パッケージのビルド成果物を削除 |
+| `pnpm clean:app` | 実行中のアプリプロセスを終了 |
+| `pnpm clean:daemon` | 3001 番ポートを掴むプロセスを終了 |
+| `pnpm clean:all` | 上記 2 つ |
+| `pnpm clean:sea` | 単一実行ファイルビルドの一時ディレクトリを削除 |
+
+## リリース
+
+| コマンド | 説明 |
+|----------|------|
+| `pnpm release` | standard-version による patch リリース |
+| `pnpm release:minor` | minor リリース |
+| `pnpm release:major` | major リリース |
+| `pnpm commitlint` | 直近のコミットメッセージを検証 |
+
+## 信頼性評価
+
+`daemon/` で実行：
+
+```powershell
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/core.json --k 3
+npx tsx src/eval/cli.ts --corpus src/eval/corpora/holdout.json --k 3 --compare JARVIS_REFLECTION=1
+```
+
+`ANTHROPIC_MODEL`、`ANTHROPIC_BASE_URL`、`ANTHROPIC_AUTH_TOKEN` を健全なゲートウェイに向ける必要があります。詳細は [信頼性評価の実行](/docs/guides/run-reliability-eval) を参照。
+
+## データベース
+
+`daemon/` で実行：
+
+| コマンド | 説明 |
+|----------|------|
+| `pnpm db:generate` | マイグレーション生成とコンパイル |
+| `pnpm db:migrate` | マイグレーション適用 |
+| `pnpm db:studio` | Drizzle Studio を開く |
 
 ## 次のステップ
 
-- [ソースからビルド](/docs/guides/build-from-source) — 完全なビルドガイド
-- [APIエンドポイント](/docs/reference/api-endpoints) — デーモンHTTP API
+- [ソースからビルド](/docs/guides/build-from-source) — ビルドの詳細
+- [APIエンドポイント](/docs/reference/api-endpoints) — デーモン HTTP API
+- [トラブルシューティング](/docs/reference/troubleshooting) — コマンドが失敗するとき

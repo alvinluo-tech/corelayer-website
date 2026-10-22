@@ -1,33 +1,36 @@
 ---
 title: Proveedores de Modelos
-description: Configura proveedores de modelos de IA para el enrutamiento de Jarvis.
+description: Configura los proveedores a los que el Model Gateway puede enrutar.
 ---
 
-El Model Gateway de CoreLayer enruta solicitudes a traves de multiples proveedores de IA. Puedes configurar uno o mas proveedores y dejar que Jarvis seleccione el mejor modelo para cada tarea.
+Cada llamada de modelo pasa por un unico adaptador compatible con OpenAI. Por eso un proveedor es una `baseURL` mas una clave, no un SDK por vendedor; agregar un proveedor que habla el formato OpenAI es configuracion, no codigo.
 
-## Proveedores Admitidos
+## IDs de proveedor soportados
 
-El Model Gateway admite de forma nativa los siguientes proveedores a través de ajustes preestablecidos incorporados:
+Estos IDs los reconoce el resolver de proveedores, con sus variables de entorno y base URL por defecto:
 
-| Proveedor | ID | Tipo | Modelos Populares |
-|-----------|----|------|-------------------|
-| **MiMo (Xiaomi)** | `mimo` | `openai_compatible` | `mimo-v2.5-pro`, `mimo-v2.5` |
-| **Groq** | `groq` | `openai_compatible` | `llama-4-scout`, `llama-4-maverick`, `llama-3.3-70b-versatile` |
-| **DeepSeek** | `deepseek` | `openai_compatible` | `deepseek-v4-pro`, `deepseek-v4-flash` |
-| **Anthropic** | `anthropic` | `openai_compatible` | `claude-sonnet-5`, `claude-fable-5`, `claude-opus-4.8` |
-| **Google Gemini** | `google` | `openai_compatible` | `gemini-3.5-flash`, `gemini-3.1-flash`, `gemini-3.1-pro` |
-| **OpenAI** | `openai` | `openai_compatible` | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.5`, `gpt-5.4` |
-| **Qwen (Alibaba)** | `qwen` | `openai_compatible` | `qwen-3.7-max-preview`, `qwen-3.7-plus-preview`, `qwen-3.6` |
-| **OpenRouter** | `openrouter` | `openai_compatible` | `anthropic/claude-sonnet-5`, `google/gemini-3.5-flash` |
-| **Ollama** | `ollama` | `ollama` | `llama4`, `qwen3.5`, `deepseek-v4` |
+| Proveedor | ID | Base URL por defecto |
+|-----------|----|----------------------|
+| DeepSeek | `deepseek` | `https://api.deepseek.com/v1` |
+| OpenAI | `openai` | `https://api.openai.com/v1` |
+| Anthropic | `anthropic` | `https://api.anthropic.com/v1` |
+| Google Gemini | `gemini` | `https://generativelanguage.googleapis.com/v1beta/openai` |
+| Groq | `groq` | `https://api.groq.com/openai/v1` |
+| OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` |
+| MiMo (Xiaomi) | `mimo` | `https://token-plan-ams.xiaomimimo.com/v1` |
+| Qwen (Alibaba) | `qwen` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| Ollama | `ollama` | `http://localhost:11434/v1` |
 
-## Archivos de Configuración
+El ID de Gemini es `gemini`, no `google`; el segundo solo aparece en el nombre de la variable `GOOGLE_API_KEY`.
 
-CoreLayer separa la configuración de las credenciales secretas. Los archivos de configuración se guardan en el directorio `~/.jarvis/config/`.
+## Donde vive la configuracion
 
-### 1. Configuración Principal (`config.json`)
+| Archivo | Contenido |
+|---------|-----------|
+| `~/.jarvis/config/config.json` | `providers[]`, `activeProvider`, `activeModel`, reglas de enrutado, valores por defecto |
+| `~/.jarvis/security/credentials.json` | claves API, por id de proveedor |
 
-Define los proveedores activos, las reglas de enrutamiento y los endpoints. **Este archivo no contiene claves API**:
+Ninguna clave API se escribe en `config.json`.
 
 ```json
 {
@@ -36,76 +39,49 @@ Define los proveedores activos, las reglas de enrutamiento y los endpoints. **Es
   "activeModel": "mimo-v2.5-pro",
   "providers": [
     {
-      "id": "mimo",
-      "name": "MiMo",
+      "id": "deepseek",
+      "name": "DeepSeek",
       "type": "openai_compatible",
-      "baseURL": "https://token-plan-ams.xiaomimimo.com/v1",
-      "enabled": true
-    },
-    {
-      "id": "groq",
-      "name": "Groq",
-      "type": "openai_compatible",
-      "baseURL": "https://api.groq.com/openai/v1",
-      "enabled": true
-    },
-    {
-      "id": "openrouter",
-      "name": "OpenRouter",
-      "type": "openai_compatible",
-      "baseURL": "https://openrouter.ai/api/v1",
-      "enabled": true
-    },
-    {
-      "id": "ollama",
-      "name": "Ollama",
-      "type": "ollama",
-      "baseURL": "http://localhost:11434/v1",
+      "baseURL": "https://api.deepseek.com/v1",
       "enabled": true
     }
   ]
 }
 ```
 
-### 2. Configuración de Credenciales (`credentials.json`)
+`type` es `openai_compatible` para todos los proveedores remotos y `ollama` para un servidor local.
 
-Guarda las claves API de forma segura, mapeando los valores al `id` del proveedor correspondiente:
+## Resolucion de clave y base URL
 
-```json
-{
-  "mimo": "your_mimo_api_key_here",
-  "groq": "your_groq_api_key_here",
-  "openrouter": "your_openrouter_api_key_here"
-}
-```
+Para un proveedor, el resolver comprueba en orden:
 
-## Enrutamiento de Modelos
+1. `security/credentials.json` y la entrada del proveedor en `config.json`
+2. Las variables de entorno del proveedor (por ejemplo `DEEPSEEK_API_KEY`, `ANTHROPIC_AUTH_TOKEN`)
+3. La base URL por defecto integrada
 
-Cuando hay multiples proveedores configurados, el Model Gateway selecciona segun:
+Si una URL no se reconoce como nombre de proveedor, el resolver intenta inferirlo del hostname (por ejemplo `api.deepseek.com` → `deepseek`).
 
-- **Complejidad de la tarea** — el razonamiento complejo se enruta a modelos mas capaces
-- **Requisitos de latencia** — las solicitudes sensibles al tiempo prefieren Groq o modelos locales
-- **Optimizacion de costes** — las tareas rutinarias usan proveedores mas economicos
-- **Disponibilidad** — respaldo si un proveedor no esta disponible
+La tabla completa de variables esta en [Archivo de Configuracion](/docs/reference/config-file#environment-variables).
 
-## Variables de Entorno
+## Enrutado y fallback
 
-Puedes usar variables de entorno en lugar de codificar las claves API:
+- `activeProvider` / `activeModel` definen el destino por defecto.
+- `routingRules[]` mapean un `taskType` a un `modelId`, con `conditions` opcionales.
+- Cuando un proveedor falla repetidamente se marca como muerto con cooldown (dos fallos consecutivos y luego backoff exponencial), asi las llamadas siguientes lo saltan en lugar de pagar el mismo timeout. Un exito lo resetea.
 
-```bash
-GROQ_API_KEY=your_groq_api_key_here
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-```
+## Familias de modelos
 
-Referencialas en la configuracion:
+El adaptador aplica pequenas adaptaciones por familia en lugar de exponerlas como configuracion:
 
-```json
-{
-  "apiKey": "${GROQ_API_KEY}"
-}
-```
+- Los modelos de razonamiento (`o1`…`o4`, previews) reciben los parametros que esos endpoints aceptan, no los del chat por defecto.
+- Los modelos Anthropic se llaman por el endpoint compatible con OpenAI, asi el tool calling y el streaming se comportan como en los demas.
 
-## Siguientes Pasos
+## Que modelos son actuales
 
-- [Model Gateway](/docs/core-concepts/model-gateway) — entiende la logica de enrutamiento
-- [Configurar Modelos Locales](/docs/guides/configure-local-models) — configurar Ollama
+Esta pagina no lista nombres de modelos a proposito. Los IDs cambian mas rapido que la documentacion: usa **Ajustes → Modelos**, que lee la lista del proveedor cuando este la expone, o la documentacion oficial del proveedor. Fijar un nombre aqui queda obsoleto en una release.
+
+## Siguientes pasos
+
+- [Model Gateway](/docs/core-concepts/model-gateway) — enrutado y streaming
+- [Configurar Modelos Locales](/docs/guides/configure-local-models) — Ollama
+- [Archivo de Configuracion](/docs/reference/config-file) — la referencia completa

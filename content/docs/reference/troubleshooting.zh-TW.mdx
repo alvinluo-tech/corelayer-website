@@ -60,9 +60,42 @@ description: 常見問題和解決方案。
 **症狀：** 所有工具呼叫都需要核准。
 
 **解決方案：**
-- 在設定 → 權限中檢查權限策略
-- 為受信任的工具新增 `allow` 規則
-- 對你信任的工具使用「一律核准」
+- `high` 風險總是需要確認、`critical` 預設拒絕——這是預設策略，不是 bug
+- 在核准上選擇「記住」，同一動作就不會再問
+- 用 `POST /api/approvals/expire-stale` 清理過期請求
+- 策略目前不可由使用者設定，詳見 [權限](/docs/configuration/permissions)
+
+## 核准看起來卡住了
+
+**症狀：** 執行一直不結束，也看不到核准彈窗。
+
+**解決方案：**
+- 用 `GET /api/approvals` 查看該執行是否有待定請求
+- 核准是持久化的，守護行程重啟不會遺失，但也不會自動決定
+- 工具內嵌確認在 `GET /api/tools/pending-confirmations`
+
+## 編碼執行器立即失敗
+
+**症狀：** 編碼執行在產生任何輸出前就失敗。
+
+**解決方案：**
+- `GET /api/runtimes/coding/diagnostics` 查看 Agent 探測狀態
+- `needs_auth` 表示 Agent 已啟動但缺少憑證，完成它的登入
+- `unreachable` 通常是 `acpx` 未安裝（`npm install acpx`）或啟動指令有誤
+- Claude Code 只允許 DeepSeek 模型，非 DeepSeek 的 `ANTHROPIC_MODEL` 會被有意拒絕
+
+## 評測嘗試逾時
+
+**症狀：** `pass^k` 崩潰，出現大量 `timed-out`。
+
+**解決方案：**
+- 先檢查閘道：抖動中的端點會讓 `acpx` 一直掛到執行預算耗盡，而不是快速失敗
+- `VOID` 嘗試屬於環境故障（配額、連線被拒、5xx），不計入比率
+- 連續三次環境故障會按設計終止評測
+
+## `POST /api/runs/:id/message` 回傳 410
+
+該端點已隨手寫 Agent 迴圈一併移除。改用標準的會話傳送 API（`POST /api/conversations/:id/messages/stream`）。
 
 ## 建置失敗
 
@@ -79,10 +112,10 @@ description: 常見問題和解決方案。
 **症狀：** 資料未儲存或載入錯誤。
 
 **解決方案：**
-- 在設定 → 儲存中檢查儲存設定
-- 驗證資料庫檔案存在且可寫入
-- 嘗試切換到不同的儲存模式
-- 對於 Supabase：驗證 URL 和匿名金鑰
+- 在 `storage.json` 中檢查儲存模式（設定 → 儲存 會寫入它）
+- 驗證 `storage/` 下的資料庫檔案存在且可寫入
+- 切換儲存模式需要重啟守護行程，不是線上熱切換
+- 對於 Supabase：驗證專案 URL 與服務金鑰
 
 ## 仍然無法解決？
 

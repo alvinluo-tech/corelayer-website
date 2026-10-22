@@ -1,117 +1,104 @@
 ---
 title: Security Model
-description: How CoreLayer protects your data and controls tool execution.
+description: How CoreLayer decides what an agent may do, how it asks, and how it records the answer.
 ---
 
-CoreLayer is designed with a local-first, permission-controlled security model.
+CoreLayer assumes that a prompted model will eventually be wrong, an MCP server may be hostile, and a coding agent may run an unintended command. Security is therefore enforced below the model, in code that does not read the prompt.
 
-## Core Principles
+## Principles
 
-1. **Local-first** — data stays on your machine by default
-2. **Permission-controlled** — tool execution requires explicit policies
-3. **Auditable** — all actions are logged
-4. **Visible** — nothing happens without you knowing
+1. **Local-first** — state lives on your machine unless you explicitly enable cloud storage.
+2. **Deny by default at the top** — `critical` risk is denied unless an approval flow says otherwise.
+3. **Declared risk** — a tool's risk level is set at registration time; it is never inferred from the tool name or its arguments.
+4. **Monotonic delegation** — a child run may narrow its parent's permissions, never widen them.
+5. **Everything is attributable** — every execution writes an audit entry and every run writes events.
 
-## Data Security
+## Enforcement layers
 
-### Local Storage
+| Layer | Enforces |
+|-------|----------|
+| Permission Guard | risk → policy (`auto` / `notify` / `confirm` / `deny`) |
+| Approval service | suspends a run, persists the request, resumes after a decision |
+| Delegation bounds | path scope, tool set, test commands, timeout, executor and model pinning |
+| Path policy | which files a coding run may touch, resolved against the worktree |
+| Worktree isolation | every coding run writes in its own git worktree, not your checkout |
+| Quality gates / judge | refuses to deliver a run whose evidence does not support "done" |
+| Audit + event log | records who did what, with which risk, and what came back |
 
-By default, all data is stored in a local SQLite database:
+## Risk levels and default policy
 
-- Conversations
-- Tasks and reading lists
-- Audit logs
-- Model configurations
-- User preferences
+The four levels are `low`, `medium`, `high`, `critical`. The default policy is:
 
-The database file is stored in the user's application data directory and is not transmitted anywhere.
+| Risk | Default action | Meaning |
+|------|----------------|---------|
+| `low` | `auto` | Execute silently |
+| `medium` | `notify` | Execute and surface a notification |
+| `high` | `confirm` | Suspend and wait for a human decision |
+| `critical` | `deny` | Block unless an explicit grant exists |
 
-### Optional Cloud Sync
+Per-app overrides can downgrade or tighten a single level (for example, `write: false` turns `medium` into `confirm` and `high` into `deny`).
 
-When Supabase is enabled:
+Tools that spawn work declare `high` explicitly: `dispatch_agent`, `run_task_graph`, and destructive conversation cleanup. A name like `dispatch_agent` contains no risky-sounding word, which is exactly why risk is not inferred.
 
-- Data is encrypted in transit (HTTPS)
-- Supabase handles encryption at rest
-- You control the Supabase project and its access policies
-
-### API Keys
-
-- Stored in the local config file
-- Can reference environment variables
-- Never transmitted to CoreLayer's own servers
-- Only sent to the configured AI provider
-
-## Tool Execution Security
-
-### Permission Guard
-
-Every tool call goes through the Permission Guard:
+## Human-in-the-loop approvals
 
 ```text
-Tool call → Risk classification → Policy check → Execute or block
+Tool call or executor request
+  → approval request persisted (with action digest, risk, scope)
+  → run suspended
+  → UI shows the request; user approves / denies / remembers
+  → decision recorded; run resumed or failed
 ```
 
-### Risk Levels
+- Approvals are stored, so a pending decision survives a daemon restart.
+- Batch approve / deny and stale-expiry are supported for unattended queues.
+- "Remember" creates a permission memory scoped to the action digest, so the same action is not asked twice.
 
-| Level | Auto-Execute? | Examples |
-|-------|---------------|----------|
-| Read | Yes | List files, read data |
-| Write | No (confirm) | Create/modify files |
-| External | No (confirm) | API calls |
-| Destructive | No (confirm + warning) | Delete data |
-| Credential-sensitive | No (block) | Access tokens |
+See [Permissions](/docs/configuration/permissions) for policy configuration and [Approvals API](/docs/reference/api-endpoints#approvals) for the endpoints.
 
-### Audit Trail
+## Data security
 
-Every tool execution is logged with:
+Local state is split across six zones under the CoreLayer home directory:
 
-- Timestamp
-- Tool name and source
-- Parameters (sanitized)
-- Risk level
-- User decision
-- Execution result
+| Zone | Contents | Sensitivity |
+|------|----------|-------------|
+| `config/` | `config.json`, `routing.json` | No secrets, safe to sync |
+| `security/` | `credentials.json` | Secrets; `0600` on POSIX |
+| `memory/` | `USER.md`, `MEMORY.md`, `journal/`, `dreams/` | Personal |
+| `storage/` | SQLite databases | Personal |
+| `worktrees/` | `active/`, `snapshots/` | Code under execution |
+| `cache/` | symbol graphs, MCP schemas, delegation pipes | Disposable |
 
-## Network Security
+API keys are resolved in this order: environment variable for the provider → `security/credentials.json` → provider default with no key. A key is only ever sent to the provider you configured.
 
-### Localhost Only
+When cloud storage (Supabase) or self-hosted PostgreSQL is enabled, data leaves the machine. Transport is HTTPS for Supabase; you own the project and its access policies.
 
-The daemon API is only accessible from localhost:
+## Network surface
 
-- Not exposed to the network
-- No remote access by default
-- Tauri IPC is local only
+- The daemon listens on loopback. `/api/runtime/shutdown` rejects non-loopback peers.
+- Outbound connections are only to configured model providers, configured MCP servers, and your configured database.
+- No telemetry, analytics, or phone-home.
 
-### External Connections
-
-CoreLayer only connects to:
-
-- **AI providers** you configure (Groq, OpenRouter, etc.)
-- **MCP servers** you add
-- **Supabase** if you enable cloud sync
-
-No telemetry, analytics, or phone-home connections.
-
-## Tauri Security
-
-Tauri provides additional security:
-
-- **Sandboxed webview** — frontend can't access system directly
-- **IPC whitelist** — only registered commands are allowed
-- **Process isolation** — daemon runs as separate process
-
-## Threat Model
+## Threat model
 
 | Threat | Mitigation |
 |--------|-----------|
-| Malicious tool call | Permission Guard + audit log |
-| Data exfiltration | Local-first storage, no telemetry |
-| Unauthorized access | Localhost-only API |
-| Model prompt injection | Tool parameter validation, risk classification, Permission Guard confirmation for non-read calls |
-| Compromised MCP server | Permission Guard blocks risky calls |
+| Model requests a destructive tool | Declared risk + policy; `high` requires confirmation, `critical` denied |
+| Prompt injection via tool output | Tool results are data, not instructions; approval still gates side effects |
+| Malicious or compromised MCP server | Every tool is registered with a risk level; risky calls are gated and audited |
+| Coding agent escapes its scope | Worktree isolation + path policy + narrowed delegation bounds |
+| Agent delegates to bypass its limits | Bounds only narrow: paths intersect, tools intersect, checks are additive, executor/model cannot change |
+| Child reports success without evidence | Completion policy + quality gates; the adversarial judge is evidence-gated |
+| Silent daemon access from another host | Loopback-only binding and peer checks on shutdown |
+
+## Known limits
+
+- **Computer control is not active.** Its execute path is a stub and it is not registered; do not rely on screen or input automation.
+- **Delegation bounds are only as strong as the executor.** Executors that do not honor a path policy rely on the worktree and the post-hoc diff as the real boundary.
+- **`mcp-servers.json` and the SQLite path still resolve from their legacy locations**, so the six-zone table above applies to `config.json`, credentials, memory, worktrees, and cache — not to every file.
 
 ## Next Steps
 
-- [Permission Guard](/docs/core-concepts/permission-guard) — detailed safety system
+- [Permission Guard](/docs/core-concepts/permission-guard) — the risk model in depth
+- [Executor Governance](/docs/architecture/executor-governance) — containment for coding agents
 - [Permissions configuration](/docs/configuration/permissions) — configure policies
-- [Runtime Boundaries](/docs/architecture/runtime-boundaries) — component isolation

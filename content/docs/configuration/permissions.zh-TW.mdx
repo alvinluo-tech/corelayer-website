@@ -1,81 +1,104 @@
 ---
 title: 權限
-description: 設定工具執行的權限守護。
+description: 設定權限守護的風險策略與按應用覆寫。
 ---
 
-權限守護控制哪些工具呼叫需要核准、哪些自動允許、哪些被封鎖。
+權限守護對每次工具呼叫決定：直接執行、執行並提示、掛起詢問，還是拒絕。這個決定是工具宣告風險與策略的純函式。
 
-## 權限等級
+## 風險 → 動作
 
-| 等級 | 行為 |
-|-------|----------|
-| **讀取** | 自動允許（讀取檔案、列出資料） |
-| **寫入** | 需要核准（寫入檔案、修改資料） |
-| **外部** | 需要核准（API 呼叫、網路請求） |
-| **破壞性** | 需要核准並附帶警告（刪除資料） |
-| **憑證敏感** | 除非明確允許，否則一律封鎖 |
+| 風險 | 預設動作 |
+|------|----------|
+| `low` | `auto` — 靜默執行 |
+| `medium` | `notify` — 執行並提示 |
+| `high` | `confirm` — 掛起直到你決定 |
+| `critical` | `deny` — 拒絕 |
 
-## 設定
+## 預設策略
 
-```json
-{
-  "permissions": {
-    "defaultPolicy": "confirm",
-    "rules": [
-      {
-        "tool": "filesystem:read",
-        "policy": "allow"
-      },
-      {
-        "tool": "filesystem:write",
-        "policy": "confirm"
-      },
-      {
-        "tool": "github:*",
-        "policy": "confirm"
-      },
-      {
-        "tool": "shell:execute",
-        "policy": "deny"
-      }
-    ]
-  }
+```ts
+defaultPolicy: {
+  low: "auto",
+  medium: "notify",
+  high: "confirm",
+  critical: "deny",
 }
 ```
 
-## 策略
+這是守護行程實際執行的策略，映射定義在 `@jarvis/permission-guard` 中並作用於每次工具呼叫。
 
-| 策略 | 效果 |
-|--------|--------|
-| `allow` | 不詢問直接執行 |
-| `confirm` | 暫停並要求使用者核准 |
-| `deny` | 完全封鎖執行 |
+**它目前還不支援使用者設定。** 守護以預設值構造，`config.json` 中也沒有權限段落——本檔案歷史版本描述過一個 `permissions.rules` 陣列，那個陣列並不存在，寫進去也不會生效。
 
-## 核准流程
+## 按應用覆寫
 
-當工具呼叫需要確認時：
+守護的設定結構支援按應用覆寫：
 
-1. Jarvis 解釋它想要做什麼
-2. 核准面板顯示工具名稱、參數和風險等級
-3. 你可以 **核准**、**拒絕** 或 **一律核准**（針對此工具）
-4. 所有決定都會記錄在稽核軌跡中
-
-## 稽核日誌
-
-每次工具執行都會被記錄：
-
-```text
-[2026-06-15 14:32:01] filesystem:write /workspace/README.md
-  風險：寫入
-  策略：確認
-  決定：已核准
-  使用者：手動核准
+```ts
+appPermissions: {
+  "filesystem": { write: true,  execute: false },
+  "untrusted-mcp": { write: false, execute: false },
+}
 ```
 
-在 **控制中心 → 權限 → 稽核日誌** 中查看稽核日誌。
+各旗標的映射：
+
+| 風險 | `write: true` | `write: false` |
+|------|---------------|----------------|
+| `medium` | `notify` | `confirm` |
+| `high` | `confirm` | `deny` |
+
+| 風險 | `execute: true` | `execute: false` |
+|------|-----------------|------------------|
+| `critical` | `confirm` | `deny` |
+
+`low` 始終是 `auto`。
+
+覆寫在存在時會被評估，但守護行程中目前沒有程式碼從磁碟讀取它們，因此只對以覆寫設定構造守護的呼叫方生效。
+
+## 語音模式
+
+語音執行不論風險都更嚴格：唯讀動作自動放行，其餘都需要確認。口頭發起比手動輸入更容易被誤觸發。
+
+## 核准請求
+
+動作為 `confirm` 時，守護不會把決定留在記憶體裡：
+
+1. 持久化 `approval_request`，包含動作摘要、風險、範圍與過期時間
+2. 掛起執行
+3. 介面展示請求——核准、拒絕或記住
+4. 決定後恢復或終止執行
+
+端點：
+
+```text
+GET  /api/approvals
+GET  /api/approvals/:id
+POST /api/approvals/:id/approve
+POST /api/approvals/:id/deny
+POST /api/approvals/:id/remember
+POST /api/approvals/batch/approve
+POST /api/approvals/batch/deny
+POST /api/approvals/expire-stale
+```
+
+「請求已過期」是真實狀態：無人值守佇列會堆積沒人應答的請求，`expire-stale` 會把它們關閉，而不是讓執行永久掛起。
+
+## 權限記憶
+
+「記住」會把決定記錄在動作摘要上——是具體動作，而不是工具名。同一動作不再詢問；不同路徑、指令或參數集合會產生不同摘要，仍會詢問。
+
+## 稽核
+
+每次決定都寫入 `audit_log`，可按條件查詢：
+
+```text
+GET /api/audit?actor=jarvis&action=tool.execute&riskLevel=high&since=2026-10-01T00:00:00Z&limit=50
+```
+
+一筆記錄包含 `actor`、`action`、`resource`、`riskLevel`、`permissionDecision`、`confirmedByUser`、`result`、`metadata` 與 `createdAt`。
 
 ## 下一步
 
-- [權限守護](/docs/core-concepts/permission-guard) — 深入了解安全模型
-- [檢視稽核日誌](/docs/guides/review-audit-logs) — 使用稽核軌跡
-- [安全模型](/docs/architecture/security-model) — 架構細節
+- [權限守護](/docs/core-concepts/permission-guard) — 策略背後的模型
+- [安全模型](/docs/architecture/security-model) — 強制層
+- [審查稽核日誌](/docs/guides/review-audit-logs) — 日誌的實際用法
